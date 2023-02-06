@@ -1,0 +1,150 @@
+.nav {
+    background-color: #342D55;
+    padding: 0px;
+}
+
+.button {
+    background-color: rgba(22, 22, 22, 0.171);
+    padding: 2px 6px;
+    border-radius: 8px;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;    
+    border: 2px solid rgba(204, 204, 204, 0.477);
+}
+.button:hover{    
+    background-color: rgba(22, 22, 22, 0.632);
+    transition-duration: 500ms;
+}
+.no-effect {
+    text-decoration: none;
+    color: white;
+}
+.no-effect:hover {
+    text-decoration: none;
+    color: white;
+}
+.fs-18 {
+    font-size: 20px;
+}
+.logo {
+    margin-right: 15px;
+    min-width: 38px;
+}
+.wallet {
+    width: 25px;
+    height: 25px;
+}
+.circle {
+    width: 27px;
+    height: 27px;
+    background-color: #342D55;
+    border-radius: 100%;
+}
+.fs-24 {
+    font-size: 24px;
+}
+p {
+    /* font-family: 'Space Grotesk'; */
+    /* font-weight: bold; */
+}
+.logo > img {
+    width: 25px;
+    height: 25px;
+}
+.nav-menu {
+    background: rgba(23,24,44,.5333333333) 0 0 no-repeat padding-box;
+    box-shadow: 0.8rem 0.3rem 0.6rem rgb(0 0 0 / 16%);
+    opacity: 1;
+    -webkit-backdrop-filter: blur(2.7rem);
+    backdrop-filter: blur(2.7rem);
+    position: fixed;
+    z-index: 801;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    width: 30.4rem;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    max-width: 80%;
+}
+.menu-active {
+    background-color: rgba(71, 73, 108, 0.533);
+}
+.nav-menu > div {    
+    padding: 5px 12px;
+}
+.stake-menu {
+    position: absolute;
+    top: 25px;
+    width: 120px;
+    background-color: #342d55;
+    padding: 12px 25px;
+    left: -12px;
+    text-align:center;
+    border-radius: 0px 0px 12px 12px;
+    border: 1px solid rgb(133, 99, 181);
+    border-top: 0px;
+    color: white;
+}
+.stake-menu > div {
+    cursor: pointer;
+}
+.stake-menu > div:hover {
+    color: rgb(179, 150, 220);
+    transition: 200ms;
+}
+.lh-33 {
+    line-height: 28px;
+}
+.claim-btn {
+    background-color: #f65959;
+    padding: 6px 24px;
+    border-radius: 15px;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;    
+    border: 1px solid rgba(204, 204, 204, 0.477);
+}
+.menu-faucet {
+    position: absolute;
+    top: 60px;
+    background-color: #342D55;
+    color: white;
+    width: 120px;
+    text-align: center;
+    border: 1px solid rgba(198, 198, 198, 0.16);
+    padding: 6px 6px;
+    cursor: pointer;
+}
+.faucet-icon {
+    width: 20px;
+    height: 20px;
+}
+.menu-faucet > div {
+    padding: 6px;
+}
+.menu-faucet > div:hover {
+    background-color: #564a8d;
+    transition: 500ms;
+    border-radius: 7px;
+}
+@media only screen and (max-width: 1480px) {
+    .w-80 {
+        width: 90%;
+    }
+}
+@media only screen and (max-width: 600px) {
+    .logo > img {
+        width: 30px;
+        height: 30px;   
+    }
+    .logo {
+        min-width: 38px;
+    }
+    .logo-text {
+        font-size: 20px;
+    }
+}
