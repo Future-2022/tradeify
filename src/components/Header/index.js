@@ -118,7 +118,6 @@ const Header = () => {
 
     const mint_token = async (tokenType) => {
         const isLog = isLoggedIn();
-        console.log(isLog);
         if(isLog == false) {
             toast.error("Please connect wallet");
         } else {

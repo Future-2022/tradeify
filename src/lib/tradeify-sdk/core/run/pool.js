@@ -33,7 +33,7 @@ export class Pool {
     }
   
     static isPool(type) {
-      return type.startsWith(`${CONFIG.PackageId}::pool::Pool<`)
+      return type.startsWith(`${CONFIG.tradeifyPackageId}::pool::Pool<`)
     }
   
     static fromSuiObject(obj) {

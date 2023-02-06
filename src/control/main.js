@@ -44,6 +44,8 @@ export const LPMetaData = (totalLPValue, metaValue) => {
         "meta": []
     }; 
     metaValue.map(item => {
+      const PoolId = item.id;
+
       const LPSymbol = item.metadata[0].symbol + '-' + item.metadata[1].symbol;
       let LPFirstIcon = importImage(item.metadata[0].symbol);
       let LPSecondIcon = importImage(item.metadata[1].symbol);
@@ -54,6 +56,7 @@ export const LPMetaData = (totalLPValue, metaValue) => {
       const LPFee = Number(Number(item.data.lpFeeBps) / 1000 * 100).toFixed(2);
 
       const newItem = {
+        PoolId: PoolId,
         LPFirstTokenSymbol: item.metadata[0].symbol,
         LPSecondTokenSymbol: item.metadata[1].symbol,
         LPFirstTokenValue: Number(item.data.balanceA.value) / (10 ** Number(item.metadata[0].decimals)).toFixed(4),
@@ -85,6 +88,53 @@ export function changeDecimal(value) {
   return balance
 }
 
+export function totalBalance(coins) {
+  return coins.reduce((acc, coin) => acc + coin.balance.value, BigInt(0))
+}
+
+export function selectCoinWithBalanceGreaterThanOrEqual(coins,  balance){
+  return coins.find(coin => coin.balance.value >= balance)
+}
+
+export async function getOrCreateCoinOfLargeEnoughBalance(
+  provider,
+  wallet,
+  coinType,
+  balance
+) {
+  const coins = (await getUserCoins(provider, wallet)).filter(coin => coin.typeArg === coinType)
+  if (totalBalance(coins) < balance) {
+    throw new Error(
+      `Balances of ${coinType} Coins in the wallet don't amount to ${balance.toString()}`
+    )
+  }
+
+  const coin = selectCoinWithBalanceGreaterThanOrEqual(coins, balance)
+  if (coin !== undefined) {
+    return coin
+  }
+
+  const inputCoins = selectCoinSetWithCombinedBalanceGreaterThanOrEqual(coins, balance)
+  const addr = await getWalletAddress(wallet)
+  const res = await wallet.signAndExecuteTransaction({
+    kind: 'pay',
+    data: {
+      inputCoins: inputCoins.map(coin => coin.id),
+      recipients: [addr],
+      amounts: [Number(balance)],
+      gasBudget: 10000,
+    },
+  })
+  if (!res.effects.created) {
+    console.debug(res)
+    throw new Error('transaction failed')
+  }
+
+  const createdId = res.effects.created[0].reference.objectId
+  const newCoin = await provider.getObject(createdId)
+  console.log(createdId);
+  return suiCoinToCoin(newCoin)
+}
 
 export async function fetchLPCoins(provider, wallet) {
     const poolIDs = [];
@@ -95,14 +145,14 @@ export async function fetchLPCoins(provider, wallet) {
         null,
         'descending'
     )
-    // console.log(events);
+    console.log(events);
   events.data.forEach(envelope => {
     const event = envelope.event
     if (!('moveEvent' in event)) {
       throw new Error('Not a MoveEvent')
     }
-
     const dec = PoolCreateEvent.fromBcs(event.moveEvent.bcs, 'base64');
+    console.log(dec)
     poolIDs.push(dec.poolId)
   })
   const poolObjs = await provider.getObjectBatch(poolIDs);

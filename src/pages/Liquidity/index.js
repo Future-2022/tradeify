@@ -9,7 +9,7 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/png/eth-bg.png';
 import TokenIcon3 from '../../img/svg/BTC.svg';
 
-import { fetchLPCoins, fetchAll, LPMetaData } from '../../control/main';
+import { fetchLPCoins, LPMetaData } from '../../control/main';
 import { StoreContext } from '../../store';
 import { useMediaQuery } from 'react-responsive';
 
@@ -32,9 +32,7 @@ const Liquidity = (props) => {
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
             })
-            console.log(lpCoins);
             const newMetaData = LPMetaData(totalLPValue, lpCoins);
-            console.log(newMetaData);
             newMetaData.meta.map(item => {
                 const newItem = {
                     label: item.LPSymbol,

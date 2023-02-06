@@ -31,3 +31,25 @@ export const mint_test_token_eth = (args) => {
         },
     }
 }
+
+export function maybeSplitThenDeposit( typeArgs, args ) {
+    // console.log(args.pool);
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: PACKAGE_ID,
+            module: 'pool',
+            function: 'maybe_split_then_deposit',
+            typeArguments: [typeArgs[0], typeArgs[1]],
+            arguments: [
+                args.pool,
+                args.inputA,
+                args.amountA.toString(),
+                args.inputB,
+                args.amountB.toString(),
+                args.minLpOut.toString(),
+            ],
+            gasBudget: 40000,
+        },
+        }
+}

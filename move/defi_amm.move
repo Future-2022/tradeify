@@ -11,7 +11,7 @@ module tradeify::pool {
     use std::vector;
     /// The number of basis points in 100%.
     const BPS_IN_100_PCT: u64 = 100 * 100;
-    const EExcessiveSlippage: u64 = 0;
+    const EExcessiveSlippage: u64 = 356;
     /// For when supplied Coin is zero.
     /// The input amount is zero.
     const EZeroInput: u64 = 1;

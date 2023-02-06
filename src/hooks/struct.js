@@ -19,11 +19,11 @@ export class PoolCreateEvent {
     }
   
     static fromBcs(data, encoding) {
-      const dec = bcs.de(`${CONFIG.tradeifyPackageId}::pool::PoolCreateEvent`, data, encoding)
+      const dec = bcs.de(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent`, data, encoding)
       return new PoolCreateEvent(dec.pool_id)
     }
   
     static isPoolCreateEvent(type) {
-      return type.startsWith(`${CONFIG.tradeifyPackageId}::pool::PoolCreateEvent<`)
+      return type.startsWith(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent<`)
     }
 }
