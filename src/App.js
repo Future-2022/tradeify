@@ -32,6 +32,8 @@ function App() {
   const [wallet, setWallet] = React.useState('');
   const [newCoins, setNewCoins] = React.useState(undefined);
   const [coinBalances, setCoinBalances] = React.useState(undefined);
+  const [isAlterSecondToken, setIsAlterSecondToken] = React.useState("SUI");
+
   const storeValue = {
     account, setAccount,
     modalIsOpen, setModalIsOpen,
@@ -39,6 +41,7 @@ function App() {
     coinBalances, setCoinBalances,
     provider,
     wallet, setWallet,
+    isAlterSecondToken, setIsAlterSecondToken
   }
 
   return (

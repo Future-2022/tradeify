@@ -27,3 +27,15 @@ export class PoolCreateEvent {
       return type.startsWith(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent<`)
     }
 }
+
+export class LP {
+  typeArgs
+
+  constructor(typeArgs) {
+    this.typeArgs = typeArgs
+  }
+
+  static isLp(type) {
+    return type.startsWith(`${CONFIG.tradeifyPackageId}::pool::TLP`)
+  }
+}

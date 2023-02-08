@@ -24,6 +24,9 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 
+import Swap from './swap';
+import Modal from 'react-modal';
+
 const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 const TradeForm = () => {    
     const { wallet, connected } = useWallet();
@@ -174,6 +177,8 @@ const TradeForm = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Short trade part */}
                 {formIndex == 2 && (
                     <div>
                         <div>
@@ -282,79 +287,11 @@ const TradeForm = () => {
                         </div>
                     </div>
                 )}
+
+
+                {/* Token swap part */}
                 {formIndex == 3 && (
-                    <div>
-                        <div className='trade-form-select d-flex mt-2 p-relative'>
-                            <div className='trade-token-select-1 mb-2 w-50'>
-                                <p className='text-gray text-left'>{orderType == 2 ? 'Limit Price':'Market Price'}</p>
-                                <div className='d-flex'>
-                                    <span className={`${orderType == 1 && ('disabled')}`}>$</span><input type='text' className={`token-select-input ${orderType == 1 && ('disabled')}`} placeholder='0.0' value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)} />
-                                </div>
-                            </div>
-                            <div className='trade-token-select-1 mb-2 ml-2 w-50'>
-                                <p className='text-gray text-left'>Order Type</p>
-                                <div className='d-flex justify-content-end'>
-                                    <div className='d-flex cursor-pointer token-select mr-2' onClick={openMenu}><h5>{orderType == 2 ? 'Limit':'Market'}</h5><FaAngleDown className='fs-26 mt-1' /></div>
-                                </div>
-                            </div>      
-                            {isOrderMenu && (                        
-                                <div className='market-menu'>
-                                    <div onClick={() => selectOrderType(1)}>Market</div>
-                                    <div onClick={() => selectOrderType(2)}>Limit</div>
-                                    <div onClick={() => selectOrderType(3)}>Stop Market</div>
-                                </div> 
-                            )}    
-                        </div> 
-                        <div className='trade-token-select mb-2'>
-                            <p className='text-gray text-left'>Pay</p>
-                            <div className='d-flex justify-content-between'>
-                                <input type='text' className='token-select-input' placeholder='0.0' />
-                                <div className='d-flex cursor-pointer token-select' onClick={() => setIsTokenMenu(true)}><h4>ETH</h4><FaAngleDown className='fs-26 mt-2' /></div>
-                            </div>
-                        </div>
-                        <div className='ex-logo-part'><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
-                        <div className='trade-token-select mt-2'>
-                            <div className='d-flex justify-content-between'><p className='text-gray text-left'>Receive</p></div>
-                            <div className='d-flex justify-content-between'>
-                                <input type='text' className='token-select-input' placeholder='0.0' />
-                                <div className='d-flex cursor-pointer token-select' onClick={() => setIsTokenMenu(true)}><h4>ETH</h4><FaAngleDown className='fs-26 mt-2' /></div>
-                            </div>
-                        </div>
-                        {optionIndex == 2 && (
-                            <div className='trade-token-select mt-2'>
-                                <div className='d-flex justify-content-between'><p className='text-gray text-left'>Price</p><p className='text-gray text-left'>Mark: 1233.23</p></div>
-                                <div className='d-flex justify-content-between'>
-                                    <input type='text' className='token-select-input' placeholder='0.0' />
-                                    <div className='d-flex cursor-pointer token-select'><h4>USD Per ETH</h4></div>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {account == undefined && (
-                            <div className='earn-button w-100 text-center' onClick={connectWallet}>Connect Wallet</div>
-                        )}
-                        {account != undefined && (
-                            <div className='earn-button w-100 text-center'>Swap</div>
-                        )}
-                        <div className='d-flex justify-content-between'>
-                            <p className='text-left pt-2'>Fees</p>
-                            <p className='text-gray pt-2'>--</p>
-                        </div>      
-                        <div className='pt-3'>
-                            <div className='d-flex justify-content-between'>
-                                <p className='text-gray'>ETH price</p>
-                                <p>$1,219.14</p>
-                            </div>
-                            <div className='d-flex justify-content-between'>
-                                <p className='text-gray'>USDC price</p>
-                                <p>$1.00</p>
-                            </div>
-                            <div className='d-flex justify-content-between'>
-                                <p className='text-gray'>Avaiable Liquidity</p>
-                                <p>$13,196,042.35</p>
-                            </div>
-                        </div>                         
-                    </div>
+                    <Swap setIsTokenMenu={setIsTokenMenu} />
                 )}
             </div>
             

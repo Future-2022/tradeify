@@ -11,6 +11,9 @@ import {
 import { CONFIG } from '../../../config'
 import { typeToTag, tagToType } from '../type';
 import { Balance, Supply } from '../../balance';
+
+const BPS_IN_100_PCT = BigInt(100 * 100);
+
 export class Pool {
     typeArgs  
     id
@@ -35,6 +38,8 @@ export class Pool {
     static isPool(type) {
       return type.startsWith(`${CONFIG.tradeifyPackageId}::pool::Pool<`)
     }
+
+    
   
     static fromSuiObject(obj) {
       const id = obj.reference.objectId;
@@ -46,7 +51,6 @@ export class Pool {
     }
   
     static fromMoveObjectField(field) {
-        // console.log(field.type);
         if (!Pool.isPool(field.type)) {
             throw new Error(`not a Pool type`)
         }
@@ -57,8 +61,8 @@ export class Pool {
         return {
             typeArgs: [typeA, typeB],
             id: field.fields.id.id,
-            balanceA: Balance.fromMoveObjectField(typeA, field.fields.balance_b),
-            balanceB: Balance.fromMoveObjectField(typeB, field.fields.balance_a),
+            balanceA: Balance.fromMoveObjectField(typeA, field.fields.balance_a),
+            balanceB: Balance.fromMoveObjectField(typeB, field.fields.balance_b),
             lpSupply: Supply.fromMoveObjectField(field.fields.lp_supply),
             lpFeeBps: BigInt(field.fields.lp_fee_bps),
             adminFeePct: BigInt(field.fields.admin_fee_pct),

@@ -51,5 +51,51 @@ export function maybeSplitThenDeposit( typeArgs, args ) {
             ],
             gasBudget: 40000,
         },
-        }
+    }
 }
+export function maybeSplitThenWithdraw( typeArgs, args ) {
+    return {
+        kind: 'moveCall',
+        data: {
+        packageObjectId: PACKAGE_ID,
+        module: 'pool',
+        function: 'maybe_split_then_withdraw',
+        typeArguments: [typeArgs.first, typeArgs.second],
+        arguments: [
+            args.pool,
+            args.lpIn,
+            args.amount.toString(),
+            args.minAOut.toString(),
+            args.minBOut.toString(),
+        ],
+        gasBudget: 10000,
+        },
+    }
+}
+export function maybeSplitThenSwapA(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: PACKAGE_ID,
+            module: 'pool',
+            function: 'maybe_split_then_swap_a',
+            typeArguments: [typeArgs.first, typeArgs.second],
+            arguments: [args.pool, args.input, args.amount.toString(), args.minOut.toString()],
+            gasBudget: 10000,
+        },
+    }
+}
+export function maybeSplitThenSwapB(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: PACKAGE_ID,
+            module: 'pool',
+            function: 'maybe_split_then_swap_b',
+            typeArguments: [typeArgs.first, typeArgs.second],
+            arguments: [args.pool, args.input, args.amount.toString(), args.minOut.toString()],
+            gasBudget: 10000,
+        },
+    }
+}
+

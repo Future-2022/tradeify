@@ -13,6 +13,8 @@ import { CONFIG } from '../lib/config';
 import { PoolCreateEvent } from '../hooks/struct';
 import { Pool } from '../lib/tradeify-sdk/pool';
 import { importImage } from './importModule';
+import { LP } from '../hooks/struct';
+
 export class Coin {
     typeArg
     id
@@ -135,7 +137,15 @@ export async function getOrCreateCoinOfLargeEnoughBalance(
   console.log(createdId);
   return suiCoinToCoin(newCoin)
 }
+export async function fetchUserLpCoins(provider, addr) {
+  const infos = (await provider.getObjectsOwnedByAddress(addr)).filter(obj => {
+    return SuiCoin.isCoin(obj) && LP.isLp(SuiCoin.getCoinTypeArg(obj))
+  })
 
+  return (await (provider).getObjectBatch(infos.map(info => info.objectId))).map(
+    suiCoinToCoin
+  )
+}
 export async function fetchLPCoins(provider, wallet) {
     const poolIDs = [];
     // console.log(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent`);
@@ -145,14 +155,14 @@ export async function fetchLPCoins(provider, wallet) {
         null,
         'descending'
     )
-    console.log(events);
+    // console.log(events);
   events.data.forEach(envelope => {
     const event = envelope.event
     if (!('moveEvent' in event)) {
       throw new Error('Not a MoveEvent')
     }
     const dec = PoolCreateEvent.fromBcs(event.moveEvent.bcs, 'base64');
-    console.log(dec)
+    // console.log(dec)
     poolIDs.push(dec.poolId)
   })
   const poolObjs = await provider.getObjectBatch(poolIDs);
@@ -179,6 +189,17 @@ export async function getUserCoins(provider, wallet) {
     })
     return coins;
 }
+
+export async function getCoins(provider, address) {
+    const coinInfos = (await provider.getObjectsOwnedByAddress(address)).filter(SuiCoin.getCoinTypeArg);
+    // console.log(coinInfos);
+    const coins = (await (provider).getObjectBatch(coinInfos.map(obj => (obj.objectId)))).map(coin => {
+      return suiCoinToCoin(coin)
+    })
+    return coins;
+}
+
+
 
 export async function getWalletAddress(wallet) {
     const accs = await wallet.getAccounts()

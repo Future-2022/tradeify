@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import './index.css';
 import Order from '../../components/Order';
 
@@ -11,12 +11,17 @@ import TradeForm from '../../components/TradeForm';
 import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
+import { StoreContext } from '../../store';
+
 const Trade = (props) => {
-    const [market, setMarket] = useState('ETH');
+    const globalContext = useContext(StoreContext);     
+    const [market, setMarket] = useState('SUI');
     const [isMarketMenu, setIsMarketMenu] = useState(false);
     
     const selectMarket = (market) => {
         setMarket(market);
+        console.log(market);
+        globalContext.setIsAlterSecondToken(market);
         setIsMarketMenu(false);
     }
     return (

@@ -96,7 +96,7 @@ module tradeify::pool {
         let a = type_name::get<A>();
         let b = type_name::get<B>();
         assert!(cmp_type_names(&a, &b) == 0, EInvalidPair);
-
+        
         let item = PoolRegistryItem{ a, b };
         assert!(table::contains(&self.table, item) == false, EPoolAlreadyExists);
 
@@ -207,7 +207,33 @@ module tradeify::pool {
         coin::mint_and_transfer<T>(c, amount, recipient, ctx); 
     }
 
-    
+    /// Calclates swap result and fees based on the input amount and current pool state.
+    fun calc_swap_result(
+        i_value: u64,
+        i_pool_value: u64,
+        o_pool_value: u64,
+        pool_lp_value: u64,
+        lp_fee_bps: u64,
+        admin_fee_pct: u64
+    ): (u64, u64) {
+        // calc out value
+        let lp_fee_value = ceil_muldiv(i_value, lp_fee_bps, BPS_IN_100_PCT);
+        let in_after_lp_fee = i_value - lp_fee_value;
+        let out_value = muldiv(in_after_lp_fee, o_pool_value, i_pool_value + in_after_lp_fee);
+
+        // calc admin fee
+        let admin_fee_value = muldiv(lp_fee_value, admin_fee_pct, 100);
+        // dL = L * sqrt((A + dA) / A) - L = sqrt(L^2(A + dA) / A) - L
+        let admin_fee_in_lp = (math::sqrt_u128(
+            muldiv_u128(
+                (pool_lp_value as u128) * (pool_lp_value as u128),
+                ((i_pool_value + i_value) as u128),
+                ((i_pool_value + i_value - admin_fee_value) as u128)
+            )
+        ) as u64) - pool_lp_value;
+
+        (out_value, admin_fee_in_lp)
+    }
 
     public fun create_pool<A, B>(
         registry: &mut PoolRegistry,
@@ -421,6 +447,94 @@ module tradeify::pool {
         destroy_or_transfer_balance(b_out, sender, ctx);
     }
 
+    public fun swap_a<A, B>(
+        pool: &mut Pool<A, B>, input: Balance<A>, min_out: u64,
+    ): Balance<B> {
+        // sanity checks
+        assert!(balance::value(&input) > 0, EZeroInput);
+        assert!(
+            balance::value(&pool.balance_a) > 0 && balance::value(&pool.balance_b) > 0,
+            ENoLiquidity
+        );
+
+        // calculate swap result
+        let i_value = balance::value(&input);
+        let i_pool_value = balance::value(&pool.balance_a);
+        let o_pool_value = balance::value(&pool.balance_b);
+        let pool_lp_value = balance::supply_value(&pool.lp_supply);
+
+        let (out_value, admin_fee_in_lp) = calc_swap_result(
+            i_value, i_pool_value, o_pool_value, pool_lp_value, pool.lp_fee_bps, pool.admin_fee_pct
+        );
+
+        assert!(out_value >= min_out, EExcessiveSlippage);
+
+        // deposit admin fee
+        balance::join(
+            &mut pool.admin_fee_balance,
+            balance::increase_supply(&mut pool.lp_supply, admin_fee_in_lp)
+        );
+
+        // deposit input
+        balance::join(&mut pool.balance_a, input);
+
+        // return output
+        balance::split(&mut pool.balance_b, out_value)
+    }
+
+    /// Entry function. Swaps the provided amount of A for B. Fails if the resulting
+    /// amount of B is smaller than `min_out`. Transfers the resulting Coin to the sender.
+    public fun swap_a_<A, B>(
+        pool: &mut Pool<A, B>, input: Coin<A>, min_out: u64, ctx: &mut TxContext
+    ) {
+        let out = swap_a(pool, coin::into_balance(input), min_out);
+        destroy_or_transfer_balance(out, tx_context::sender(ctx), ctx);
+    }
+
+    public fun swap_b<A, B>(
+        pool: &mut Pool<A, B>, input: Balance<B>, min_out: u64
+    ): Balance<A> {
+        // sanity checks
+        assert!(balance::value(&input) > 0, EZeroInput);
+        assert!(
+            balance::value(&pool.balance_a) > 0 && balance::value(&pool.balance_b) > 0,
+            ENoLiquidity
+        );
+
+        // calculate swap result
+        let i_value = balance::value(&input);
+        let i_pool_value = balance::value(&pool.balance_b);
+        let o_pool_value = balance::value(&pool.balance_a);
+        let pool_lp_value = balance::supply_value(&pool.lp_supply);
+
+        let (out_value, admin_fee_in_lp) = calc_swap_result(
+            i_value, i_pool_value, o_pool_value, pool_lp_value, pool.lp_fee_bps, pool.admin_fee_pct
+        );
+
+        assert!(out_value >= min_out, EExcessiveSlippage);
+
+        // deposit admin fee
+        balance::join(
+            &mut pool.admin_fee_balance,
+            balance::increase_supply(&mut pool.lp_supply, admin_fee_in_lp)
+        );
+
+        // deposit input
+        balance::join(&mut pool.balance_b, input);
+
+        // return output
+        balance::split(&mut pool.balance_a, out_value)
+    }
+
+    /// Entry function. Swaps the provided amount of B for A. Fails if the resulting
+    /// amount of A is smaller than `min_out`. Transfers the resulting Coin to the sender.
+    public fun swap_b_<A, B>(
+        pool: &mut Pool<A, B>, input: Coin<B>, min_out: u64, ctx: &mut TxContext
+    ) {
+        let out = swap_b(pool, coin::into_balance(input), min_out);
+        destroy_or_transfer_balance(out, tx_context::sender(ctx), ctx);
+    }
+
     public fun maybe_split_and_transfer_rest<T>(
         input: Coin<T>, amount: u64, recipient: address, ctx: &mut TxContext
     ): Coin<T> {
@@ -473,5 +587,19 @@ module tradeify::pool {
     ) {
         let input_lp = maybe_split_and_transfer_rest(lp_in, amount, tx_context::sender(ctx), ctx);
         withdraw_(pool, input_lp, min_a_out, min_b_out, ctx);
+    }
+
+    public entry fun maybe_split_then_swap_a<A, B>(
+        pool: &mut Pool<A, B>, input: Coin<A>, amount: u64, min_out: u64, ctx: &mut TxContext
+    ) {
+        let input = maybe_split_and_transfer_rest(input, amount, tx_context::sender(ctx), ctx);
+        swap_a_(pool, input, min_out, ctx);
+    }
+
+    public entry fun maybe_split_then_swap_b<A, B>(
+        pool: &mut Pool<A, B>, input: Coin<B>, amount: u64, min_out: u64, ctx: &mut TxContext
+    ) {
+        let input = maybe_split_and_transfer_rest(input, amount, tx_context::sender(ctx), ctx);
+        swap_b_(pool, input, min_out, ctx);
     }
 }

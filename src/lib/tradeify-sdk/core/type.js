@@ -1,6 +1,6 @@
 import { TypeTag } from '@mysten/sui.js'
 
-export type Type = string
+// export type Type = string
 
 export function typeToTag(type) {
     return parseFromStr(type)
