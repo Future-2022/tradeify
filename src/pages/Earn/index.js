@@ -5,12 +5,16 @@ import TLP from '../../img/png/token-logo.png';
 
 import { FaAngleDown } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
-import { useSuiWallet } from '../../context/ConnectWallet/useSuiWallet';
+import { useWallet } from '@mysten/wallet-adapter-react';
 
 const Earn = (props) => {
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);   
-    const { account, connected, connecting, connects, disconnect } = useSuiWallet();
+    const { account, connected, connecting, connects, disconnect } = useWallet();
+
+    useEffect(() => {
+        console.log(globalContext.account);
+    }, [])
 
     return (
         <div>
@@ -39,10 +43,10 @@ const Earn = (props) => {
                                     <div className='percent-item'><p>100%</p></div>
                                 </div>
                             </div>
-                            {account == undefined && (
+                            {globalContext.account == null && connected == false && (
                                 <div className='earn-button w-100 text-center py-2 border-radius mb-3 mt-15' onClick={() => globalContext.setModalIsOpen(true)}>Connect Wallet</div>
                             )}
-                            {account != undefined && (
+                            {globalContext.account != '' && connected != false && (
                                 <div className='earn-button w-100 text-center py-2 border-radius mb-3 mt-15'>Stack TLP</div>
                             )}
                         </div>
@@ -57,7 +61,7 @@ const Earn = (props) => {
                                         <h4 className='py-2'>36.79%</h4>
                                     </div>
                                     <div className='d-flex justify-content-between'>
-                                        <p className='text-gray py-2'>Price</p>
+                                        <p className='text-gray py-2'>TRY Price</p>
                                         <p className='py-2 text-pink-sharp'>$ 0.782</p>
                                     </div>
                                     <div className='d-flex justify-content-between'>
@@ -81,10 +85,11 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>Claimable rewards</p>
-                                        <p className='py-2'>$0.00</p>
+                                        <p className='py-2'>0.00 TRY</p>
                                     </div>
                                     <div className='d-flex mt-3'>
                                         <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2'>Claim rewards</div>
+                                        <div className='earn-button-gray w-100 text-center  py-2 border-radius mb-3 ml-2'>Unstake TLP</div>
                                     </div>
                                 </div>                         
                             </div>

@@ -202,7 +202,7 @@ const Market = (props) => {
                         sellTLPSdk(wallet, {
                             pool: item,
                             lpIn: variable.id,
-                            amount: lpToken.toFixed(0),
+                            amount: lpToken,
                             maxSlippagePct: CONFIG.defaultSlippagePct
                         }).then(item => {
                             toast.info("Your TLP token has been successfully sold!");

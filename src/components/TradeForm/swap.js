@@ -91,7 +91,6 @@ const Swap = (props) => {
                 value = item;
             }
         });
-        console.log(value)
         if(isSelectActive == 1) {
             setFirstToken(token);
             setFirstTokenMaxValue(value);

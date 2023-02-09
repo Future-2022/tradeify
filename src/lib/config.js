@@ -3,14 +3,19 @@ export const CONFIG = {
      
     rpcUrl: 'https://fullnode.devnet.sui.io:443',
 
-    tradeifyPackageId: '0x1a9b0388bd26f8aef580a9b2a1efc0f0fb18e1ed',
-    testTokenSupplyId: '0x3ca8f07bd3514a5c1eb89dbe35af955f5409fb2c',
-    poolRegistryId: '0xf0d78a4d65fa9c81a5be9b8e1230a5490abef88d',
+    tradeifyPackageId: '0x501c635103059bb7a8b9298750bc48c9834e3283',
+    testTokenSupplyId: '0x34e2d9dcf07502cb110ebb2ec9450dfa2cc01fa6',
+    poolRegistryId: '0xab8848d0a1a806d9e4d58c4d4eecc66f68fa515f',
 
-    eth_id: '0xc179c80240e76110142b89ac0d6940d820add29d',
-    eth: '0x4b0a6c5e79876b68e37d1af765d3f49078b51100::eth::ETH',
-    btc_id: '0x7e22205b14f76621fa3171c9ef779a46cb8b299e',
-    btc: '0xdc5fd5e54c0aac35dd6f77fe7352b79e98582cf8::btc::BTC',
+    eth_id: '0xab542793742fdbde68ef53ff125bf506c09d8a34',
+    eth: '0x649a6e580de079e682b542c8ed6ea232fc9280bc::eth::ETH',
+    btc_id: '0xd5cdc5be2162becda2c699ce0d33a074f5e6a7a5',
+    btc: '0x37864b1010e7ddd17e1e37e39ca2da13152ae6d0::btc::BTC',
+
+    try_id: '0x14c059ae71e3544a58404f9e8f6a062abf5cd599',
+    try: '0xa12ec00a857dd0e67ea10c3b75f7e6fd2dc53313::try::TRY',
+
+    tlp: '0x501c635103059bb7a8b9298750bc48c9834e3283::pool::TLP',
     
     MainDecimal: 9,
     defaultSlippagePct: 1

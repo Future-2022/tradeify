@@ -9,6 +9,7 @@ module tradeify::pool {
     use sui::table::{Self, Table};
     use std::type_name::{Self, TypeName};
     use std::vector;
+
     /// The number of basis points in 100%.
     const BPS_IN_100_PCT: u64 = 100 * 100;
     const EExcessiveSlippage: u64 = 356;
@@ -85,6 +86,7 @@ module tradeify::pool {
             2
         }
     }
+
     /// Creat a new empty `PoolRegistry`.
     fun new_registry(ctx: &mut TxContext): PoolRegistry {
         PoolRegistry { 
@@ -92,6 +94,7 @@ module tradeify::pool {
             table: table::new(ctx)
         }
     }
+
     fun registry_add<A, B>(self: &mut PoolRegistry) {
         let a = type_name::get<A>();
         let b = type_name::get<B>();
@@ -108,14 +111,17 @@ module tradeify::pool {
         supply_btc: u64,
         supply_eth: u64
     }
+
     struct PoolRegistryItem has copy, drop, store  {
         a: TypeName,
         b: TypeName
     }
+
     struct AdminCap has key, store {
         id: UID,
     }
-    /// The capability of the Suiswap, used for inidicating 
+
+    /// The capability of the tradeify, used for inidicating 
     /// admin-level operation
     struct SwapCap has key {
         id: UID,
@@ -127,13 +133,16 @@ module tradeify::pool {
         id: UID,
         pool_id: ID
     }
+
     struct PoolRegistry has key, store {
         id: UID,
         table: Table<PoolRegistryItem, bool>,
     }
+
     struct PoolCreationEvent has copy, drop {
         pool_id: ID,
     }
+
     struct LiquidityEvent has copy, drop {
         // The add liqulity pool id
         pool_id: ID,
@@ -149,7 +158,7 @@ module tradeify::pool {
 
     struct TLP has drop {}
 
-    /// Pool struct for Suiswap
+    /// Pool struct for tradeify
     struct Pool<phantom A, phantom B> has key {
         id: UID,
         balance_a: Balance<A>,
@@ -201,9 +210,16 @@ module tradeify::pool {
         token_supply.supply_btc = token_supply.supply_btc + amount;
         coin::mint_and_transfer<T>(c, amount, recipient, ctx);
     }
+
     entry fun mint_test_token_eth<T>(c: &mut TreasuryCap<T>, token_supply: &mut TestTokenSupply, amount: u64, recipient: address, ctx: &mut TxContext) {
         // Admin could mint with a amount set for testing usage
         token_supply.supply_eth = token_supply.supply_eth + amount;
+        coin::mint_and_transfer<T>(c, amount, recipient, ctx); 
+    }
+    
+    entry fun mint_test_token_try<T>(c: &mut TreasuryCap<T>, token_supply: &mut TestTokenSupply, amount: u64, recipient: address, ctx: &mut TxContext) {
+        // Admin could mint with a amount set for testing usage
+        token_supply.supply_try = token_supply.supply_try + amount;
         coin::mint_and_transfer<T>(c, amount, recipient, ctx); 
     }
 
@@ -243,6 +259,7 @@ module tradeify::pool {
         admin_fee_pct: u64,
         ctx: &mut TxContext,
     ): Balance<TLP> {
+
         // sanity checks
         assert!(balance::value(&init_a) > 0 && balance::value(&init_b) > 0, EZeroInput);
         assert!(lp_fee_bps < BPS_IN_100_PCT, EInvalidFeeParam);
