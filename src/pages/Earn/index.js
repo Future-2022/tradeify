@@ -1,20 +1,141 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './index.css';
-import { StoreContext } from '../../store';
 import TLP from '../../img/png/token-logo.png';
-
 import { FaAngleDown } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
+import { fetchUserLpCoins, findStakingMeta, getStakingPoolStatus, fetchLPCoins, changeDecimal } from '../../control/main';
+import { CONFIG } from '../../lib/config';
+import { StoreContext } from '../../store';
+import { stakeTLP, depositTLPStake, getStakingReward, UnStakeTLP } from '../../lib/tradeify-sdk/staking';
 
 const Earn = (props) => {
+    
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);   
     const { account, connected, connecting, connects, disconnect } = useWallet();
+    
+    const [totalLPValue, setTotalLPValue] = useState(false);
+    const [stakingAPR, setStakingAPR] = useState(0);
+    const [userReward, setUserReward] = useState(0);
+
+    // 
+    const [hasStakingMeta, setHasStakingMeta] = useState(false);
+    const [userStakingStatus, setUserStakingStatus] = useState(undefined);
+    const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
+
+    // staking parameter
+    const [tlpValue, setTLPvalue] = useState(0);
+    const [lockTime, setLockTime] = useState(0);
+    
+    // UI parameter
+    const [userLpCoin, setUserLPCoin] = useState([]);
+    const [totalUserLP, setTotalUserLP] = useState(0);
+    
+    const handleChangeTLP = (value) => {
+        setTLPvalue(value);
+    }
+
+    const handleChangeLock = (value) => {
+        setLockTime(value);
+    }
+
+    const handleChangeTLPByPercentage = (percentage) => {
+        setTLPvalue((totalUserLP * percentage / 100).toFixed(0));
+    }
+
+    const stakeTLPEvent = () => {
+        const currentTimestamp = Date.now();        
+        if(hasStakingMeta == false) {
+            stakeTLP(globalContext.provider, globalContext.wallet, {
+                tlpAmount: tlpValue,
+                lockTime: Number(lockTime * 1000),
+                currentTimestamp: currentTimestamp,
+                tlpType: CONFIG.tlp,
+                tryType: CONFIG.try
+            })
+        } else {
+            const metaPoolId = userStakingStatus.data.fields.id.id;
+            depositTLPStake(globalContext.provider, globalContext.wallet, {
+                stakingMetaId: metaPoolId,
+                tlpAmount: tlpValue,
+                lockTime: Number(lockTime * 1000),
+                currentTimestamp: currentTimestamp,
+                tlpType: CONFIG.tlp,
+                tryType: CONFIG.try
+            })
+        }
+    }
+
+    const getReward = () => {
+        if(hasStakingMeta == true) {
+            const currentTimestamp = Date.now();      
+            const metaPoolId = userStakingStatus.data.fields.id.id;
+            getStakingReward(globalContext.provider, globalContext.wallet, {
+                stakingMetaId: metaPoolId,
+                currentTimestamp: currentTimestamp,
+                tlpType: CONFIG.tlp,
+                tryType: CONFIG.try
+            })
+        }
+    }
+
+    const unStake = () => {
+        if(hasStakingMeta == true) {   
+            const metaPoolId = userStakingStatus.data.fields.id.id;
+            UnStakeTLP(globalContext.provider, globalContext.wallet, {
+                stakingMetaId: metaPoolId,
+                tlpType: CONFIG.tlp,
+                tryType: CONFIG.try
+            })
+        }
+    }
 
     useEffect(() => {
-        console.log(globalContext.account);
-    }, [])
+        let totalSupplyTLP = 0;
+        fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(async (items) => {          
+            let totalUserLPValue = 0;            
+            items.map(args => {
+                totalUserLPValue += Number(args.balance.value);
+                setTotalUserLP(totalUserLPValue);
+            })
+            setUserLPCoin(items);
+        });
+        findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
+            res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
+                setHasStakingMeta(true);
+                setUserStakingStatus(item);
+            })
+        });
+        getStakingPoolStatus(globalContext.provider).then(res => {
+            setStakingPoolStatus(res);
+            totalSupplyTLP = res.details.data.fields.balance_tlp;
+            console.log(totalSupplyTLP);
+        })
+        
+        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+            let totalLPValue = 0;
+            lpCoins.map(item => {
+                totalLPValue += Number(item.data.lpSupply.value);
+            })
+            console.log(totalLPValue);
+            if(stakingPoolStatus != undefined) {
+                let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
+                let currentTimestamp = Date.now();
+                let Reward = 100 * (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+                setStakingAPR(APR);
+                setUserReward(Reward);
+            }
+            setTotalLPValue(totalLPValue);
+            // console.log(APR);
+        })
+        calculateReward()
+    }, [globalContext.newCoins, totalLPValue])
+
+    const calculateReward = () => {
+        let currentTimestamp = Date.now();
+        console.log(currentTimestamp); 
+    }
 
     return (
         <div>
@@ -29,25 +150,35 @@ const Earn = (props) => {
                     
                             <div className='trade-token-select mb-2 p-4 mt-5'>
                                 <div className='d-flex justify-content-between'>
-                                    <p className='text-gray text-left'>TLP Balance</p>
-                                    <p className='text-gray text-left'>Max: 0.00</p>
+                                    <h5 className='font-bold text-gray text-left fs-12'>TLP Balance</h5>
+                                    <h5 className='text-gray text-left fs-12 font-bold'>Max: {totalUserLP} TLP</h5>
                                 </div>
                                 <div className='d-flex justify-content-between'>
-                                    <input type='text' className='token-select-input' placeholder='0.0' />
-                                    <div className='d-flex cursor-pointer token-select'><h5>TLP</h5><FaAngleDown className='fs-26' /></div>
+                                    <input type='text' className='token-select-input' placeholder='0.0' value={tlpValue} onChange={(e) => handleChangeTLP(e.target.value)} />
+                                    <div className='d-flex cursor-pointer token-select'><h5>TLP</h5></div>
                                 </div>
                                 <div className='d-flex justify-content-between py-3'>
-                                    <div className='percent-item'><p>25%</p></div>
-                                    <div className='percent-item'><p>50%</p></div>
-                                    <div className='percent-item'><p>75%</p></div>
-                                    <div className='percent-item'><p>100%</p></div>
+                                    <div className='percent-item' onClick={() => handleChangeTLPByPercentage(25)}><p>25%</p></div>
+                                    <div className='percent-item' onClick={() => handleChangeTLPByPercentage(50)}><p>50%</p></div>
+                                    <div className='percent-item' onClick={() => handleChangeTLPByPercentage(75)}><p>75%</p></div>
+                                    <div className='percent-item' onClick={() => handleChangeTLPByPercentage(100)}><p>100%</p></div>
+                                </div>
+                            </div>
+                            <div className='trade-token-select mb-2 p-4 mt-3'>
+                                <div className='d-flex justify-content-between'>
+                                    <h5 className='font-bold fs-12 text-gray text-left'>Staking Lock Time</h5>
+                                    <h5 className='font-bold fs-12 text-gray text-left'>Min: 50</h5>
+                                </div>
+                                <div className='d-flex justify-content-between'>
+                                    <input type='text' className='token-select-input' placeholder='0.0' value={lockTime} onChange={(e) => handleChangeLock(e.target.value)} />
+                                    <div className='d-flex cursor-pointer token-select'><h5>Second</h5></div>
                                 </div>
                             </div>
                             {globalContext.account == null && connected == false && (
-                                <div className='earn-button w-100 text-center py-2 border-radius mb-3 mt-15' onClick={() => globalContext.setModalIsOpen(true)}>Connect Wallet</div>
+                                <div className='earn-button-grey w-100 text-center py-2 border-radius mb-3 mt-15' onClick={() => globalContext.setModalIsOpen(true)}>Connect Wallet</div>
                             )}
                             {globalContext.account != '' && connected != false && (
-                                <div className='earn-button w-100 text-center py-2 border-radius mb-3 mt-15'>Stack TLP</div>
+                                <div className='earn-button-grey w-100 text-center py-2 border-radius mb-3 mt-15' onClick={() => stakeTLPEvent()}>Stack TLP</div>
                             )}
                         </div>
                         <div className={`${isMobile == true ? `w-100`:`w-50`}`}>
@@ -58,7 +189,7 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between pt-3'>
                                         <p className='text-gray py-2 pt-3'>Stake APR</p>
-                                        <h4 className='py-2'>36.79%</h4>
+                                        <h4 className='py-2'>{stakingAPR.toFixed(2)}%</h4>
                                     </div>
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>TRY Price</p>
@@ -66,7 +197,11 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>Total staked</p>
-                                        <p className='py-2 text-pink-sharp'>13,912,574 TLP</p>
+                                        <p className='py-2 text-pink-sharp'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</p>
+                                    </div>
+                                    <div className='d-flex justify-content-between'>
+                                        <p className='text-gray py-2'>Total TLP value</p>
+                                        <p className='py-2 text-pink-sharp'>{totalLPValue} TLP</p>
                                     </div>
                                 </div>                         
                             </div>
@@ -77,19 +212,19 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>Balance</p>
-                                        <p className='py-2'>0.00 TLP</p>
+                                        <p className='py-2'>{totalUserLP} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between'>
-                                        <p className='text-gray py-2'>You staked</p>
-                                        <p className='py-2'>0.00 TLP</p>
+                                        <p className='text-gray py-2'>Staked TLP</p>
+                                        <p className='py-2'>{userStakingStatus != undefined ? userStakingStatus.data.fields.staking_amount : 0} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>Claimable rewards</p>
-                                        <p className='py-2'>0.00 TRY</p>
+                                        <p className='py-2'>{changeDecimal(userReward)} TRY</p>
                                     </div>
                                     <div className='d-flex mt-3'>
-                                        <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2'>Claim rewards</div>
-                                        <div className='earn-button-gray w-100 text-center  py-2 border-radius mb-3 ml-2'>Unstake TLP</div>
+                                        <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2' onClick={() => getReward()}>Claim rewards</div>
+                                        <div className='earn-button-gray w-100 text-center  py-2 border-radius mb-3 ml-2' onClick={() => unStake()}>Unstake TLP</div>
                                     </div>
                                 </div>                         
                             </div>

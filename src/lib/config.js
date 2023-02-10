@@ -16,6 +16,9 @@ export const CONFIG = {
     try: '0xa12ec00a857dd0e67ea10c3b75f7e6fd2dc53313::try::TRY',
 
     tlp: '0x501c635103059bb7a8b9298750bc48c9834e3283::pool::TLP',
+
+    stakingPackageId: '0xb74c018f2515af51193e66ff548bde544b543c69',
+    stakingPoolId: '0x9780f06a6478ee29f84f7dd93bead2d71de11a91',
     
     MainDecimal: 9,
     defaultSlippagePct: 1

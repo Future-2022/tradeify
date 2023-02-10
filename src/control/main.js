@@ -110,14 +110,17 @@ export async function getOrCreateCoinOfLargeEnoughBalance(
       `Balances of ${coinType} Coins in the wallet don't amount to ${balance.toString()}`
     )
   }
-
   const coin = selectCoinWithBalanceGreaterThanOrEqual(coins, balance)
+  
   if (coin !== undefined) {
+    console.log(coin);
     return coin
   }
 
   const inputCoins = selectCoinSetWithCombinedBalanceGreaterThanOrEqual(coins, balance)
+  console.log(inputCoins);
   const addr = await getWalletAddress(wallet)
+  console.log(addr);
   const res = await wallet.signAndExecuteTransaction({
     kind: 'pay',
     data: {
@@ -126,17 +129,57 @@ export async function getOrCreateCoinOfLargeEnoughBalance(
       amounts: [Number(balance)],
       gasBudget: 10000,
     },
-  })
+  })  
   if (!res.effects.created) {
-    console.debug(res)
     throw new Error('transaction failed')
   }
-
   const createdId = res.effects.created[0].reference.objectId
   const newCoin = await provider.getObject(createdId)
   console.log(createdId);
   return suiCoinToCoin(newCoin)
 }
+export function sortByBalance(coins) {
+  return coins.sort((a, b) => {
+    if (a.balance.value < b.balance.value) {
+      return -1
+    } else if (a.balance.value > b.balance.value) {
+      return 1
+    } else {
+      return 0
+    }
+  })
+}
+export function selectCoinSetWithCombinedBalanceGreaterThanOrEqual(
+  coins,
+  amount
+) {
+  const sortedCoins = sortByBalance(coins)
+  const total = totalBalance(sortedCoins)
+  // return empty set if the aggregate balance of all coins is smaller than amount
+  if (total < amount) {
+    return []
+  } else if (total === amount) {
+    return sortedCoins
+  }
+
+  let sum = BigInt(0)
+  const ret = []
+  while (sum < total) {
+    // prefer to add a coin with smallest sufficient balance
+    const target = amount - sum
+    const coinWithSmallestSufficientBalance = sortedCoins.find(c => c.balance.value >= target)
+    if (coinWithSmallestSufficientBalance) {
+      ret.push(coinWithSmallestSufficientBalance)
+      break
+    }
+    const coinWithLargestBalance = sortedCoins.pop();
+    ret.push(coinWithLargestBalance)
+    sum += coinWithLargestBalance.balance.value
+  }
+  return sortByBalance(ret)
+}
+
+
 export async function fetchUserLpCoins(provider, addr) {
   const infos = (await provider.getObjectsOwnedByAddress(addr)).filter(obj => {
     return SuiCoin.isCoin(obj) && LP.isLp(SuiCoin.getCoinTypeArg(obj))
@@ -217,6 +260,7 @@ export function getCoinBalances(coins){
     }
     return balances
 }
+
 export function getCoinSymbols(coins){
     const balances = new Map;
     for (const coin of coins) {
@@ -224,4 +268,59 @@ export function getCoinSymbols(coins){
       balances.set(coin.typeArg, symbol)
     }
     return balances
+}
+export const getStakingPoolStatus = async (provider) => {
+    const poolIDs = [];
+    // console.log(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent`);
+    const events = await provider.getEvents(
+        { MoveEvent: `${CONFIG.stakingPackageId}::pool::StakingPoolCreationEvent` },
+        null,
+        null,
+        'descending'
+    )
+    events.data.forEach(envelope => {
+      const event = envelope.event
+      if (!('moveEvent' in event)) {
+        throw new Error('Not a MoveEvent')
+      }
+      const dec = PoolCreateEvent.fromBcs(event.moveEvent.bcs, 'base64');
+      // console.log(dec)
+      poolIDs.push(dec.poolId)
+    })
+    const stakingPoolObjs = await provider.getObjectBatch(poolIDs);
+    return stakingPoolObjs[0];
+}
+export const findStakingMeta = async ( provider, walletAddress ) => {
+  const poolIDs = [];
+  // console.log(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent`);
+  const events = await provider.getEvents(
+      { MoveEvent: `${CONFIG.stakingPackageId}::pool::StakeCreationEvent` },
+      null,
+      null,
+      'descending'
+  )
+  events.data.forEach(envelope => {
+    const event = envelope.event
+    if (!('moveEvent' in event)) {
+      throw new Error('Not a MoveEvent')
+    }
+    const dec = PoolCreateEvent.fromBcs(event.moveEvent.bcs, 'base64');
+    // console.log(dec)
+    poolIDs.push(dec.poolId)
+  })
+  const poolObjs = await provider.getObjectBatch(poolIDs);
+  return await Promise.all(
+    poolObjs.filter(async res => res.details.owner.AddressOwner === walletAddress).map(item => {
+      const obj = getObjectExistsResponse(item)
+      return obj
+    })
+    // poolObjs.map(async res => {
+    //   console.log(res);
+    //   const obj = getObjectExistsResponse(res)
+    //   if(obj.owner.AddressOwner == walletAddress) {
+    //     console.log('very good', '----', obj)
+    //     return obj
+    //   }
+    // })
+  )
 }

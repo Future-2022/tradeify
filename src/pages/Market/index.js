@@ -172,10 +172,10 @@ const Market = (props) => {
 
                 if(isACS == true) {
                     inputAmountA = BigInt(firstTokenValue);
-                    inputAmountB = BigInt(secondTokenValue);
+                    inputAmountB = BigInt(secondTokenValue.toFixed(0));
                 } else {
                     inputAmountA = BigInt(secondTokenValue);
-                    inputAmountB = BigInt(firstTokenValue);
+                    inputAmountB = BigInt(firstTokenValue.toFixed(0));
                 }
                 await buyTLPSdk(globalContext.provider, wallet, { 
                     amountA: inputAmountA,
@@ -245,6 +245,7 @@ const Market = (props) => {
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
             })
+            console.log(totalLPValue);
             setTotalLPValue(totalLPValue);
             const newMetaData = LPMetaData(totalLPValue, lpCoins);
             SetLPMetaData(newMetaData.meta);

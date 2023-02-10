@@ -1,6 +1,4 @@
-import { ObjectId, SignableTransaction } from '@mysten/sui.js'
 import { PACKAGE_ID } from '../index'
-import { Type } from '../type'
 import { CONFIG } from '../../../config'
 
 export const mint_test_token_eth = (args) => {
@@ -33,7 +31,6 @@ export const mint_test_token_eth = (args) => {
 }
 
 export function maybeSplitThenDeposit( typeArgs, args ) {
-    // console.log(args.pool);
     return {
         kind: 'moveCall',
         data: {
@@ -80,7 +77,12 @@ export function maybeSplitThenSwapA(typeArgs, args) {
             module: 'pool',
             function: 'maybe_split_then_swap_a',
             typeArguments: [typeArgs.first, typeArgs.second],
-            arguments: [args.pool, args.input, args.amount.toString(), args.minOut.toString()],
+            arguments: [
+                args.pool, 
+                args.input, 
+                args.amount.toString(), 
+                args.minOut.toString()
+            ],
             gasBudget: 10000,
         },
     }
@@ -92,8 +94,96 @@ export function maybeSplitThenSwapB(typeArgs, args) {
             packageObjectId: PACKAGE_ID,
             module: 'pool',
             function: 'maybe_split_then_swap_b',
-            typeArguments: [typeArgs.first, typeArgs.second],
-            arguments: [args.pool, args.input, args.amount.toString(), args.minOut.toString()],
+            typeArguments: [
+                typeArgs.first, 
+                typeArgs.second
+            ],
+            arguments: [
+                args.pool,
+                args.input, 
+                args.amount.toString(), 
+                args.minOut.toString()
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+export function stakeTLPSdk(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.stakingPackageId,
+            module: 'pool',
+            function: 'stake_tlp_',
+            typeArguments: [typeArgs[0], typeArgs[1]],
+            arguments: [
+                CONFIG.stakingPoolId, 
+                args.tlpObjectId, 
+                args.stakeAmount, 
+                args.ownerAddress, 
+                args.currentTime.toString(), 
+                args.lockTime
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+export function depositTLPStakeSdk(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.stakingPackageId,
+            module: 'pool',
+            function: 'deposit_tlp_stake_',
+            typeArguments: [typeArgs[0], typeArgs[1]],
+            arguments: [
+                CONFIG.stakingPoolId, 
+                args.stakingMetaId, 
+                args.tlpObjectId, 
+                args.stakeAmount, 
+                args.currentTime.toString(), 
+                args.lockTime
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+export function rewardStakeSdk(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.stakingPackageId,
+            module: 'pool',
+            function: 'get_reward_',
+            typeArguments: [
+                typeArgs[0], 
+                typeArgs[1]
+            ],
+            arguments: [
+                CONFIG.stakingPoolId, 
+                args.stakingMetaId, 
+                args.currentTime.toString(), 
+                args.ownerAddress
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+export function unStakeSdk(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.stakingPackageId,
+            module: 'pool',
+            function: 'unstake_',
+            typeArguments: [
+                typeArgs[0], 
+                typeArgs[1]
+            ],
+            arguments: [
+                CONFIG.stakingPoolId, 
+                args.stakingMetaId, 
+            ],
             gasBudget: 10000,
         },
     }

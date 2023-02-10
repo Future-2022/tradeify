@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import { useMediaQuery } from 'react-responsive';
 
-import Switch from "./Switch";
 const Referral = (props) => {
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     return (
@@ -11,7 +10,6 @@ const Referral = (props) => {
             <div className='text-center container'>
                 <div className='mt-5'><h3 className='text-white font-bold'>Referrals</h3></div>
                 <div><p className='text-gray'>Get fee discounts and earn rebates through the Tradeify referral program{!isMobile && (<br />)}For more information, please read the <span className='text-decoration-underline'>referral program details.</span></p></div>
-                <Switch />
                 <div className='input-referral'>
                     <h4 className='text-white pt-4'>Enter Referral Code</h4>
                     <p className='text-gray'>Please input a referral code to benefit from fee discounts.</p>
