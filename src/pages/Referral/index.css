@@ -1,4 +1,5 @@
 .clipboard:focus {
+    color: #ddd6ff;
     color: white;
 }
 .trader-referral-part {

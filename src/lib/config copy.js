@@ -13,22 +13,22 @@ export const CONFIG = {
     btc: '0x37864b1010e7ddd17e1e37e39ca2da13152ae6d0::btc::BTC',
     try_id: '0x14c059ae71e3544a58404f9e8f6a062abf5cd599',
     try: '0xa12ec00a857dd0e67ea10c3b75f7e6fd2dc53313::try::TRY',    
-    tlp: '0xde36bc4b0e9f603ff4c649734adf2e82ed71da59::pool::TLP',
+    tlp: '0x501c635103059bb7a8b9298750bc48c9834e3283::pool::TLP',
 
     // mint, buy/sell, swap package
-    tradeifyPackageId: '0xde36bc4b0e9f603ff4c649734adf2e82ed71da59',
-    testTokenSupplyId: '0x8716ebd42c40475500bd814efb02eeb9860cb32b',
-    poolRegistryId: '0x703a401d9775f0dbc8051c522e1a83ecbf8718e6',
+    tradeifyPackageId: '0x501c635103059bb7a8b9298750bc48c9834e3283',
+    testTokenSupplyId: '0x34e2d9dcf07502cb110ebb2ec9450dfa2cc01fa6',
+    poolRegistryId: '0xab8848d0a1a806d9e4d58c4d4eecc66f68fa515f',
 
     // staking package
-    stakingPackageId: '0xde36bc4b0e9f603ff4c649734adf2e82ed71da59',
-    stakingPoolId: '0x9c5216bbeaef96ae361cd61fc61aaffe8242cc75',
+    stakingPackageId: '0xb74c018f2515af51193e66ff548bde544b543c69',
+    stakingPoolId: '0x9780f06a6478ee29f84f7dd93bead2d71de11a91',
 
     // referral package
-    referralPackageId: '0xde36bc4b0e9f603ff4c649734adf2e82ed71da59',
-    referRegistryId: '0xa2651bd3ababaac41d2b37543b2a7a27286bc41b',
-    refTraderRegistryId: '0x216c44a11e7b4a602480a639fc850650296d7190',
-    referralStaus: '0x7f7a8973aea2c35792bb8a77ea5d885e3c95d1c2',
+    referralPackageId: '0x13684d60fed92491bf23a957a9a20d7033891123',
+    referRegistryId: '0xfd8166024c68469f2d2d263451e046c98dca3335',
+    refTraderRegistryId: '0xae81bebbb103fb469ed7a255d5c060112ef2c535',
+    referralStaus: '0x47bc378d10a090fdf90d586f8cf60332433debea',
 
     // Main default setting parameter
     MainDecimal: 9,

@@ -114,9 +114,9 @@ module referral::referral {
         while (j < lenRefer) {
             let (key, value) = vec_map::get_entry_by_idx(&refer_registry.data, j);
             if(key.referralCode == referralCode) {
-                if (key.trader = trader) { 
+                if (key.refer != trader) { 
                     isReferFlag = true;
-                }
+                };
             };
             j = j + 1;
         };

@@ -56,7 +56,7 @@ const Header = () => {
     const [provider, setProvider] = useState({});
 
     const handleConnect = async (walletName) => {
-        await select(walletName.toString());        
+        await select(walletName.toString());  
         closeModal();
     }
     
@@ -74,15 +74,32 @@ const Header = () => {
     }
     const disconnectWallet = () => {
         disconnect();
-        localStorage.setItem('walletAddress', null);
     }
-    const getItem = async () => {     
-        if(localStorage.getItem('walletAddress') == "null" || localStorage.getItem('walletAddress') == "undefined" && localStorage.getItem('walletAddress')) {      
-            globalContext.setWallet(wallet);      
+    const connectWallet = () => {
+        globalContext.setModalIsOpen(true);
+    }
+    const openEarnMenu = () => {
+        setIsEarnMenu(true);
+    }
+    const closeModal = () => {
+        globalContext.setModalIsOpen(false);
+    }
+    useEffect(() => {
+        getItems();
+    }, [menuItem, connected])
+
+    const getItems = async () => {
+        
+        if(connected == false) {
+            await select(localStorage.getItem('preferredSuiWallet'))
+        }
+
+        if(connected == true) {
             const accounts = await wallet.getAccounts();
             localStorage.setItem('walletAddress', accounts[0]);
-            globalContext.setAccount(localStorage.getItem('walletAddress'));
-            getUserCoins(globalContext.provider, wallet).then(coins => {
+            await globalContext.setAccount(accounts[0]);
+            await globalContext.setWallet(wallet);
+            await getUserCoins(globalContext.provider, wallet).then(coins => {
                 const newCoins = getUniqueCoinTypes(coins).map(arg => {
                     return { value: arg, label: Coin.getCoinSymbol(arg) }
                 });
@@ -96,26 +113,7 @@ const Header = () => {
         }
         const path = location.pathname.split("/")[1];
         setMenuItem(path); 
-        if(!localStorage.getItem("walletAddress")) {
-            globalContext.setAccount(localStorage.getItem("walletAddress"));
-        } else {
-            globalContext.setAccount(undefined);
-        }
     }
-    const connectWallet = () => {
-        globalContext.setModalIsOpen(true);
-        localStorage.setItem('walletAddress', null);
-    }
-    const openEarnMenu = () => {
-        setIsEarnMenu(true);
-    }
-    const closeModal = () => {
-        globalContext.setModalIsOpen(false);
-    }
-    useEffect(() => {
-        getItem();
-    }, [menuItem, wallet])
-
     const mint_token = async (tokenType) => {
         const isLog = isLoggedIn();
         if(isLog == false) {
@@ -206,11 +204,11 @@ const Header = () => {
                                 <div className='d-flex justify-content-between' onClick={() => mint_token("btc")} ><img src={TokenIcon3} className='faucet-icon'/>BTC</div>
                             </div>
                         )}
-                        {globalContext.account == null && connected == false && (
+                        {connected && wallet && localStorage.getItem('walletAddress') ?
+                        (
+                            <div className='button d-flex mt-2' onClick={disconnectWallet}><div className='align-self-center'><img src={WalletIcon} className='wallet' /></div><p className='mb-0 ml-1 lh-33 align-self-center'>{ExportAddress(localStorage.getItem('walletAddress'))}</p></div>
+                        ):(
                             <div className='button d-flex mt-2' onClick={connectWallet}><div className='align-self-center'><img src={WalletIcon} className='wallet' /></div><p className='mb-0 ml-1 lh-33 align-self-center'>Connect Wallet</p></div>
-                        )}
-                        {globalContext.account != '' && connected == true && (
-                            <div className='button d-flex mt-2' onClick={disconnectWallet}><div className='align-self-center'><img src={WalletIcon} className='wallet' /></div><p className='mb-0 ml-1 lh-33 align-self-center'>{ExportAddress(localStorage.getItem('walletAddress').toString())}</p></div>
                         )}
                     </div>  
                 </div>

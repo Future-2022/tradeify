@@ -194,7 +194,7 @@ export function CreateReferralCodeSdk(args) {
         kind: 'moveCall',
         data: {
             packageObjectId: CONFIG.referralPackageId,
-            module: 'referral',
+            module: 'pool',
             function: 'create_referral_code_',
             typeArguments: [],
             arguments: [
@@ -211,7 +211,7 @@ export function SubmitReferralCodeSdk(args) {
         kind: 'moveCall',
         data: {
             packageObjectId: CONFIG.referralPackageId,
-            module: 'referral',
+            module: 'pool',
             function: 'submit_referral_code_',
             typeArguments: [],
             arguments: [

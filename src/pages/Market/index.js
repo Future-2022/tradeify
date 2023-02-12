@@ -33,7 +33,8 @@ const Market = (props) => {
     const [switchMarket, setSwitchMarket] = useState(1);
     const [activeLP, setActiveLP] = useState(null);
     const [totalLPValue, setTotalLPValue] = useState(null);
-    const [poolLPValue, setPoolLPValue] = useState(null);
+    const [TLPbalance, setTLPbalace] = useState('0');
+    const [poolLPValue, setPoolLPValue] = useState(0);
 
     // sell constant
     const [sellFirstTokenSymbol, setSellFirstTokenSymbol] = useState(null);
@@ -61,7 +62,7 @@ const Market = (props) => {
     const [isLPMenu, setIsLPMenu] = useState(false);
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
 
-    const [userLpCoin, setUserLPCoin] = useState([]);
+    const [userLpCoin, setUserLPCoin] = useState(undefined);
     const [lpCoin, SetLPCoin] = useState([]);
     const [lpMetaData, SetLPMetaData] = useState([]);
     const [lpToken, setLPToken] = useState(0);  
@@ -80,12 +81,22 @@ const Market = (props) => {
                 return { value: arg, label: Coin.getCoinSymbol(arg) }
             });
             const balance = getCoinBalances(item);
+            console.log(balance)
+            balance.forEach((item, key) => {
+                if(key == CONFIG.tlp) {
+                    setTLPbalace(Number(item).toString())
+                }
+            })
             setCoinBalance(balance);
             setCoins(newCoins)
         })
     }, [])
     const selectToken = (type) => {        
         const token = coins.filter(item => item.label == type);
+        if(token.length == 0) {
+            toast.error("You don't have this token, please mint token!");
+            setIsTokenMenu(false);
+        }
         let value = undefined;
         coinBalance.forEach((item, index) => {
             if(index == token[0].value) {
@@ -134,8 +145,8 @@ const Market = (props) => {
                 _getLpValue = (value * Number(item.data.lpSupply.value)) / Number(item.data.balanceB.value);
             }
         })        
-        setSecondTokenValue(_secondTokenValue);
-        setLPToken(_getLpValue);
+        setSecondTokenValue(_secondTokenValue.toFixed(0));
+        setLPToken(_getLpValue.toFixed(0));
     }
     
     const handleSecondTokenChange = (value) => {
@@ -172,10 +183,10 @@ const Market = (props) => {
 
                 if(isACS == true) {
                     inputAmountA = BigInt(firstTokenValue);
-                    inputAmountB = BigInt(secondTokenValue.toFixed(0));
+                    inputAmountB = BigInt(secondTokenValue);
                 } else {
                     inputAmountA = BigInt(secondTokenValue);
-                    inputAmountB = BigInt(firstTokenValue.toFixed(0));
+                    inputAmountB = BigInt(firstTokenValue);
                 }
                 await buyTLPSdk(globalContext.provider, wallet, { 
                     amountA: inputAmountA,
@@ -241,6 +252,7 @@ const Market = (props) => {
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+            console.log(lpCoins)
             let totalLPValue = 0;
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
@@ -252,7 +264,6 @@ const Market = (props) => {
             SetLPCoin(lpCoins);
         })
         fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
-            console.log(item);
             setUserLPCoin(item);
         })
     }, [globalContext.newCoins])
@@ -312,7 +323,7 @@ const Market = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>You will receive</p>
-                                        <p className='py-2'>{lpToken.toFixed(2)} TLP</p>
+                                        <p className='py-2'>{lpToken} TLP</p>
                                     </div>
                                 </div>  
                                 {globalContext.account == null && connected == false && (
@@ -339,7 +350,7 @@ const Market = (props) => {
                                     </div>
                                 </div>
                                 <div className='trade-token-select my-2 px-4 py-2'>
-                                    <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Max Amount : {poolLPValue}</h5></div>
+                                    <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Max Amount : {poolLPValue}</h5><h5 className='text-gray-light text-left fs-12'>TLP balance: {TLPbalance}</h5></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input' value={lpToken} placeholder='0.0' onChange={(e) => handleTLPTokenChange(e.target.value)}/>
                                         <div className='d-flex cursor-pointer' disabled={true} ><h5>TLP</h5></div>                                       

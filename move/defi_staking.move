@@ -1,4 +1,4 @@
-module staking::staking {
+module staking::pool {
     use sui::object::{Self, UID, ID};
     use sui::coin::{Self, Coin, TreasuryCap};
     use sui::balance::{Self, Balance, Supply, create_supply};

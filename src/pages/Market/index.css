@@ -10,6 +10,9 @@
     border-radius: 34px;
     border:2px solid rgb(94, 94, 94);
 }
+.text-gray-light {
+    color:#ada0ff;
+}
 .market-form-input > div {
     width: 33.33%;
     margin: 4px 4px;

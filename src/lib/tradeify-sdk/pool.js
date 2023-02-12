@@ -48,13 +48,11 @@ export const mint_test_token_fun = async (provider, wallet, args) => {
 }
 
 const calcLpValue = (lpAmount, pool) => {
-  console.log(pool);
   const [balanceA, balanceB, poolLpAmount] = [
     pool.data.balanceA.value,
     pool.data.balanceB.value,
     pool.data.lpSupply.value,
   ]
-  console.log(pool.metadata[0].decimals);
   if (lpAmount === 0n || balanceA === 0n || balanceB === 0n) {
     return [
       fromInt(0n, pool.metadata[0].decimals),
@@ -65,8 +63,6 @@ const calcLpValue = (lpAmount, pool) => {
   const amountA = (balanceA * BigInt(lpAmount)) / poolLpAmount
   const amountB = (balanceB * BigInt(lpAmount)) / poolLpAmount
   // console.log(fromInt(amountA, pool.metadata[0].decimals));
-  console.log(amountA);
-  console.log(amountB);
   return [
     amountA, amountB
   ]
@@ -129,7 +125,7 @@ export const buyTLPSdk = async (provider, wallet, args) => {
     ),
   ])
   
-  const minLpOut = ceilDiv(BigInt(args.lpAmount.toFixed(0)) * BigInt(100 - args.maxSlippagePct), 100n);
+  const minLpOut = ceilDiv(BigInt(args.lpAmount) * BigInt(100 - args.maxSlippagePct), 100n);
   const tx = maybeSplitThenDeposit([args.pool.data.balanceA.type, args.pool.data.balanceB.type], {
     pool: args.pool.id,
     inputA: inputA.id,

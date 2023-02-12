@@ -103,6 +103,7 @@ const Earn = (props) => {
         });
         findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
             res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
+                console.log(item);
                 setHasStakingMeta(true);
                 setUserStakingStatus(item);
             })
@@ -119,7 +120,7 @@ const Earn = (props) => {
                 totalLPValue += Number(item.data.lpSupply.value);
             })
             console.log(totalLPValue);
-            if(stakingPoolStatus != undefined) {
+            if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
                 let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
                 let currentTimestamp = Date.now();
                 let Reward = 100 * (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);

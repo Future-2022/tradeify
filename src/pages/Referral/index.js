@@ -2,13 +2,16 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import './index.css';
 import { useMediaQuery } from 'react-responsive';
+import { useWallet } from '@mysten/wallet-adapter-react';
 import { StoreContext } from '../../store';
 import { createReferralCode, submitReferralCode } from '../../lib/tradeify-sdk/referral';
 import { getReferralStatus, getTraderStatus } from '../../control/main';
 import { FaClipboard } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
+import LoadingSpin from "react-loading-spin";
 
 const Referral = (props) => {
+    const { wallets, wallet, select, connected, disconnect } = useWallet();
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const inputArea = useRef(undefined);
     const [formIndex, setFormIndex] = useState(1);
@@ -26,13 +29,9 @@ const Referral = (props) => {
         const code = new URLSearchParams(location.search).get('ref')
         setReferralCodeValue(code);
         getReferralStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            if(item.referralCode == undefined) {
-                setReferralCodeValue('');
-            }
             setReferralCode(item.referralCode);
             setTraderNum(item.traderNum);
             setReferralLink(item.referralLink);
-            setReferralCodeValue(item.referralCode);
         })
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setTraderReferralCode(item.referralCode);
@@ -41,9 +40,9 @@ const Referral = (props) => {
     
     const selectFormIndex = (value) => {
         setFormIndex(value);
-        setReferralCodeValue('');
     }
     const create_refer_code = () => {
+        console.log(referralCodeValue);
         createReferralCode(globalContext.provider, globalContext.wallet, {
             referralCode: referralCodeValue
         }).then(args => {
@@ -97,10 +96,22 @@ const Referral = (props) => {
 
                     {formIndex == 1 && (
                         <>
-                        {referralCodeValue == undefined && (
-                            <></>
-                        )}
-                        {referralCodeValue == '' && (
+                        {/* {referralCodeValue == undefined && (
+                            <div className='pt-5'>
+                                <LoadingSpin
+                                    duration="1s"
+                                    width="5px"
+                                    timingFunction="ease-in-out"
+                                    direction="alternate"
+                                    size="200px"
+                                    primaryColor="#666"
+                                    secondaryColor="#333"
+                                    numberOfRotationsInAnimation={2}
+                                />
+                                <p className='text-gray'>Loading data...</p>
+                            </div>
+                        )} */}
+                        {traderReferralCode == undefined && (
                             <div className='input-referral'>
                                 <h4 className='text-white pt-1'>Enter Referral Code</h4>
                                 <p className='text-gray'>Please input a referral code to benefit from fee discounts.<br /> You can input valid code on this tradefiy platform.</p>
@@ -108,7 +119,7 @@ const Referral = (props) => {
                                 <div className='referral-button' onClick={submit_refer_code}>Enter referral code</div>
                             </div>
                         )}
-                        {referralCodeValue != undefined && (
+                        {traderReferralCode != undefined && (
                             <div className='w-100'>
                                 <div className='mt-5 trader-referral-part referral-part flex-wrap d-flex justify-content-center mt-3 p-5'>
                                     <div>
@@ -131,7 +142,7 @@ const Referral = (props) => {
 
                     {formIndex == 2  && (
                         <>
-                            {referralCodeValue == '' && (
+                            {referralCode == undefined && (
                                 <div className='input-referral'>
                                     <h4 className='text-white pt-1'>Generate Referral Code</h4>
                                     <p className='text-gray'>Looks like you don't have a referral code to share.<br/>Create one now and start earning rebates!</p>
@@ -139,7 +150,7 @@ const Referral = (props) => {
                                     <div className='referral-button' onClick={create_refer_code}>Enter a code</div>
                                 </div>
                             )}
-                            {referralCodeValue != undefined && (
+                            {referralCode != undefined && (
                                 <div className='w-100 trader-referral-part mt-4'>
                                     <div className='flex-wrap referral-part d-flex justify-content-center p-4'>
                                         <div>
