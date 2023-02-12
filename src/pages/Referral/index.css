@@ -1,3 +1,53 @@
+.clipboard:focus {
+    color: white;
+}
+.trader-referral-part {
+    border: 1px solid #9a91be10;
+}
+.referral-part > div {
+    border: 1px solid #9a91be52;
+    padding: 24px;
+    width: 270px;
+    margin: 0 15px;
+}
+.referral-part > div:hover {
+    transition: 200ms;
+    box-shadow: 0px 5px 20px 1px rgba(156, 53, 196, 0.269);
+}
+.referral-code-part {
+    border: 1px solid #9a91be52;
+    padding: 12px 24px;
+    border-radius: 24px;
+}
+.referral-part > div > p {
+    color: #9a91be;
+    font-size: 17px;
+    font-weight: 400;
+}
+.referral-part > div > h5 {
+    color: white;
+    padding-top: 10px;
+    font-size: 28px;
+}
+.referral-form-input {
+    border: 1px solid #777096b3;
+    width: 320px;
+    height: 50px;
+    font-size: 16px;
+    margin: auto;
+    margin-top: 25px;
+    border-radius: 25px;
+}
+.referral-form-input > .active {
+    background-color:#ff6f6f;
+    color: white;
+    border-radius: 24px;
+}
+.referral-form-input > div {
+    border-radius: 24px;
+    padding: 7px;
+    cursor: pointer;
+}
 .input-referral {    
     border: 1px solid rgba(128, 128, 128, 0.289);
     width: 40%;
@@ -5,6 +55,7 @@
     margin-top: 35px;
     border-radius: 5px;
     padding: 41px 46px;
+    height: 320px;
 }
 .referral {
     background-color: rgba(250, 235, 215, 0);

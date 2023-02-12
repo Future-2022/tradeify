@@ -189,3 +189,39 @@ export function unStakeSdk(typeArgs, args) {
     }
 }
 
+export function CreateReferralCodeSdk(args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.referralPackageId,
+            module: 'referral',
+            function: 'create_referral_code_',
+            typeArguments: [],
+            arguments: [
+                args.referralCode,
+                CONFIG.referralStaus,
+                CONFIG.referRegistryId
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+export function SubmitReferralCodeSdk(args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.referralPackageId,
+            module: 'referral',
+            function: 'submit_referral_code_',
+            typeArguments: [],
+            arguments: [
+                args.referralCode,
+                CONFIG.referralStaus,
+                CONFIG.refTraderRegistryId,
+                CONFIG.referRegistryId,
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+

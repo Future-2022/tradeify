@@ -3,9 +3,6 @@ import {
     Provider,
     Coin as SuiCoin,
     getObjectExistsResponse,
-    JsonRpcProvider,
-    getCreatedObjects,
-    TransactionEffects
 } from '@mysten/sui.js'
 import { WalletAdapter } from '@mysten/wallet-adapter-base';
 import { Balance } from '../control/balance';
@@ -305,7 +302,6 @@ export const findStakingMeta = async ( provider, walletAddress ) => {
       throw new Error('Not a MoveEvent')
     }
     const dec = PoolCreateEvent.fromBcs(event.moveEvent.bcs, 'base64');
-    // console.log(dec)
     poolIDs.push(dec.poolId)
   })
   const poolObjs = await provider.getObjectBatch(poolIDs);
@@ -314,13 +310,56 @@ export const findStakingMeta = async ( provider, walletAddress ) => {
       const obj = getObjectExistsResponse(item)
       return obj
     })
-    // poolObjs.map(async res => {
-    //   console.log(res);
-    //   const obj = getObjectExistsResponse(res)
-    //   if(obj.owner.AddressOwner == walletAddress) {
-    //     console.log('very good', '----', obj)
-    //     return obj
-    //   }
-    // })
   )
+}
+
+export const getReferralStatus = async (provider, wallet) => {
+  const referralStatusAddress = [];
+  referralStatusAddress.push(CONFIG.referRegistryId);
+  referralStatusAddress.push(CONFIG.refTraderRegistryId);
+  referralStatusAddress.push(CONFIG.referralStaus);
+  const refer = await provider.getObjectBatch(referralStatusAddress);
+  
+  const referData = refer[0].details.data.fields.data.fields.contents;
+
+  // get Referral Code
+  let referralCode = undefined;
+  referData.map(item => {
+    if(item.fields.key.fields.refer == wallet) {
+      referralCode = item.fields.key.fields.referralCode;
+    }
+  })
+
+  // get Trader Info
+  let traderNum = 0;
+  const traderData = refer[1].details.data.fields.data.fields.contents;
+  traderData.map(item => {
+    if(item.fields.key.fields.referralCode == referralCode) {
+      traderNum++;
+    }
+  })
+
+  // create referral link
+  let referralLink = CONFIG.link + 'referral?ref=' + referralCode;
+  return {referralCode, traderNum, referralLink};
+}
+
+
+export const getTraderStatus = async (provider, wallet) => {
+  const referralStatusAddress = [];
+  referralStatusAddress.push(CONFIG.referRegistryId);
+  referralStatusAddress.push(CONFIG.refTraderRegistryId);
+  referralStatusAddress.push(CONFIG.referralStaus);
+  const refer = await provider.getObjectBatch(referralStatusAddress);
+  
+  const referData = refer[1].details.data.fields.data.fields.contents;
+
+  // get Referral Code
+  let referralCode = undefined;
+  referData.map(item => {
+    if(item.fields.key.fields.trader == wallet) {
+      referralCode = item.fields.key.fields.referralCode;
+    }
+  })
+  return {referralCode};
 }
