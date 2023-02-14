@@ -74,6 +74,7 @@ const Header = () => {
     }
     const disconnectWallet = () => {
         disconnect();
+        globalContext.setAccount(null);
     }
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);

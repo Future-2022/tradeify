@@ -57,7 +57,7 @@ module referral::referral {
         total_refer: u64,
         total_trader: u64
     }
-
+    //
     fun new_refer_registry(ctx: &mut TxContext): ReferRegistry {
         ReferRegistry { 
             id: object::new(ctx),
@@ -106,7 +106,6 @@ module referral::referral {
             assert!(key.trader != trader, EReferAlreadyExistsTrader);
             i = i + 1;
         };
-
 
         let j = 0;
         let lenRefer = vec_map::size(&refer_registry.data);

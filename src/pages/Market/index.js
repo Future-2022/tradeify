@@ -68,9 +68,11 @@ const Market = (props) => {
     const [lpToken, setLPToken] = useState(0);  
     const [poolId, setPoolId] = useState(null);  
 
-    const [coins, setCoins] = useState([]);
+    const [coins, setCoins] = useState(undefined);
     const [coinBalance, setCoinBalance] = useState([]);
-
+    const connectWallet = () => {
+        globalContext.setModalIsOpen(true);
+    }
     const openTokenModal = (part) => {
         setIsSelectActive(part);
         setIsTokenMenu(true);
@@ -92,25 +94,30 @@ const Market = (props) => {
         })
     }, [])
     const selectToken = (type) => {        
-        const token = coins.filter(item => item.label == type);
-        if(token.length == 0) {
-            toast.error("You don't have this token, please mint token!");
+        if(coins == undefined) {
+            toast.info("please wait for a few sec. now loading data");
+            setIsTokenMenu(false);
+        } else {
+            const token = coins.filter(item => item.label == type);
+            if(token.length == 0) {
+                toast.error("You don't have this token, please mint token!");
+                setIsTokenMenu(false);
+            }
+            let value = undefined;
+            coinBalance.forEach((item, index) => {
+                if(index == token[0].value) {
+                    value = item;
+                }
+            });
+            if(isSelectActive == 1) {
+                setFirstToken(token);
+                setFirstTokenMaxValue(value);
+            } else {
+                setSecondToken(token);
+                setSecondTokenMaxValue(value);
+            }
             setIsTokenMenu(false);
         }
-        let value = undefined;
-        coinBalance.forEach((item, index) => {
-            if(index == token[0].value) {
-                value = item;
-            }
-        });
-        if(isSelectActive == 1) {
-            setFirstToken(token);
-            setFirstTokenMaxValue(value);
-        } else {
-            setSecondToken(token);
-            setSecondTokenMaxValue(value);
-        }
-        setIsTokenMenu(false);
     }
 
     const selectPercentage = (index, value) => {
@@ -327,7 +334,7 @@ const Market = (props) => {
                                     </div>
                                 </div>  
                                 {globalContext.account == null && connected == false && (
-                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3'>Connect Wallet</div>
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={connectWallet}>Connect Wallet</div>
                                 )}                       
                                 {globalContext.account != '' && connected == true && (
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={() => buyTLP()}>Buy TLP</div>

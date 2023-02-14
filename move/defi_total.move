@@ -15,7 +15,6 @@ module tradeify::pool {
     use std::option::{Self, Option};
     use sui::vec_map::{Self, VecMap};
 
-    /// The number of basis points in 100%.
     const BPS_IN_100_PCT: u64 = 100 * 100;
 
     const ETableNotEmpty: u64 = 0;
@@ -24,22 +23,13 @@ module tradeify::pool {
     const EReferAlreadyExistsCode: u64 = 126;
     const NotReferralCode: u64 = 127;
     const EExcessiveSlippage: u64 = 356;
-    /// For when supplied Coin is zero.
-    /// The input amount is zero.
     const EZeroInput: u64 = 1;
-    /// The pool ID doesn't match the required.
     const EInvalidPoolID: u64 = 2;
-    /// There's no liquidity in the pool.
     const ENoLiquidity: u64 = 3;
-    /// Fee parameter is not valid.
     const EInvalidFeeParam: u64 = 4;
-    /// The provided admin capability doesn't belong to this pool.
     const EInvalidAdminCap: u64 = 5;
-    /// Pool pair coin types must be ordered alphabetically (`A` < `B`) and mustn't be equal.
     const EInvalidPair: u64 = 6;
-    /// Pool for this pair already exists.
     const EPoolAlreadyExists: u64 = 7;
-
     const INVALID_USER: u64 = 136;
     const ETOKEN_TIME_LOCK_IS_SOME: u64 = 137;
     const STAKINGLOCK: u64 = 135;
@@ -67,6 +57,7 @@ module tradeify::pool {
     fun ceil_div_u128(a: u128, b: u128): u128 {
         if (a == 0) 0 else (a - 1) / b + 1
     }
+
     fun cmp_type_names(a: &TypeName, b: &TypeName): u8 {
         let bytes_a = std::ascii::as_bytes(type_name::borrow_string(a));
         let bytes_b = std::ascii::as_bytes(type_name::borrow_string(b));
@@ -99,7 +90,7 @@ module tradeify::pool {
             2
         }
     }
-
+    
     /// Creat a new empty `PoolRegistry`.
     fun new_registry(ctx: &mut TxContext): PoolRegistry {
         PoolRegistry { 
@@ -118,6 +109,84 @@ module tradeify::pool {
 
         table::add(&mut self.table, item, true)
     }
+
+    fun new_refer_registry(ctx: &mut TxContext): ReferRegistry {
+        ReferRegistry { 
+            id: object::new(ctx),
+            data: vec_map::empty()
+        }
+    }
+
+    fun add_refer_registry(refer_registry: &mut ReferRegistry, refer: ID, referralCode: u64) {
+        let item = ReferRegistryItem {
+            refer,
+            referralCode
+        };
+        let len = vec_map::size(&refer_registry.data);
+        let i = 0;
+        while (i < len) {            
+            let (key, value) = vec_map::get_entry_by_idx(&refer_registry.data, i);
+            assert!(key.refer != refer, EReferAlreadyExistsRefer);
+            assert!(key.referralCode != referralCode, EReferAlreadyExistsCode);
+            i =i + 1;
+        };
+        vec_map::insert(&mut refer_registry.data, item, true);
+    }
+
+    fun new_refTrader_registry(ctx: &mut TxContext): RefTraderRegistry {
+        RefTraderRegistry {
+            id: object::new(ctx),
+            data: vec_map::empty()
+        }
+    }
+
+    fun add_refTrader_registry(
+        refTrader_registry: &mut RefTraderRegistry, 
+        trader: ID, 
+        referralCode: u64, 
+        refer_registry: & ReferRegistry
+    ) {
+        let item = RefTraderRegistryItem {
+            trader,
+            referralCode
+        };
+        let lenRefTrader = vec_map::size(&refTrader_registry.data);        
+
+        let i = 0;
+        while (i < lenRefTrader) {            
+            let (key, value) = vec_map::get_entry_by_idx(&refTrader_registry.data, i);
+            assert!(key.trader != trader, EReferAlreadyExistsTrader);
+            i = i + 1;
+        };
+
+
+        let j = 0;
+        let lenRefer = vec_map::size(&refer_registry.data);
+        let isReferFlag = false;
+        while (j < lenRefer) {
+            let (key, value) = vec_map::get_entry_by_idx(&refer_registry.data, j);
+            if(key.referralCode == referralCode) {
+                if (key.refer != trader) { 
+                    isReferFlag = true;
+                }
+            };
+            j = j + 1;
+        };
+        assert!(isReferFlag == true, NotReferralCode);
+        vec_map::insert(&mut refTrader_registry.data, item, true);
+    }
+
+    fun destroy_or_transfer_balance<T>(balance: Balance<T>, recipient: address, ctx: &mut TxContext) {
+        if (balance::value(&balance) == 0) {
+            balance::destroy_zero(balance);
+            return
+        };
+        transfer::transfer(
+            coin::from_balance(balance, ctx),
+            recipient
+        );
+    }
+
     /// A shared object to wrapped the test token supply
     struct TestTokenSupply has key {
         id: UID,
@@ -277,6 +346,15 @@ module tradeify::pool {
                 supply_try: 0,
             }
         );
+        transfer::share_object(
+            TradingPool {
+                id: object::new(ctx),
+                openPosition: 0,
+                closePosition: 0,
+                totalPosition: 0,
+                data: vec_map::empty(),
+            }
+        );
         transfer::share_object(new_refer_registry(ctx));
         transfer::share_object(new_refTrader_registry(ctx));
         transfer::share_object(
@@ -286,108 +364,23 @@ module tradeify::pool {
                 total_trader: 0
             }
         )
-    }
-
-    fun new_refer_registry(ctx: &mut TxContext): ReferRegistry {
-        ReferRegistry { 
-            id: object::new(ctx),
-            data: vec_map::empty()
-        }
-    }
-
-    fun add_refer_registry(refer_registry: &mut ReferRegistry, refer: ID, referralCode: u64) {
-        let item = ReferRegistryItem {
-            refer,
-            referralCode
-        };
-        let len = vec_map::size(&refer_registry.data);
-        let i = 0;
-        while (i < len) {            
-            let (key, value) = vec_map::get_entry_by_idx(&refer_registry.data, i);
-            assert!(key.refer != refer, EReferAlreadyExistsRefer);
-            assert!(key.referralCode != referralCode, EReferAlreadyExistsCode);
-            i =i + 1;
-        };
-        vec_map::insert(&mut refer_registry.data, item, true);
-    }
-
-    fun new_refTrader_registry(ctx: &mut TxContext): RefTraderRegistry {
-        RefTraderRegistry {
-            id: object::new(ctx),
-            data: vec_map::empty()
-        }
-    }
-
-    fun add_refTrader_registry(
-        refTrader_registry: &mut RefTraderRegistry, 
-        trader: ID, 
-        referralCode: u64, 
-        refer_registry: & ReferRegistry
-    ) {
-        let item = RefTraderRegistryItem {
-            trader,
-            referralCode
-        };
-        let lenRefTrader = vec_map::size(&refTrader_registry.data);        
-
-        let i = 0;
-        while (i < lenRefTrader) {            
-            let (key, value) = vec_map::get_entry_by_idx(&refTrader_registry.data, i);
-            assert!(key.trader != trader, EReferAlreadyExistsTrader);
-            i = i + 1;
-        };
-
-
-        let j = 0;
-        let lenRefer = vec_map::size(&refer_registry.data);
-        let isReferFlag = false;
-        while (j < lenRefer) {
-            let (key, value) = vec_map::get_entry_by_idx(&refer_registry.data, j);
-            if(key.referralCode == referralCode) {
-                if (key.refer != trader) { 
-                    isReferFlag = true;
-                }
-            };
-            j = j + 1;
-        };
-        assert!(isReferFlag == true, NotReferralCode);
-        vec_map::insert(&mut refTrader_registry.data, item, true);
-    }
-
-    // entry fun init_token_id<T>(c: &mut TreasuryCap<T>,d: &mut TreasuryCap<T>, token_supply: &mut TestTokenSupply) {
-    //     token_supply.btc_id = object::uid_to_inner(&c);
-    //     token_supply.eth_id = object::uid_to_inner(&c);
-    // }
-    fun destroy_or_transfer_balance<T>(balance: Balance<T>, recipient: address, ctx: &mut TxContext) {
-        if (balance::value(&balance) == 0) {
-            balance::destroy_zero(balance);
-            return
-        };
-        transfer::transfer(
-            coin::from_balance(balance, ctx),
-            recipient
-        );
-    }
+    }    
 
     entry fun mint_test_token_btc<T>(c: &mut TreasuryCap<T>, token_supply: &mut TestTokenSupply, amount: u64, recipient: address, ctx: &mut TxContext) {
-        // Admin could mint with a amount set for testing usage
         token_supply.supply_btc = token_supply.supply_btc + amount;
         coin::mint_and_transfer<T>(c, amount, recipient, ctx);
     }
 
     entry fun mint_test_token_eth<T>(c: &mut TreasuryCap<T>, token_supply: &mut TestTokenSupply, amount: u64, recipient: address, ctx: &mut TxContext) {
-        // Admin could mint with a amount set for testing usage
         token_supply.supply_eth = token_supply.supply_eth + amount;
         coin::mint_and_transfer<T>(c, amount, recipient, ctx); 
     }
     
     entry fun mint_test_token_try<T>(c: &mut TreasuryCap<T>, token_supply: &mut TestTokenSupply, amount: u64, recipient: address, ctx: &mut TxContext) {
-        // Admin could mint with a amount set for testing usage
         token_supply.supply_try = token_supply.supply_try + amount;
         coin::mint_and_transfer<T>(c, amount, recipient, ctx); 
     }
 
-    /// Calclates swap result and fees based on the input amount and current pool state.
     fun calc_swap_result(
         i_value: u64,
         i_pool_value: u64,
@@ -396,14 +389,12 @@ module tradeify::pool {
         lp_fee_bps: u64,
         admin_fee_pct: u64
     ): (u64, u64) {
-        // calc out value
+
         let lp_fee_value = ceil_muldiv(i_value, lp_fee_bps, BPS_IN_100_PCT);
         let in_after_lp_fee = i_value - lp_fee_value;
         let out_value = muldiv(in_after_lp_fee, o_pool_value, i_pool_value + in_after_lp_fee);
 
-        // calc admin fee
         let admin_fee_value = muldiv(lp_fee_value, admin_fee_pct, 100);
-        // dL = L * sqrt((A + dA) / A) - L = sqrt(L^2(A + dA) / A) - L
         let admin_fee_in_lp = (math::sqrt_u128(
             muldiv_u128(
                 (pool_lp_value as u128) * (pool_lp_value as u128),
@@ -424,15 +415,12 @@ module tradeify::pool {
         ctx: &mut TxContext,
     ): Balance<TLP> {
 
-        // sanity checks
         assert!(balance::value(&init_a) > 0 && balance::value(&init_b) > 0, EZeroInput);
         assert!(lp_fee_bps < BPS_IN_100_PCT, EInvalidFeeParam);
         assert!(admin_fee_pct <= 100, EInvalidFeeParam);
 
-        // add to registry (guarantees that there's only one pool per currency pair)
         registry_add<A, B>(registry);
 
-        // create pool
         let pool = Pool<A, B> {
             id: object::new(ctx),
             balance_a: init_a,
@@ -443,7 +431,6 @@ module tradeify::pool {
             admin_fee_balance: balance::zero<TLP>()
         };
 
-        // mint initial lp tokens
         let lp_amt = mulsqrt(balance::value(&pool.balance_a), balance::value(&pool.balance_b));
         let lp_balance = balance::increase_supply(&mut pool.lp_supply, lp_amt);
 
@@ -453,8 +440,6 @@ module tradeify::pool {
         lp_balance
     }
 
-    /// Entry function. Creates a new Pool with provided initial balances. Transfers
-    /// the initial LP coins to the sender.
     public fun create_pool_<A, B>(
         registry: &mut PoolRegistry,
         init_a: Coin<A>,
@@ -477,23 +462,15 @@ module tradeify::pool {
         );
     }
 
-    /// Deposit liquidity into pool. The deposit will use up the maximum amount of
-    /// the provided balances possible depending on the current pool ratio. Usually
-    /// this means that all of either `input_a` or `input_b` will be fully used, while
-    /// the other only partially. Otherwise, both input values will be fully used.
-    /// Returns the remaining input amounts (if any) and LPCoin of appropriate value.
-    /// Fails if the value of the issued LPCoin is smaller than `min_lp_out`. 
     public fun deposit<A, B>(
         pool: &mut Pool<A, B>,
         input_a: Balance<A>,
         input_b: Balance<B>,
         min_lp_out: u64
     ): (Balance<A>, Balance<B>, Balance<TLP>) {
-        // sanity checks
         assert!(balance::value(&input_a) > 0, EZeroInput);
         assert!(balance::value(&input_b) > 0, EZeroInput);
 
-        // calculate the deposit amounts
         let dab: u128 = (balance::value(&input_a) as u128) * (balance::value(&pool.balance_b) as u128);
         let dba: u128 = (balance::value(&input_b) as u128) * (balance::value(&pool.balance_a) as u128);
 
@@ -526,10 +503,8 @@ module tradeify::pool {
             deposit_a = balance::value(&input_a);
             deposit_b = balance::value(&input_b);
             if (balance::supply_value(&pool.lp_supply) == 0) {
-                // in this case both pool balances are 0 and lp supply is 0
                 lp_to_issue = mulsqrt(deposit_a, deposit_b);
             } else {
-                // the ratio of input a and b matches the ratio of pool balances
                 lp_to_issue = muldiv(
                     deposit_a,
                     balance::supply_value(&pool.lp_supply),
@@ -538,7 +513,6 @@ module tradeify::pool {
             }
         };
 
-        // deposit amounts into pool 
         balance::join(
             &mut pool.balance_a,
             balance::split(&mut input_a, deposit_a)
@@ -548,20 +522,12 @@ module tradeify::pool {
             balance::split(&mut input_b, deposit_b)
         );
 
-        // mint lp coin
         assert!(lp_to_issue >= min_lp_out, EExcessiveSlippage);
         let lp = balance::increase_supply(&mut pool.lp_supply, lp_to_issue);
 
-        // return
         (input_a, input_b, lp)
     }
 
-    /// Entry function. Deposit liquidity into pool. The deposit will use up the maximum
-    /// amount of the provided coins possible depending on the current pool ratio. Usually
-    /// this means that all of either `input_a` or `input_b` will be fully used, while
-    /// the other only partially. Otherwise, both input values will be fully used.
-    /// Transfers the remaining input amounts (if any) and LPCoin of appropriate value
-    /// to the sender. Fails if the value of the issued LPCoin is smaller than `min_lp_out`. 
     public fun deposit_<A, B>(
         pool: &mut Pool<A, B>,
         input_a: Coin<A>,
@@ -573,7 +539,6 @@ module tradeify::pool {
             pool, coin::into_balance(input_a), coin::into_balance(input_b), min_lp_out
         );
 
-        // transfer the output amounts to the caller (if any)
         let sender = tx_context::sender(ctx);
         destroy_or_transfer_balance(remaining_a, sender, ctx);
         destroy_or_transfer_balance(remaining_b, sender, ctx);
@@ -586,10 +551,8 @@ module tradeify::pool {
         min_a_out: u64,
         min_b_out: u64,
     ): (Balance<A>, Balance<B>) {
-        // sanity checks
         assert!(balance::value(&lp_in) > 0, EZeroInput);
 
-        // calculate output amounts
         let lp_in_value = balance::value(&lp_in);
         let pool_a_value = balance::value(&pool.balance_a);
         let pool_b_value = balance::value(&pool.balance_b);
@@ -600,20 +563,14 @@ module tradeify::pool {
         assert!(a_out >= min_a_out, EExcessiveSlippage);
         assert!(b_out >= min_b_out, EExcessiveSlippage);
 
-        // burn lp tokens
         balance::decrease_supply(&mut pool.lp_supply, lp_in);
 
-        // return amounts
         (
             balance::split(&mut pool.balance_a, a_out),
             balance::split(&mut pool.balance_b, b_out)
         )
     }
 
-    /// Entry function. Burns the provided LPCoin and withdraws corresponding
-    /// pool balances. Fails if the withdrawn balances are smaller than
-    /// `min_a_out` and `min_b_out` respectively. Transfers the withdrawn balances
-    /// to the sender.
     public fun withdraw_<A, B>(
         pool: &mut Pool<A, B>,
         lp_in: Coin<TLP>,
@@ -631,14 +588,12 @@ module tradeify::pool {
     public fun swap_a<A, B>(
         pool: &mut Pool<A, B>, input: Balance<A>, min_out: u64,
     ): Balance<B> {
-        // sanity checks
         assert!(balance::value(&input) > 0, EZeroInput);
         assert!(
             balance::value(&pool.balance_a) > 0 && balance::value(&pool.balance_b) > 0,
             ENoLiquidity
         );
 
-        // calculate swap result
         let i_value = balance::value(&input);
         let i_pool_value = balance::value(&pool.balance_a);
         let o_pool_value = balance::value(&pool.balance_b);
@@ -650,21 +605,16 @@ module tradeify::pool {
 
         assert!(out_value >= min_out, EExcessiveSlippage);
 
-        // deposit admin fee
         balance::join(
             &mut pool.admin_fee_balance,
             balance::increase_supply(&mut pool.lp_supply, admin_fee_in_lp)
         );
 
-        // deposit input
         balance::join(&mut pool.balance_a, input);
 
-        // return output
         balance::split(&mut pool.balance_b, out_value)
     }
 
-    /// Entry function. Swaps the provided amount of A for B. Fails if the resulting
-    /// amount of B is smaller than `min_out`. Transfers the resulting Coin to the sender.
     public fun swap_a_<A, B>(
         pool: &mut Pool<A, B>, input: Coin<A>, min_out: u64, ctx: &mut TxContext
     ) {
@@ -675,14 +625,12 @@ module tradeify::pool {
     public fun swap_b<A, B>(
         pool: &mut Pool<A, B>, input: Balance<B>, min_out: u64
     ): Balance<A> {
-        // sanity checks
         assert!(balance::value(&input) > 0, EZeroInput);
         assert!(
             balance::value(&pool.balance_a) > 0 && balance::value(&pool.balance_b) > 0,
             ENoLiquidity
         );
 
-        // calculate swap result
         let i_value = balance::value(&input);
         let i_pool_value = balance::value(&pool.balance_b);
         let o_pool_value = balance::value(&pool.balance_a);
@@ -694,21 +642,16 @@ module tradeify::pool {
 
         assert!(out_value >= min_out, EExcessiveSlippage);
 
-        // deposit admin fee
         balance::join(
             &mut pool.admin_fee_balance,
             balance::increase_supply(&mut pool.lp_supply, admin_fee_in_lp)
         );
 
-        // deposit input
         balance::join(&mut pool.balance_b, input);
 
-        // return output
         balance::split(&mut pool.balance_a, out_value)
     }
 
-    /// Entry function. Swaps the provided amount of B for A. Fails if the resulting
-    /// amount of A is smaller than `min_out`. Transfers the resulting Coin to the sender.
     public fun swap_b_<A, B>(
         pool: &mut Pool<A, B>, input: Coin<B>, min_out: u64, ctx: &mut TxContext
     ) {
@@ -729,8 +672,6 @@ module tradeify::pool {
         return out
     }
 
-    /// Splits the input Coins to desired values and then does the pool creation. Returns the remainders
-    /// to the sender (if any).
     public entry fun maybe_split_then_create_pool<A, B>(
         registry: &mut PoolRegistry,
         input_a: Coin<A>,

@@ -47,12 +47,7 @@ module staking::pool {
         stake_id: ID,
         owner: ID
     }
-
-    struct StakingTimeInterval  has key, store {
-        id: UID,
-        interval: EpochTimeLock
-    }
-
+    
     struct StakingMeta<phantom A> has key, store {
         id: UID,
         owner: ID,

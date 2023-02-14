@@ -16,13 +16,13 @@ import { StoreContext } from '../../store';
 const Trade = (props) => {
     const globalContext = useContext(StoreContext);     
     const [market, setMarket] = useState('SUI');
-    const [isMarketMenu, setIsMarketMenu] = useState(false);
+    // const [isMarketMenu, setIsMarketMenu] = useState(false);
     
     const selectMarket = (market) => {
         setMarket(market);
         console.log(market);
         globalContext.setIsAlterSecondToken(market);
-        setIsMarketMenu(false);
+        // setIsMarketMenu(false);
     }
     return (
         <div className='container pt-5 text-center'>
@@ -30,8 +30,8 @@ const Trade = (props) => {
                 <div className='t-w-1'>
                     <div className='trade-header d-flex justify-content-between'>
                         <div className='d-flex'>
-                            <h4 className='text-white m-auto cursor-pointer token-title' onClick={() => setIsMarketMenu(true)}>{market}/USD</h4>
-                            <FaAngleDown className='m-auto fs-28 text-white' />
+                            <h4 className='text-white m-auto cursor-pointer token-title'>{globalContext.marketToken}/USD</h4>
+                            {/* <FaAngleDown className='m-auto fs-28 text-white' /> */}
                         </div>
                         <div className='d-flex trade-result flex-wrap justify-content-between'>
                             <div>
@@ -72,7 +72,7 @@ const Trade = (props) => {
                     <TradeForm />           
                 </div>
             </div>
-            {isMarketMenu && (
+            {/* {isMarketMenu && (
                 <div>
                     <div className='mask-background'></div>
                     <div className='token-menu p-4'>
@@ -125,7 +125,7 @@ const Trade = (props) => {
                         </div>
                     </div>
                 </div>
-            )}   
+            )}    */}
         </div>
     )
 }

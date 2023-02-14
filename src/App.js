@@ -30,6 +30,7 @@ function App() {
   const [modalIsOpen, setModalIsOpen] = React.useState(false);
   const [account, setAccount] = React.useState('');
   const [wallet, setWallet] = React.useState('');
+  const [marketToken, setMarketToken] = React.useState("SUI");
   const [newCoins, setNewCoins] = React.useState(undefined);
   const [coinBalances, setCoinBalances] = React.useState(undefined);
   const [isAlterSecondToken, setIsAlterSecondToken] = React.useState("SUI");
@@ -41,7 +42,8 @@ function App() {
     coinBalances, setCoinBalances,
     provider,
     wallet, setWallet,
-    isAlterSecondToken, setIsAlterSecondToken
+    isAlterSecondToken, setIsAlterSecondToken,
+    marketToken, setMarketToken
   }
 
   return (

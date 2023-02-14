@@ -1,4 +1,4 @@
-module tradeify::pool {
+module trading::trading {
     use sui::object::{Self, UID, ID};
     use sui::coin::{Self, Coin, TreasuryCap};
     use sui::balance::{Self, Balance, Supply, create_supply};
@@ -9,9 +9,20 @@ module tradeify::pool {
     use sui::table::{Self, Table};
     use std::type_name::{Self, TypeName};
     use std::vector;
+    use sui::staking_pool;
+    use sui::locked_coin;
+    use sui::epoch_time_lock::{Self, EpochTimeLock, new, epoch};   
+    use std::option::{Self, Option};
+    use sui::vec_map::{Self, VecMap};
 
     /// The number of basis points in 100%.
     const BPS_IN_100_PCT: u64 = 100 * 100;
+
+    const ETableNotEmpty: u64 = 0;
+    const EReferAlreadyExistsTrader: u64 = 124;
+    const EReferAlreadyExistsRefer: u64 = 125;
+    const EReferAlreadyExistsCode: u64 = 126;
+    const NotReferralCode: u64 = 127;
     const EExcessiveSlippage: u64 = 356;
     /// For when supplied Coin is zero.
     /// The input amount is zero.
@@ -29,7 +40,9 @@ module tradeify::pool {
     /// Pool for this pair already exists.
     const EPoolAlreadyExists: u64 = 7;
 
-    const U64_MAX: u128 = 18446744073709551615;
+    const INVALID_USER: u64 = 136;
+    const ETOKEN_TIME_LOCK_IS_SOME: u64 = 137;
+    const STAKINGLOCK: u64 = 135;
 
     fun muldiv(a: u64, b: u64, c: u64): u64 {
         ((((a as u128) * (b as u128)) / (c as u128)) as u64)
@@ -109,7 +122,8 @@ module tradeify::pool {
     struct TestTokenSupply has key {
         id: UID,
         supply_btc: u64,
-        supply_eth: u64
+        supply_eth: u64,
+        supply_try: u64
     }
 
     struct PoolRegistryItem has copy, drop, store  {
@@ -173,6 +187,107 @@ module tradeify::pool {
         admin_fee_balance: Balance<TLP>
     }
 
+
+    /// Staking pool struct for tradeify
+    struct StakingPool<phantom A, phantom B> has key {
+        id: UID,
+        balance_tlp: Balance<A>,
+        balance_try: Balance<B>,
+        stake_fee: u64
+    }
+
+    /// Staking pool creation event
+    struct StakingPoolCreationEvent has copy, drop {
+        staking_pool_id: ID,
+    }
+    struct StakeCreationEvent has copy, drop {
+        stake_id: ID,
+        owner: ID
+    }
+
+    struct StakingTimeInterval  has key, store {
+        id: UID,
+        interval: EpochTimeLock
+    }
+
+    struct StakingMeta<phantom A> has key, store {
+        id: UID,
+        owner: ID,
+        staking_amount: u64,
+        start_timestamp: u64,
+        lock_time: u64
+    }
+
+    struct Refer has key, store {
+        id: UID,
+        refer: ID,
+        referralCode: u64,
+    }
+    struct ReferRegistryItem has copy, drop, store  {
+        refer: ID,
+        referralCode: u64
+    }
+    struct ReferRegistry has key, store {
+        id: UID,
+        data: VecMap<ReferRegistryItem, bool>
+    }
+    struct ReferCreationEvent has copy, drop {
+        refer: ID,
+        referralCode: u64
+    }
+
+    struct Trader has key, store {
+        id: UID,
+        trader: ID,
+        referralCode: u64
+    }
+    struct RefTraderRegistryItem has copy, drop, store  {
+        trader: ID,
+        referralCode: u64
+    }
+    struct RefTraderRegistry has key, store {
+        id: UID,
+        data: VecMap<RefTraderRegistryItem, bool>
+    }
+    struct RefTraderCreationEvent has copy, drop {
+        trader: ID,
+        referralCode: u64
+    }
+
+    struct ReferralStatus has key {
+        id: UID,
+        total_refer: u64,
+        total_trader: u64
+    }
+
+    struct TradingPool has key, store {
+        id: UID,
+        openPosition: u64,
+        closePosition: u64,
+        totalPosition: u64,
+        data: VecMap<OrderRegistryItem, bool>
+    }
+
+    // Trading type is 1, 2, 3.  1 = Market      2 = Limit       3 = Stop Market
+    // Trading status is 1, 2, 3.   1 = pending     2 = fund        3 = closed
+
+    struct OrderRegistryItem has copy, drop, store {
+        trader: ID,
+        tradingType: u64,
+        isRefer: bool,
+        referID: ID,
+        originalTradingAmount: u64,
+        updateTradingAmount: u64,
+        spreadAmount: u64,
+        updateSpreadingAmount: u64,
+        pairID: ID,
+        leverage: u64,
+        tradingStatus: u64,
+        sourceCoin: u64,
+        createdTimeStamp: u64,
+        destinationCoin: u64
+    }
+
     /// Module initializer is empty - to publish a new Pool one has
     /// to create a type which will mark LSPs.
     /// Initializes the `PoolRegistry` objects and shares it, and transfers `AdminCap` to sender.
@@ -186,10 +301,175 @@ module tradeify::pool {
             TestTokenSupply { 
                 id: object::new(ctx),
                 supply_btc: 0,
-                supply_eth: 0
+                supply_eth: 0,
+                supply_try: 0,
             }
         );
+        transfer::share_object(new_refer_registry(ctx));
+        transfer::share_object(new_refTrader_registry(ctx));
+        transfer::share_object(
+            ReferralStatus {
+                id: object::new(ctx),
+                total_refer: 0,
+                total_trader: 0
+            }
+        );
+        transfer::share_object(
+            TradingPool {
+                id: object::new(ctx),
+                openPosition: 0,
+                closePosition: 0,
+                totalPosition: 0,
+                data: vec_map::empty(),
+            }
+        )
     }
+
+    public fun create_long_position<A, B> (
+        poolID: &mut Pool<A, B>,
+        marketPrice: u64,
+        inputCoinA: Coin<A>,
+        inputCoinB: Coin<B>,
+        firstCoinAmount: u64,
+        secondCoinAmount: u64,
+        positionAmount: u64,
+        createdTimeStamp: u64,
+        leverageValue: u64,
+        hasRefer: bool,
+        isACS: bool,
+        referAddress: ID,
+        tradingType: u64,
+        ctx: &mut TxContext
+    ) {
+        let balance_A = coin::into_balance(inputCoinA);
+        let balance_B = coin::into_balance(inputCoinB);
+        let trading_A = balance::value(&balance_A);
+        let trading_B = balance::value(&balance_B);
+        balance::join(&mut poolID.balance_a, balance_A);
+        balance::join(&mut poolID.balance_b, balance_B);
+    }
+
+    public entry fun create_long_position_<A, B>(
+        poolID: &mut Pool<A, B>,
+        marketPrice: u64,
+        inputCoinA: Coin<A>,
+        inputCoinB: Coin<B>,
+        firstCoinAmount: u64,
+        secondCoinAmount: u64,
+        positionAmount: u64,
+        createdTimeStamp: u64,
+        leverageValue: u64,
+        hasRefer: bool,
+        isACS: bool,
+        referAddress: ID,
+        tradingType: u64,
+        ctx: &mut TxContext
+    ) {
+        if(isACS == true) {
+            let _tradingAmount = maybe_split_and_transfer_rest(inputCoinA, firstCoinAmount, tx_context::sender(ctx), ctx);
+            create_long_position(
+                poolID, 
+                marketPrice, 
+                _tradingAmount, 
+                inputCoinB, 
+                firstCoinAmount, 
+                secondCoinAmount, 
+                positionAmount,
+                createdTimeStamp,
+                leverageValue,
+                hasRefer,
+                isACS,
+                referAddress,
+                tradingType,    
+                ctx,
+            )
+            } else {
+            let _tradingAmount = maybe_split_and_transfer_rest(inputCoinB, firstCoinAmount, tx_context::sender(ctx), ctx);
+            create_long_position(
+                poolID, 
+                marketPrice, 
+                inputCoinA, 
+                _tradingAmount, 
+                firstCoinAmount, 
+                secondCoinAmount, 
+                positionAmount,
+                createdTimeStamp,
+                leverageValue,
+                hasRefer,
+                isACS,
+                referAddress,
+                tradingType,
+                ctx,    
+            )
+        }
+    }
+
+    fun new_refer_registry(ctx: &mut TxContext): ReferRegistry {
+        ReferRegistry { 
+            id: object::new(ctx),
+            data: vec_map::empty()
+        }
+    }
+
+    fun add_refer_registry(refer_registry: &mut ReferRegistry, refer: ID, referralCode: u64) {
+        let item = ReferRegistryItem {
+            refer,
+            referralCode
+        };
+        let len = vec_map::size(&refer_registry.data);
+        let i = 0;
+        while (i < len) {            
+            let (key, value) = vec_map::get_entry_by_idx(&refer_registry.data, i);
+            assert!(key.refer != refer, EReferAlreadyExistsRefer);
+            assert!(key.referralCode != referralCode, EReferAlreadyExistsCode);
+            i =i + 1;
+        };
+        vec_map::insert(&mut refer_registry.data, item, true);
+    }
+
+    fun new_refTrader_registry(ctx: &mut TxContext): RefTraderRegistry {
+        RefTraderRegistry {
+            id: object::new(ctx),
+            data: vec_map::empty()
+        }
+    }
+
+    fun add_refTrader_registry(
+        refTrader_registry: &mut RefTraderRegistry, 
+        trader: ID, 
+        referralCode: u64, 
+        refer_registry: & ReferRegistry
+    ) {
+        let item = RefTraderRegistryItem {
+            trader,
+            referralCode
+        };
+        let lenRefTrader = vec_map::size(&refTrader_registry.data);        
+
+        let i = 0;
+        while (i < lenRefTrader) {            
+            let (key, value) = vec_map::get_entry_by_idx(&refTrader_registry.data, i);
+            assert!(key.trader != trader, EReferAlreadyExistsTrader);
+            i = i + 1;
+        };
+
+
+        let j = 0;
+        let lenRefer = vec_map::size(&refer_registry.data);
+        let isReferFlag = false;
+        while (j < lenRefer) {
+            let (key, value) = vec_map::get_entry_by_idx(&refer_registry.data, j);
+            if(key.referralCode == referralCode) {
+                if (key.refer != trader) { 
+                    isReferFlag = true;
+                }
+            };
+            j = j + 1;
+        };
+        assert!(isReferFlag == true, NotReferralCode);
+        vec_map::insert(&mut refTrader_registry.data, item, true);
+    }
+
     // entry fun init_token_id<T>(c: &mut TreasuryCap<T>,d: &mut TreasuryCap<T>, token_supply: &mut TestTokenSupply) {
     //     token_supply.btc_id = object::uid_to_inner(&c);
     //     token_supply.eth_id = object::uid_to_inner(&c);
@@ -618,5 +898,226 @@ module tradeify::pool {
     ) {
         let input = maybe_split_and_transfer_rest(input, amount, tx_context::sender(ctx), ctx);
         swap_b_(pool, input, min_out, ctx);
+    }
+
+    
+    public fun create_staking_pool<A, B>(
+        init_a: Coin<A>,
+        init_b: Coin<B>,
+        stake_fee: u64,
+        ctx: &mut TxContext
+    ) {
+        let staking_pool = StakingPool<A,B> {
+            id: object::new(ctx),
+            balance_tlp: coin::into_balance(init_a),
+            balance_try: coin::into_balance(init_b),
+            stake_fee: stake_fee
+        };
+        event::emit(StakingPoolCreationEvent { staking_pool_id: object::id(&staking_pool) });
+        transfer::share_object(staking_pool)
+    }
+    
+    public entry fun create_staking_pool_<A, B>(
+        input_a: Coin<A>,
+        input_b: Coin<B>,
+        amount_a: u64,
+        amount_b: u64,
+        stake_fee: u64,
+        ctx: &mut TxContext
+    ) {
+        let init_a = maybe_split_and_transfer_rest(input_a, amount_a, tx_context::sender(ctx), ctx);
+        let init_b = maybe_split_and_transfer_rest(input_b, amount_b, tx_context::sender(ctx), ctx);
+        create_staking_pool(
+            init_a,
+            init_b,
+            stake_fee,
+            ctx
+        )        
+    }
+
+    public fun deposit_try<A, B> (
+        staking_pool: &mut StakingPool<A, B>,
+        init_try: Coin<B>
+    ) {
+        let balance = coin::into_balance(init_try);
+        balance::join(&mut staking_pool.balance_try, balance);
+    }
+
+    public entry fun deposit_try_<A, B> (
+        staking_pool: &mut StakingPool<A, B>,
+        input_try: Coin<B>,
+        amount_try: u64,
+        ctx: &mut TxContext
+    ) {
+        let init_try = maybe_split_and_transfer_rest(input_try, amount_try, tx_context::sender(ctx), ctx);
+        deposit_try(staking_pool, init_try)
+    }
+
+
+    public fun stake_tlp<A, B>(
+        staking_pool: &mut StakingPool<A, B>,
+        input_tlp: Coin<A>,
+        owner: ID,
+        start_timestamp: u64,
+        lock_time: u64,
+        ctx: &mut TxContext
+    ) {
+        let balance_tlp = coin::into_balance(input_tlp);
+        let stake_tlp = balance::value(&balance_tlp);
+        balance::join(&mut staking_pool.balance_tlp, balance_tlp);
+        let staking_data = StakingMeta<A>{
+            id: object::new(ctx),
+            owner: owner,
+            staking_amount: stake_tlp,
+            start_timestamp: start_timestamp,
+            lock_time: lock_time
+        };
+        event::emit(StakeCreationEvent { stake_id: object::id(&staking_data), owner: owner });
+        transfer::transfer(
+            staking_data,
+            tx_context::sender(ctx)
+        )
+    }
+    public entry fun stake_tlp_<A, B> (
+        staking_pool: &mut StakingPool<A, B>,
+        input_tlp: Coin<A>,
+        stake_amount: u64,
+        owner: ID,
+        start_timestamp: u64,
+        lock_time: u64,
+        ctx: &mut TxContext
+    ) {
+        let stake_tlp = maybe_split_and_transfer_rest(input_tlp, stake_amount, tx_context::sender(ctx), ctx);
+        stake_tlp(staking_pool, stake_tlp, owner, start_timestamp, lock_time, ctx);
+    }
+
+
+    public fun deposit_tlp_stake<A, B>(
+        staking_pool: &mut StakingPool<A, B>,
+        user_stake: &mut StakingMeta<A>,
+        input_tlp: Coin<A>,
+        start_timestamp: u64,
+        lock_time: u64,
+        ctx: &mut TxContext
+    ) {
+        let balance_tlp = coin::into_balance(input_tlp);
+        let stake_tlp = balance::value(&balance_tlp);
+        balance::join(&mut staking_pool.balance_tlp, balance_tlp);
+        user_stake.start_timestamp = start_timestamp;
+        user_stake.staking_amount = user_stake.staking_amount + stake_tlp;
+        user_stake.lock_time = lock_time;
+    }
+    public entry fun deposit_tlp_stake_<A, B> (
+        staking_pool: &mut StakingPool<A, B>,        
+        user_stake: &mut StakingMeta<A>,
+        input_tlp: Coin<A>,
+        stake_amount: u64,
+        start_timestamp: u64,
+        lock_time: u64,
+        ctx: &mut TxContext
+    ) {
+        let stake_tlp = maybe_split_and_transfer_rest(input_tlp, stake_amount, tx_context::sender(ctx), ctx);
+        deposit_tlp_stake(staking_pool, user_stake, stake_tlp, start_timestamp, lock_time, ctx);
+    }
+
+
+    /// get reward of staking
+    public fun get_reward<A, B> (
+        staking_pool: &mut StakingPool<A, B>,
+        user_stake: &mut StakingMeta<A>,
+        current_time: u64,    
+        owner: ID,
+    ): (Balance<B>) {
+        assert!(current_time > (user_stake.start_timestamp + user_stake.lock_time), STAKINGLOCK);
+        assert!(owner == user_stake.owner, INVALID_USER);
+        let balance = (current_time - user_stake.start_timestamp) * user_stake.staking_amount / balance::value(&staking_pool.balance_tlp);
+        user_stake.start_timestamp = current_time;
+        return balance::split(&mut staking_pool.balance_try, balance)
+    }
+
+    public entry fun get_reward_<A, B> (
+        staking_pool: &mut StakingPool<A, B>,
+        user_stake: &mut StakingMeta<A>,
+        current_time: u64,
+        owner: ID,
+        ctx: &mut TxContext,
+    ) {
+        let reward_out = get_reward(staking_pool, user_stake, current_time, owner);
+        let sender = tx_context::sender(ctx);
+        destroy_or_transfer_balance(reward_out, sender, ctx);
+    }
+
+    public fun unstake<A, B> (
+        staking_pool: &mut StakingPool<A, B>,
+        user_stake: &mut StakingMeta<A>,
+        ctx: &mut TxContext,
+    ):Balance<A> {        
+        let out_amount = balance::split(&mut staking_pool.balance_tlp, (user_stake.staking_amount - user_stake.staking_amount * staking_pool.stake_fee / 100));
+        user_stake.staking_amount = 0;
+        out_amount
+    }
+    public entry fun unstake_<A, B>(
+        staking_pool: &mut StakingPool<A, B>,
+        user_stake: &mut StakingMeta<A>,
+        ctx: &mut TxContext,
+    ) {
+        let out_tlp = unstake(staking_pool, user_stake, ctx);
+        let sender = tx_context::sender(ctx);
+        destroy_or_transfer_balance(out_tlp, sender, ctx);
+    } 
+
+    public fun create_referral_code(
+        ctx: &mut TxContext, 
+        referalStaus: &mut ReferralStatus, 
+        referralCode: u64,
+        refer_registry: &mut ReferRegistry,
+    ) {
+        let refer_id = object::id_from_address(tx_context::sender(ctx));
+        let refer = Refer{
+            id: object::new(ctx),
+            refer: refer_id,
+            referralCode: referralCode
+        };
+        add_refer_registry(refer_registry, refer_id, referralCode);
+        referalStaus.total_refer = referalStaus.total_refer + 1;
+        event::emit(ReferCreationEvent {refer: refer_id, referralCode:referralCode});
+        transfer::transfer(refer, tx_context::sender(ctx));
+    }
+    entry fun create_referral_code_(
+        referralCode: u64,
+        referalStaus: &mut ReferralStatus, 
+        refer_registry: &mut ReferRegistry,
+        ctx: &mut TxContext,
+    ) {
+        create_referral_code(ctx, referalStaus, referralCode, refer_registry);
+    }
+
+    public fun submit_referral_code (        
+        ctx: &mut TxContext, 
+        referalStaus: &mut ReferralStatus, 
+        referralCode: u64,
+        refTrader_registry: &mut RefTraderRegistry,
+        refer_registry: &mut ReferRegistry,
+    ) {
+        let trader_id = object::id_from_address(tx_context::sender(ctx));
+        let trader = Trader{
+            id: object::new(ctx),
+            trader: trader_id,
+            referralCode: referralCode
+        };
+        add_refTrader_registry(refTrader_registry, trader_id, referralCode, refer_registry);
+        referalStaus.total_trader = referalStaus.total_trader + 1;
+        event::emit(RefTraderCreationEvent {trader: trader_id, referralCode:referralCode});
+        transfer::transfer(trader, tx_context::sender(ctx));
+    }
+
+    entry fun submit_referral_code_(
+        referralCode: u64,
+        referalStaus: &mut ReferralStatus, 
+        refTrader_registry: &mut RefTraderRegistry,
+        refer_registry: &mut ReferRegistry,
+        ctx: &mut TxContext,
+    ) {
+        submit_referral_code(ctx, referalStaus, referralCode, refTrader_registry, refer_registry);
     }
 }

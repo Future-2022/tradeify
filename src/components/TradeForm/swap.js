@@ -154,7 +154,10 @@ const Swap = (props) => {
     return (
         <div> 
             <div className='trade-token-select mb-2 mt-2'>
-                <p className='text-gray text-left'>Pay: {changeDecimal(firstTokenMaxValue)} {firstToken[0].label}</p>
+                <div className='d-flex justify-content-between'>
+                    <h5 className='text-gray text-left fs-12'>Pay </h5>
+                    <h5 className='text-gray-light text-left fs-12'>Balance: {changeDecimal(firstTokenMaxValue)} {firstToken[0].label} </h5>
+                </div>
                 <div className='d-flex justify-content-between'>
                     <input type='text' className='token-select-input' placeholder='0.0' value={firstTokenValue} onChange={(e) => handleFirstTokenChange(e.target.value)}/>
                     <div className='d-flex cursor-pointer token-select' onClick={() => openModal(1)}><h4>{firstToken[0].label}</h4><FaAngleDown className='fs-26 mt-2' /></div>
