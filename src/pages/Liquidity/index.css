@@ -16,6 +16,15 @@
     width: 35px;
     height: 35px;
 }
+.rs-badge-green {
+    background-color: rgb(234, 0, 86);
+    height: 18px;
+    font-weight: bold;
+    padding: 0px 5px;
+    border-radius: 5px;
+    margin-right: -8px;
+    z-index: 2;
+}
 .img-circle-2 {
     border-radius: 100%;
     width: 20px;

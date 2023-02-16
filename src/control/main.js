@@ -37,7 +37,61 @@ export const ExportAddress = (address) => {
     const value = address.slice(0, 5) + '...' + address.slice(address.length - 5, address.length);
     return value
 }
+export const getTraderMetaData = (lpCoin, value) => {
+  let returnValue = [];
+  let iconType = undefined;
+  let netPrice = 0;
+  let colletral = undefined;
+  let type = undefined;
+  console.log(value);
+  console.log(lpCoin);
+  value.map(valueItem => {
+    lpCoin.map(item => {
+      if(item.id == valueItem.poolID) {
+        if(valueItem.tradingType == 0) {
+          type = "LONG";
+        } else {
+          type = "SHORT";
+        }
+        if(valueItem.isACS == 1) {
+          if(valueItem.isDiff == 1) {
+            colletral = item.metadata[1].symbol;
+          } else{
+            colletral = item.metadata[0].symbol;
+          }
+          iconType = item.metadata[0].symbol;
+          netPrice = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);
 
+        } else {          
+          if(valueItem.isDiff == 1) {
+            colletral = item.metadata[0].symbol;
+          } else{
+            colletral = item.metadata[1].symbol;
+          }
+
+          iconType = item.metadata[1].symbol;
+          netPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
+        }
+        let MarketIcon = importImage(iconType);
+        let value = {
+          MarketIcon:MarketIcon,
+          coinType: iconType,
+          tradingAmount: changeDecimal5Fix(valueItem.calcAmount),
+          netPrice: netPrice.toFixed(5),
+          entryPrice: valueItem.marketPrice / 1000,
+          tradingStatus: valueItem.tradingStatus,
+          colletral: colletral,
+          tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
+          leverageValue: valueItem.leverageValue,
+          type: type
+        }
+        returnValue.push(value);
+      }
+    })
+  }) 
+  console.log(returnValue);
+  return returnValue;
+}
 export const LPMetaData = (totalLPValue, metaValue) => {
     let MetaValue = {
         "meta": []
@@ -84,6 +138,10 @@ export function suiCoinToCoin(coin) {
 }
 export function changeDecimal(value) {
   const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(3);
+  return balance
+}
+export function changeDecimal5Fix(value) {
+  const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(5);
   return balance
 }
 
@@ -239,6 +297,24 @@ export async function getCoins(provider, address) {
     return coins;
 }
 
+export async function getTradeDatas(provider, address) {
+  const tradingID = [];
+  tradingID.push(CONFIG.tradingPoolID);
+  const traderBatch = await provider.getObjectBatch(tradingID);
+  console.log(traderBatch);
+
+  const traderData = traderBatch[0].details.data.fields.data.fields.contents;
+  // // get Referral Code
+  // let referralCode = undefined;
+  let ownData = [];
+  traderData.map(item => {
+    if(item.fields.key.fields.trader == address) {
+      ownData.push(item.fields.key.fields);
+    }
+  })
+  return ownData;
+}
+
 
 
 export async function getWalletAddress(wallet) {
@@ -343,6 +419,19 @@ export const getReferralStatus = async (provider, wallet) => {
   let referralLink = CONFIG.link + 'referral?ref=' + referralCode;
   return {referralCode, traderNum, referralLink};
 }
+export const getReferralIDByCode = async (provider, wallet, referralCode) => {
+  const referralStatusAddress = [];
+  referralStatusAddress.push(CONFIG.referRegistryId);
+  const referralStatus = await provider.getObjectBatch(referralStatusAddress);
+  const referData = await referralStatus[0].details.data.fields.data.fields.contents
+  let referID = undefined;
+  referData.map(item => {
+    if(referralCode == item.fields.key.fields.referralCode) {
+      referID = item.fields.key.fields.refer;
+    } 
+  })
+  return referID;
+}
 
 
 export const getTraderStatus = async (provider, wallet) => {
@@ -356,9 +445,11 @@ export const getTraderStatus = async (provider, wallet) => {
 
   // get Referral Code
   let referralCode = undefined;
+  let referID = undefined;
   referData.map(item => {
     if(item.fields.key.fields.trader == wallet) {
       referralCode = item.fields.key.fields.referralCode;
+      referID = item.fields.key.fields.refer;
     }
   })
   return {referralCode};

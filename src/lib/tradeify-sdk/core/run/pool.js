@@ -47,6 +47,7 @@ export class Pool {
       if (moveObj === undefined) {
         throw new Error(`'${id}' is not a valid Pool object`)
       }
+      // console.log(moveObj.type);
       return this.fromMoveObjectField(moveObj)
     }
   

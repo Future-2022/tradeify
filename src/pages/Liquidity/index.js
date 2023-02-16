@@ -28,6 +28,7 @@ const Liquidity = (props) => {
     }
     useEffect(() => {        
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+            console.log(lpCoins);
             let totalLPValue = 0;
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);

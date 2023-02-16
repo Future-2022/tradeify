@@ -104,9 +104,6 @@
     position: relative;
     /* z-index: 1; */
 }
-p + p {
-    margin-top: 0px!important;
-}
 @media only screen and (max-width: 480px) {
     .t-w-1 {
         width: 100%;

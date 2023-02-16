@@ -342,19 +342,21 @@ const ShortPosition = () => {
                     </div>
                     <div>
                         <div className='pt-4'>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon1} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>SUI</h5>
-                                        <p className='text-gray'>Sui</p>
+                            {isSelectActive == 1 && (
+                                <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
+                                    <div className='d-flex'>
+                                        <img src={TokenIcon1} width={45} />
+                                        <div className='ml-4'>
+                                            <h5 className='text-white text-left'>SUI</h5>
+                                            <p className='text-gray'>Sui</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5 className='text-white text-right'>$1.0034</h5>
+                                        <p className='text-green text-right'>+0.02</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1.0034</h5>
-                                    <p className='text-green text-right'>+0.02</p>
-                                </div>
-                            </div>
+                            )}
                             <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
                                 <div className='d-flex'>
                                     <img src={TokenIcon3} width={45} />

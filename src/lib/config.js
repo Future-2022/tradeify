@@ -16,22 +16,26 @@ export const CONFIG = {
     tlp: '0xde36bc4b0e9f603ff4c649734adf2e82ed71da59::pool::TLP',
 
     // mint, buy/sell, swap package
-    tradeifyPackageId: '0xe6f93d77e8bab83744f1129103b1eb50a74f3aea',
-    testTokenSupplyId: '0xc1bed9cf50ee7b5b9778bcea31319204ce04d1fe',
-    poolRegistryId: '0xed440d4f7b224891f190501f001509d240881dec',
+    tradeifyPackageId: '0x942583684b4ef0d79be228763879ba53ddbbd96b',
+    testTokenSupplyId: '0x9388867d07fd738bcfc03840b4ef6f6c2bc2c5c3',
+    poolRegistryId: '0xce0c9d31693d4714510cc1abed8940293b070171',
 
     // staking package
-    stakingPackageId: '0xe6f93d77e8bab83744f1129103b1eb50a74f3aea',
+    stakingPackageId: '0x942583684b4ef0d79be228763879ba53ddbbd96b',
     stakingPoolId: '0x9c5216bbeaef96ae361cd61fc61aaffe8242cc75',
 
     // referral package
-    referralPackageId: '0xe6f93d77e8bab83744f1129103b1eb50a74f3aea',
-    referRegistryId: '0xa2651bd3ababaac41d2b37543b2a7a27286bc41b',
-    refTraderRegistryId: '0x216c44a11e7b4a602480a639fc850650296d7190',
-    referralStaus: '0x7f7a8973aea2c35792bb8a77ea5d885e3c95d1c2',
+    referralPackageId: '0x942583684b4ef0d79be228763879ba53ddbbd96b',
+    referRegistryId: '0x3505416e5b78c6ae92dfeb516edefb31973f3324',
+    refTraderRegistryId: '0xec28317b945bca6dffe830168eeff1251e8bdf34',
+    referralStaus: '0x219327551d560fa92fe9e156a024b9ab0c1518d6',
+
+    // trading package
+    tradingPoolID: '0x4836f0160a5dfd87cdad20e2322c32c179e02e7f',
 
     // Main default setting parameter
     MainDecimal: 9,
     defaultSlippagePct: 1,
-    tradingFee: 0.1, // this is % value
+    tradingFee: 1, // this is % value
+    nullAddress: '0x0000000000000000000000000000000000000000'
 }
