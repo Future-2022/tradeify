@@ -8,7 +8,7 @@ import { WalletAdapter } from '@mysten/wallet-adapter-base';
 import { Balance } from '../control/balance';
 import { CONFIG } from '../lib/config';
 import { PoolCreateEvent } from '../hooks/struct';
-import { Pool } from '../lib/tradeify-sdk/pool';
+import { calcSwapOut, Pool } from '../lib/tradeify-sdk/pool';
 import { importImage } from './importModule';
 import { LP } from '../hooks/struct';
 
@@ -40,11 +40,15 @@ export const ExportAddress = (address) => {
 export const getTraderMetaData = (lpCoin, value) => {
   let returnValue = [];
   let iconType = undefined;
-  let netPrice = 0;
   let colletral = undefined;
   let type = undefined;
+  let markPrice = 0;
+  let entryPrice = 0;
+  let earnType = undefined;
+  let earnAmount = undefined;
+  let netValue = undefined;
   console.log(value);
-  console.log(lpCoin);
+  // console.log(lpCoin);
   value.map(valueItem => {
     lpCoin.map(item => {
       if(item.id == valueItem.poolID) {
@@ -53,37 +57,73 @@ export const getTraderMetaData = (lpCoin, value) => {
         } else {
           type = "SHORT";
         }
-        if(valueItem.isACS == 1) {
-          if(valueItem.isDiff == 1) {
+        if(valueItem.isDiff == 1) {
+          if(valueItem.isACS == 1) {
             colletral = item.metadata[1].symbol;
-          } else{
-            colletral = item.metadata[0].symbol;
+            iconType = item.metadata[0].symbol;
+            markPrice = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);  
+            netValue = calcSwapOut(item, (valueItem.tradingAmount), false) * valueItem.leverageValue;
+            console.log(netValue); 
           }
-          iconType = item.metadata[0].symbol;
-          netPrice = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);
-
-        } else {          
-          if(valueItem.isDiff == 1) {
+          else {
             colletral = item.metadata[0].symbol;
-          } else{
-            colletral = item.metadata[1].symbol;
+            iconType = item.metadata[1].symbol;
+            markPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);   
           }
-
+        } else {
+          colletral = item.metadata[1].symbol;
           iconType = item.metadata[1].symbol;
-          netPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
+          markPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);           
+        }
+        if(valueItem.isDiff == 1) {
+          entryPrice = (1 / (valueItem.marketPrice / 1000)).toFixed(4);
+        } else {
+          entryPrice = (valueItem.marketPrice / 1000).toFixed(4);
         }
         let MarketIcon = importImage(iconType);
+        let colletralIcon = importImage(colletral);
+        if(valueItem.tradingType == 0) {
+          if(entryPrice > markPrice) {
+            earnType = "-";            
+            earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
+            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
+          } else {
+            earnType = "+";
+            earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
+            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
+          }
+        } else {
+          if(entryPrice > markPrice) {
+            earnType = "+";            
+            earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
+            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
+          } else {
+            earnType = "-";
+            earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
+            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
+          }
+        }
         let value = {
-          MarketIcon:MarketIcon,
+          MarketIcon: MarketIcon,
           coinType: iconType,
-          tradingAmount: changeDecimal5Fix(valueItem.calcAmount),
-          netPrice: netPrice.toFixed(5),
-          entryPrice: valueItem.marketPrice / 1000,
+          tokenA: item.metadata[0].typeArg,
+          tokenB: item.metadata[1].typeArg,
+          calcAmount: changeDecimal5Fix(valueItem.calcAmount),
+          entryPrice: entryPrice,
           tradingStatus: valueItem.tradingStatus,
           colletral: colletral,
+          colletralIcon: colletralIcon,
           tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
           leverageValue: valueItem.leverageValue,
-          type: type
+          type: type,
+          isDiff: valueItem.isDiff,
+          isACS: valueItem.isACS,
+          markPrice: markPrice.toFixed(4),
+          earnType: earnType,
+          earnAmount: earnAmount,
+          netValue: Number(netValue).toFixed(4),
+          createdTimeStamp: valueItem.createdTimeStamp,
+          poolID: valueItem.poolID
         }
         returnValue.push(value);
       }
@@ -301,7 +341,7 @@ export async function getTradeDatas(provider, address) {
   const tradingID = [];
   tradingID.push(CONFIG.tradingPoolID);
   const traderBatch = await provider.getObjectBatch(tradingID);
-  console.log(traderBatch);
+  // console.log(traderBatch);
 
   const traderData = traderBatch[0].details.data.fields.data.fields.contents;
   // // get Referral Code
@@ -453,4 +493,44 @@ export const getTraderStatus = async (provider, wallet) => {
     }
   })
   return {referralCode};
+}
+export const getReferralResult = async (provider, wallet) => {
+  console.log(wallet);
+  const referralStatusAddress = [];
+  referralStatusAddress.push(CONFIG.tradingPoolID);
+  const batch = await provider.getObjectBatch(referralStatusAddress);
+  const tradingData = batch[0].details.data.fields.data.fields.contents;
+  let tradingAmount = 0;
+  let rebate = 0;
+  tradingData.map(item => {
+    const result = item.fields.key.fields;
+    console.log(result);
+    if(result.referID == wallet) {
+      tradingAmount += Number(result.tradingAmount);
+      rebate += Number(result.tradingAmount * CONFIG.tradingFee / 100)
+    }
+  }) 
+  console.log(tradingAmount);
+  return {tradingAmount: changeDecimal5Fix(tradingAmount), rebate: changeDecimal5Fix(rebate)};
+}
+export const getTradingResult = async (provider, wallet) => {
+  console.log(wallet);
+  const referralStatusAddress = [];
+  referralStatusAddress.push(CONFIG.tradingPoolID);
+  const batch = await provider.getObjectBatch(referralStatusAddress);
+  const tradingData = batch[0].details.data.fields.data.fields.contents;
+  let tradingAmount = 0;
+  let rebate = 0;
+  tradingData.map(item => {
+    const result = item.fields.key.fields;
+    console.log(result);
+    if(result.hasRefer == "1") {
+      if(result.trader == wallet) {
+        tradingAmount += Number(result.tradingAmount);
+        rebate += Number(result.tradingAmount * CONFIG.tradingFee / 100)
+      }
+    }
+  }) 
+  console.log(tradingAmount);
+  return {tradingAmount: changeDecimal5Fix(tradingAmount), rebate: changeDecimal5Fix(rebate)};
 }

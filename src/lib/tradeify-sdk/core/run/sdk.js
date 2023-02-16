@@ -279,4 +279,40 @@ export function createLongPositionBSdk(typeArgs, args) {
         },
     }
 }
+export function closeOrderASdk(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.referralPackageId,
+            module: 'pool',
+            function: 'close_position_A_',
+            typeArguments: [typeArgs[0], typeArgs[1]],
+            arguments: [
+                args.poolID,
+                CONFIG.tradingPoolID,
+                args.createdTimeStamp,
+                (args.updateAmount * 1000000000).toString()
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+export function closeOrderBSdk(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.referralPackageId,
+            module: 'pool',
+            function: 'close_position_B_',
+            typeArguments: [typeArgs[0], typeArgs[1]],
+            arguments: [
+                args.poolID,
+                CONFIG.tradingPoolID,
+                args.createdTimeStamp,
+                (args.updateAmount * 1000000000).toString()
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
 

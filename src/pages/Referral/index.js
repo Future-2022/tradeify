@@ -5,7 +5,7 @@ import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
 import { StoreContext } from '../../store';
 import { createReferralCode, submitReferralCode } from '../../lib/tradeify-sdk/referral';
-import { getReferralStatus, getTraderStatus } from '../../control/main';
+import { getReferralStatus, getTraderStatus, getReferralResult, getTradingResult } from '../../control/main';
 import { FaClipboard } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import LoadingSpin from "react-loading-spin";
@@ -22,6 +22,12 @@ const Referral = (props) => {
     const [traderNum, setTraderNum] = useState(undefined);
     const [referralLink, setReferralLink] = useState(undefined);
 
+    const [referTradingVolume, setReferTradingVolume] = useState(undefined);
+    const [referTradingRebate, setReferTradingRebate] = useState(undefined);
+    
+    const [traderTradingVolume, setTraderTradingVolume] = useState(undefined);
+    const [traderTradingRebate, setTraderTradingRebate] = useState(undefined);
+
     // trader part parameter
     const [traderReferralCode, setTraderReferralCode] = useState(undefined);
 
@@ -36,7 +42,15 @@ const Referral = (props) => {
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setTraderReferralCode(item.referralCode);
         })
-    }, [])
+        getReferralResult(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            setReferTradingVolume(item.tradingAmount);
+            setReferTradingRebate(item.rebate);
+        })
+        getTradingResult(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            setTraderTradingVolume(item.tradingAmount);
+            setTraderTradingRebate(item.rebate);
+        })
+    }, [traderReferralCode])
     
     const selectFormIndex = (value) => {
         setFormIndex(value);
@@ -46,7 +60,8 @@ const Referral = (props) => {
         createReferralCode(globalContext.provider, globalContext.wallet, {
             referralCode: referralCodeValue
         }).then(args => {
-            console.log(args);
+            toast.info(`Your referral code ${referralCodeValue} has been created`);
+            setTraderReferralCode(0);
         }).catch(err => {
             console.log(err);
         })
@@ -56,7 +71,8 @@ const Referral = (props) => {
         submitReferralCode(globalContext.provider, globalContext.wallet, {
             referralCode: referralCodeValue
         }).then(args => {
-            console.log(args);
+            toast.info(`You have set referral code ${referralCodeValue}`);
+            setTraderReferralCode(0);
         }).catch(err => {
             console.log(err);
         })
@@ -124,11 +140,11 @@ const Referral = (props) => {
                                 <div className='mt-5 trader-referral-part referral-part flex-wrap d-flex justify-content-center mt-3 p-5'>
                                     <div>
                                         <p>Total trading volume</p>
-                                        <h5>$0.00</h5>
+                                        <h5>${traderTradingVolume}</h5>
                                     </div>
                                     <div>
                                         <p>Total rebates</p>
-                                        <h5>$0.00000</h5>
+                                        <h5>${traderTradingRebate}</h5>
                                     </div>
                                     <div>
                                         <p>Active referral code</p>
@@ -159,11 +175,11 @@ const Referral = (props) => {
                                         </div>
                                         <div>
                                             <p>Total trading volume</p>
-                                            <h5>$0.00</h5>
+                                            <h5>${referTradingVolume}</h5>
                                         </div>
                                         <div>
                                             <p>Total rebates</p>
-                                            <h5>$0.00000</h5>
+                                            <h5>${referTradingRebate}</h5>
                                         </div>
                                     </div>
 

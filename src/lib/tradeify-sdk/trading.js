@@ -11,7 +11,7 @@ import { Type } from './core/type'
 import { CoinMetadataLoader } from './core/run/MetaDataLoader';
 import { Pool as PoolObj } from './core/run/pool';
 import { getOrCreateCoinOfLargeEnoughBalance } from '../../control/main';
-import { createLongPositionBSdk, createLongPositionASdk } from './core/run/sdk';
+import { createLongPositionBSdk, createLongPositionASdk, closeOrderASdk, closeOrderBSdk } from './core/run/sdk';
 import { ceilDiv } from './core/math';
 import { CONFIG } from '../config';
 
@@ -22,6 +22,7 @@ export const createLongPositionAOrder = async (provider, wallet, args) => {
         args.tokenTypeA,
         BigInt(args.tradingAmount)
     )
+    console.log(args);
     const tx = createLongPositionASdk([args.tokenTypeA, args.tokenTypeB], {
         poolID: args.poolID,
         coinA: input.id,
@@ -89,4 +90,31 @@ export const createLongPositionBOrder = async (provider, wallet, args) => {
         console.log(tx);
         return await wallet.signAndExecuteTransaction(tx)
     }
+}
+
+export const closeOrderFun = async (provider, wallet, index, poolID, value, tokenA, tokenB, isDiff, isACS) => {
+    let tx = undefined;
+    if(isDiff == 1) {
+        if(isACS == 1) {
+            tx = closeOrderBSdk([tokenA, tokenB], {
+                poolID: poolID,
+                createdTimeStamp: index,
+                updateAmount: value
+            })
+        } else {
+            tx = closeOrderASdk([tokenA, tokenB], {
+                poolID: poolID,
+                createdTimeStamp: index,
+                updateAmount: value
+            })
+        }
+    } else {
+        tx = closeOrderBSdk([tokenA, tokenB], {
+            poolID: poolID,
+            createdTimeStamp: index,
+            updateAmount: value
+        })
+    }
+    
+    return await wallet.signAndExecuteTransaction(tx)
 }

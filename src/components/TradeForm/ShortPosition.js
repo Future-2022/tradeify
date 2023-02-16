@@ -30,8 +30,11 @@ import TokenIcon3 from '../../img/png/eth-bg.png';
 
 import Swap from './swap';
 import Modal from 'react-modal';
-import { getCoins, getUniqueCoinTypes, getCoinBalances, changeDecimal, fetchLPCoins } from '../../control/main';
 
+import { getTradeDatas, getCoins, getReferralIDByCode, 
+    getTraderStatus, getUniqueCoinTypes, getCoinBalances, 
+    changeDecimal, fetchLPCoins, getTraderMetaData } from '../../control/main';
+import { createLongPositionAOrder, createLongPositionBOrder } from '../../lib/tradeify-sdk/trading';
 const customStyles = {
     content: {
         top: '50%',
@@ -157,11 +160,11 @@ const ShortPosition = () => {
         if(_firstTokenType != _secondTokenType) { 
             lpCoin.map((item) => {
                 if(_firstTokenType == item.metadata[0].symbol && _secondTokenType == item.metadata[1].symbol) {
-                    setIsACS(true);
+                    setIsACS(1);
                     setPoolId(item);                
                     _secondTokenValue = calcSwapOut(item, value, true);
                 } else if (_firstTokenType == item.metadata[1].symbol && _secondTokenType == item.metadata[0].symbol){
-                    setIsACS(false);
+                    setIsACS(0);
                     setPoolId(item);
                     _secondTokenValue = calcSwapOut(item, value, false);
                 }
@@ -185,7 +188,90 @@ const ShortPosition = () => {
     }, [leverageValue])
 
     const createOrder = () => {
-        alert("create short order");
+        let createdTimeStamp = (Date.now() / 1000).toFixed(0);
+        let marketPrice = limitPrice * 1000;
+        let referID= undefined;
+        let hasRefer = undefined;
+        let isDiff = undefined;
+        let tradingType = 1; // trading type = 1 : short position
+        getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            let referralCode = item.referralCode;
+            getReferralIDByCode(globalContext.provider, localStorage.getItem('walletAddress'), referralCode).then(item => {
+                if(item == undefined) {
+                    hasRefer = 0;                 
+                    referID = CONFIG.nullAddress;
+                } else {
+                    hasRefer = 1;                 
+                    referID = item;
+                }
+                if(firstToken[0].value == secondToken[0].value) {
+                    isDiff = 0;
+                    setIsACS(0);
+                    console.log(isACS);
+                    lpCoin.map(item => {
+                        if(item.metadata[0].typeArg == "0x2::sui::SUI" && item.metadata[1].typeArg == secondToken[0].value) {
+                            console.log(item.metadata[0].typeArg);
+                            createLongPositionBOrder(globalContext.provider, globalContext.wallet, {
+                                poolID: item.id,
+                                tokenTypeA: "0x2::sui::SUI",
+                                tokenTypeB: secondToken[0].value,
+                                marketPrice: marketPrice,
+                                tradingAmount: firstTokenValue,
+                                calcAmount: Number(secondTokenValue).toFixed(0),
+                                leverageValue: leverageValue,
+                                hasRefer: hasRefer,
+                                referID: referID,
+                                isDiff: isDiff,
+                                isACS: 0, // placeholder
+                                createdTimeStamp: createdTimeStamp,
+                                tradingType: tradingType
+                            }).then(res => {
+                                toast.info("You have created position successfully!");
+                            })
+                        }
+                    }) 
+                } else {
+                    isDiff = 1;
+                    if(isACS == 0) {
+                        createLongPositionBOrder(globalContext.provider, globalContext.wallet, {
+                            poolID: poolId.id,
+                            tokenTypeA: firstToken[0].value,
+                            tokenTypeB: secondToken[0].value,
+                            marketPrice: marketPrice,
+                            tradingAmount: firstTokenValue,
+                            calcAmount: Number(secondTokenValue).toFixed(0),
+                            leverageValue: leverageValue,
+                            hasRefer: hasRefer,
+                            referID: referID,
+                            isDiff: isDiff,
+                            isACS: isACS,
+                            createdTimeStamp: createdTimeStamp,
+                            tradingType: tradingType
+                        }).then(res => {
+                            toast.info("You have created position successfully!");
+                        })
+                    } else {
+                        createLongPositionAOrder(globalContext.provider, globalContext.wallet, {
+                            poolID: poolId.id,
+                            tokenTypeA: firstToken[0].value,
+                            tokenTypeB: secondToken[0].value,
+                            marketPrice: marketPrice,
+                            tradingAmount: firstTokenValue,
+                            calcAmount: Number(secondTokenValue).toFixed(0),
+                            leverageValue: leverageValue,
+                            hasRefer: hasRefer,
+                            referID: referID,
+                            isDiff: isDiff,
+                            isACS: isACS,
+                            createdTimeStamp: createdTimeStamp,
+                            tradingType: tradingType
+                        }).then(res => {
+                            toast.info("You have created position successfully!");
+                        })
+                    }
+                }            
+            })
+        })
     }
 
     const setMarketPrice = (firstToken, secondToken) => {

@@ -14,11 +14,17 @@
     background-color: #342D55;
     border-radius: 8px;
 }
-.order-content-top > p {
+.order-content-top > h6 {
     color: #675d90;
     font-size: 12px;
     padding: 12px 6px;
     width: 160px;
+}
+.fs-15 {
+    font-size: 15px;
+}
+.text-gray-closed {
+    color: #968cc1!important;
 }
 .order-content-value > p {
     color: white;
@@ -27,11 +33,22 @@
     width: 150px;
     margin-top: 7px;
 }
+.PNL-green {
+    color: rgb(0, 214, 107)!important;
+}
+.PNL-red {
+    color: red!important;
+}
 .order-content-value > div {
     color: white;
     font-size: 12px;
     padding: 12px 6px;
     width: 150px;
+}
+.img-circle-small {
+    border-radius: 100%;
+    width: 20px;
+    height: 20px;
 }
 .btn-primary-custom {
     background-color: rgb(140, 35, 245);

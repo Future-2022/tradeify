@@ -7,12 +7,12 @@ export const CONFIG = {
     // link: 'https://tradeify/',
 
     // toeknomics
-    eth_id: '0xab542793742fdbde68ef53ff125bf506c09d8a34',
-    eth: '0x649a6e580de079e682b542c8ed6ea232fc9280bc::eth::ETH',
-    btc_id: '0xd5cdc5be2162becda2c699ce0d33a074f5e6a7a5',
-    btc: '0x37864b1010e7ddd17e1e37e39ca2da13152ae6d0::btc::BTC',
-    try_id: '0x14c059ae71e3544a58404f9e8f6a062abf5cd599',
-    try: '0xa12ec00a857dd0e67ea10c3b75f7e6fd2dc53313::try::TRY',    
+    eth_id: '0x29f8d5469163a3740cb7b17b2c04c385de1d6ade',
+    eth: '0xffbf0d6c86dc7328c0337beac66f6642f34d1d41::eth::ETH',
+    btc_id: '0xc9b314762fb2031ec0c9171df8312631040127a5',
+    btc: '0xabc7c056bfde290ea841e04f3e5439a0b4d56eab::btc::BTC',
+    try_id: '0xae7235a7faf97bb871d8554e9c9da9408bf62508',
+    try: '0xefd6df06a300258833fd91bf69439077e059cf03::try::TRY',    
     tlp: '0xde36bc4b0e9f603ff4c649734adf2e82ed71da59::pool::TLP',
 
     // mint, buy/sell, swap package
@@ -31,7 +31,7 @@ export const CONFIG = {
     referralStaus: '0x219327551d560fa92fe9e156a024b9ab0c1518d6',
 
     // trading package
-    tradingPoolID: '0x4836f0160a5dfd87cdad20e2322c32c179e02e7f',
+    tradingPoolID: '0x1785408256394459aec2439d1b5c6c244bb5c10b',
 
     // Main default setting parameter
     MainDecimal: 9,

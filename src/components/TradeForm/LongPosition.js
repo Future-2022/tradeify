@@ -13,7 +13,6 @@ import {
 import { Slider } from 'rsuite';
 import Modal from 'react-modal';
 import { ToastContainer, toast } from 'react-toastify';
-import { FaAlignRight } from 'react-icons/fa';
 
 import { useSuiWallet } from '../../context/ConnectWallet/useSuiWallet';
 import { StoreContext } from '../../store';
@@ -31,6 +30,7 @@ import TokenIcon3 from '../../img/png/eth-bg.png';
 import { getTradeDatas, getCoins, getReferralIDByCode, 
     getTraderStatus, getUniqueCoinTypes, getCoinBalances, 
     changeDecimal, fetchLPCoins, getTraderMetaData } from '../../control/main';
+
 import { createLongPositionAOrder, createLongPositionBOrder } from '../../lib/tradeify-sdk/trading';
 const customStyles = {
     content: {
@@ -88,7 +88,7 @@ const LongPosition = () => {
             SetLPCoin(lpCoins);            
             getTradeData(lpCoins);
         });
-    }, [])
+    }, [globalContext.traderData])
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -220,6 +220,8 @@ const LongPosition = () => {
                                 isACS: 0, // placeholder
                                 createdTimeStamp: createdTimeStamp,
                                 tradingType: tradingType
+                            }).then(res => {
+                                toast.info("You have created position successfully!");
                             })
                         }
                     }) 
@@ -240,6 +242,8 @@ const LongPosition = () => {
                             isACS: isACS,
                             createdTimeStamp: createdTimeStamp,
                             tradingType: tradingType
+                        }).then(res => {
+                            toast.info("You have created position successfully!");
                         })
                     } else {
                         createLongPositionAOrder(globalContext.provider, globalContext.wallet, {
@@ -256,6 +260,8 @@ const LongPosition = () => {
                             isACS: isACS,
                             createdTimeStamp: createdTimeStamp,
                             tradingType: tradingType
+                        }).then(res => {
+                            toast.info("You have created position successfully!");
                         })
                     }
                 }            
@@ -266,7 +272,6 @@ const LongPosition = () => {
     const getTradeData = (lpCoinVal) => {
         getTradeDatas(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             const traderData = getTraderMetaData(lpCoinVal, item);
-            console.log(traderData);
             globalContext.setTraderData(traderData);
         })
     }
