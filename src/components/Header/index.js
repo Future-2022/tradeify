@@ -128,7 +128,6 @@ const Header = () => {
                     receiveAddress: localStorage.getItem("walletAddress"),
                 }).then((args) => {
                     toast.info("Token has been minted successfully!");
-                    console.log("mint successfully");
                 })
             } catch (e) {
                 console.error(e)

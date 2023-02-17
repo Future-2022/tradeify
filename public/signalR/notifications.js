@@ -4,7 +4,6 @@ var url = (window.location.hostname === "v4.poolpo.in" || window.location.hostna
 
 if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   localhost = false;
-// console.log(localhost)
 
 if (localhost)
   url = "https://localhost:44352";
@@ -16,7 +15,6 @@ var connection = new signalR.HubConnectionBuilder()
   .withAutomaticReconnect()
   .build();
 let leadID = localStorage.getItem('LeadID')
-// console.log("La lead de localstorage es:", leadID)
 connection.on("ReceiveMessage", function (hash, action, text) {
   console.log('receive message')
   if (localhost) {

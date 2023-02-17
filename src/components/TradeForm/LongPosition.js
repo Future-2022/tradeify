@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FaAngleDown, FaAngleLeft, FaArrowRight } from 'react-icons/fa';
 import { WalletAdapter } from '@mysten/wallet-adapter-base';
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
 import { useWallet } from '@mysten/wallet-adapter-react';
 import {
     ObjectId,
@@ -10,7 +12,7 @@ import {
     GetObjectDataResponse,
     JsonRpcProvider,
 } from '@mysten/sui.js'
-import { Slider } from 'rsuite';
+// import { Slider } from 'rsuite';
 import Modal from 'react-modal';
 import { ToastContainer, toast } from 'react-toastify';
 
@@ -51,6 +53,19 @@ const customStyles = {
     }
 };
 
+const sliderGreen = ['rgba(220, 66, 9, 0.1)', 'rgba(220, 66, 9, 1)'];
+const sliderRed = ['rgba(240, 68, 56, .3)', 'rgba(240, 68, 56, 1)'];
+
+const leverageMarks = {
+    2: "2x",
+    5: "5x",
+    10: "10x",
+    15: "15x",
+    20: "20x",
+    25: "25x",
+    30: "30x",
+};
+
 const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 const LongPosition = () => {   
     const globalContext = useContext(StoreContext);     
@@ -63,7 +78,9 @@ const LongPosition = () => {
     const [isOrderMenu, setIsOrderMenu] = useState(false);
     const [isTokenMenu, setIsTokenMenu] = useState(false);
     const [orderType, setOrderType] = useState(1);
-    const [leverageValue, setLeverageValue] = useState(6);
+    const [leverageValue, setLeverageValue] = useState(5);
+    
+    const [trade, setTrade] = useState(0); 
 
     const [isSelectActive, setIsSelectActive] = useState(1);
     const [coins, setCoins] = useState(undefined);
@@ -202,10 +219,8 @@ const LongPosition = () => {
                 if(firstToken[0].value == secondToken[0].value) {
                     isDiff = 0;
                     setIsACS(0);
-                    console.log(isACS);
                     lpCoin.map(item => {
                         if(item.metadata[0].typeArg == "0x2::sui::SUI" && item.metadata[1].typeArg == secondToken[0].value) {
-                            console.log(item.metadata[0].typeArg);
                             createLongPositionBOrder(globalContext.provider, globalContext.wallet, {
                                 poolID: item.id,
                                 tokenTypeA: "0x2::sui::SUI",
@@ -346,20 +361,20 @@ const LongPosition = () => {
                 )}
                 <div>
                     <div className='text-left pt-2 d-flex justify-content-between'><p className='mt-3'>Leverage: {leverageValue}</p> <input type='text' className='form-control w-25 leverage' value={leverageValue} onChange={(e) => setLeverageValue(e.target.value)}/></div>
-                    <div className='pt-3'>
+                    <div className='py-3'>
                         <Slider
-                            defaultValue={leverageValue}
-                            min={2}
-                            step={3}
-                            max={50}
-                            graduated
-                            progress
+                            min={1.1}
+                            max={30}
+                            step={0.1}
+                            marks={leverageMarks}
+                            onChange={(value) => { setLeverageValue(value) }}
                             value={leverageValue}
-                            onChange={(value) => { selectLeverage(value) }}
-                            renderMark={mark => {
-                                return mark;
-                            }}
-                            className='custom-slider'
+                            defaultValue={leverageValue}
+                            dotStyle={{ backgroundColor: trade === 0 ? sliderGreen[0] : sliderRed[0], border: '0 none', borderRadius: '2px', width: '2px' }}
+                            handleStyle={{ backgroundColor: trade === 0 ? sliderGreen[1] : sliderRed[1], opacity: 1, boxShadow: 'none' }}
+                            trackStyle={{ background: trade === 0 ? sliderGreen[1] : sliderRed[1] }}
+                            railStyle={{ backgroundColor: '#6b4633' }}
+                            activeDotStyle={{ backgroundColor: trade === 0 ? sliderGreen[1] : sliderRed[1] }}
                         />
                     </div>
                 </div>

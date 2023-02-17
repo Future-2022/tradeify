@@ -47,8 +47,6 @@ export const getTraderMetaData = (lpCoin, value) => {
   let earnType = undefined;
   let earnAmount = undefined;
   let netValue = undefined;
-  console.log(value);
-  // console.log(lpCoin);
   value.map(valueItem => {
     lpCoin.map(item => {
       if(item.id == valueItem.poolID) {
@@ -63,7 +61,6 @@ export const getTraderMetaData = (lpCoin, value) => {
             iconType = item.metadata[0].symbol;
             markPrice = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);  
             netValue = calcSwapOut(item, (valueItem.tradingAmount), false) * valueItem.leverageValue;
-            console.log(netValue); 
           }
           else {
             colletral = item.metadata[0].symbol;
@@ -129,7 +126,6 @@ export const getTraderMetaData = (lpCoin, value) => {
       }
     })
   }) 
-  console.log(returnValue);
   return returnValue;
 }
 export const LPMetaData = (totalLPValue, metaValue) => {
@@ -208,14 +204,11 @@ export async function getOrCreateCoinOfLargeEnoughBalance(
   const coin = selectCoinWithBalanceGreaterThanOrEqual(coins, balance)
   
   if (coin !== undefined) {
-    console.log(coin);
     return coin
   }
 
   const inputCoins = selectCoinSetWithCombinedBalanceGreaterThanOrEqual(coins, balance)
-  console.log(inputCoins);
   const addr = await getWalletAddress(wallet)
-  console.log(addr);
   const res = await wallet.signAndExecuteTransaction({
     kind: 'pay',
     data: {
@@ -230,7 +223,6 @@ export async function getOrCreateCoinOfLargeEnoughBalance(
   }
   const createdId = res.effects.created[0].reference.objectId
   const newCoin = await provider.getObject(createdId)
-  console.log(createdId);
   return suiCoinToCoin(newCoin)
 }
 export function sortByBalance(coins) {
@@ -286,32 +278,27 @@ export async function fetchUserLpCoins(provider, addr) {
 }
 export async function fetchLPCoins(provider, wallet) {
     const poolIDs = [];
-    // console.log(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent`);
     const events = await provider.getEvents(
         { MoveEvent: `${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent` },
         null,
         null,
         'descending'
     )
-    // console.log(events);
   events.data.forEach(envelope => {
     const event = envelope.event
     if (!('moveEvent' in event)) {
       throw new Error('Not a MoveEvent')
     }
     const dec = PoolCreateEvent.fromBcs(event.moveEvent.bcs, 'base64');
-    // console.log(dec)
     poolIDs.push(dec.poolId)
   })
   const poolObjs = await provider.getObjectBatch(poolIDs);
-  // console.log(poolObjs);
   return await Promise.all(
     poolObjs.map(async res => {
       const obj = getObjectExistsResponse(res)
       if (obj == undefined) {
         throw new Error(`object does not exist`)
       }
-      // console.log(obj);
       return Pool.fromSuiObject(obj)
     })
   )
@@ -321,7 +308,6 @@ export async function fetchLPCoins(provider, wallet) {
 export async function getUserCoins(provider, wallet) {
     const addr = await getWalletAddress(wallet);
     const coinInfos = (await provider.getObjectsOwnedByAddress(addr)).filter(SuiCoin.getCoinTypeArg);
-    // console.log(coinInfos);
     const coins = (await (provider).getObjectBatch(coinInfos.map(obj => (obj.objectId)))).map(coin => {
       return suiCoinToCoin(coin)
     })
@@ -330,7 +316,6 @@ export async function getUserCoins(provider, wallet) {
 
 export async function getCoins(provider, address) {
     const coinInfos = (await provider.getObjectsOwnedByAddress(address)).filter(SuiCoin.getCoinTypeArg);
-    // console.log(coinInfos);
     const coins = (await (provider).getObjectBatch(coinInfos.map(obj => (obj.objectId)))).map(coin => {
       return suiCoinToCoin(coin)
     })
@@ -341,11 +326,9 @@ export async function getTradeDatas(provider, address) {
   const tradingID = [];
   tradingID.push(CONFIG.tradingPoolID);
   const traderBatch = await provider.getObjectBatch(tradingID);
-  // console.log(traderBatch);
 
   const traderData = traderBatch[0].details.data.fields.data.fields.contents;
   // // get Referral Code
-  // let referralCode = undefined;
   let ownData = [];
   traderData.map(item => {
     if(item.fields.key.fields.trader == address) {
@@ -384,7 +367,6 @@ export function getCoinSymbols(coins){
 }
 export const getStakingPoolStatus = async (provider) => {
     const poolIDs = [];
-    // console.log(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent`);
     const events = await provider.getEvents(
         { MoveEvent: `${CONFIG.stakingPackageId}::pool::StakingPoolCreationEvent` },
         null,
@@ -397,15 +379,22 @@ export const getStakingPoolStatus = async (provider) => {
         throw new Error('Not a MoveEvent')
       }
       const dec = PoolCreateEvent.fromBcs(event.moveEvent.bcs, 'base64');
-      // console.log(dec)
       poolIDs.push(dec.poolId)
     })
     const stakingPoolObjs = await provider.getObjectBatch(poolIDs);
     return stakingPoolObjs[0];
 }
+
+export const getTotalTRYValue = async (provider) => {
+    const poolIDs = [];
+    poolIDs.push(CONFIG.try_id);
+    const batch = await provider.getObjectBatch(poolIDs);
+    const TRYValue = batch[0].details.data.fields.total_supply.fields.value;
+    return Number(changeDecimal(TRYValue)).toFixed(0);
+}
+
 export const findStakingMeta = async ( provider, walletAddress ) => {
   const poolIDs = [];
-  // console.log(`${CONFIG.tradeifyPackageId}::pool::PoolCreationEvent`);
   const events = await provider.getEvents(
       { MoveEvent: `${CONFIG.stakingPackageId}::pool::StakeCreationEvent` },
       null,
@@ -495,7 +484,6 @@ export const getTraderStatus = async (provider, wallet) => {
   return {referralCode};
 }
 export const getReferralResult = async (provider, wallet) => {
-  console.log(wallet);
   const referralStatusAddress = [];
   referralStatusAddress.push(CONFIG.tradingPoolID);
   const batch = await provider.getObjectBatch(referralStatusAddress);
@@ -504,17 +492,14 @@ export const getReferralResult = async (provider, wallet) => {
   let rebate = 0;
   tradingData.map(item => {
     const result = item.fields.key.fields;
-    console.log(result);
     if(result.referID == wallet) {
       tradingAmount += Number(result.tradingAmount);
       rebate += Number(result.tradingAmount * CONFIG.tradingFee / 100)
     }
   }) 
-  console.log(tradingAmount);
   return {tradingAmount: changeDecimal5Fix(tradingAmount), rebate: changeDecimal5Fix(rebate)};
 }
 export const getTradingResult = async (provider, wallet) => {
-  console.log(wallet);
   const referralStatusAddress = [];
   referralStatusAddress.push(CONFIG.tradingPoolID);
   const batch = await provider.getObjectBatch(referralStatusAddress);
@@ -523,7 +508,6 @@ export const getTradingResult = async (provider, wallet) => {
   let rebate = 0;
   tradingData.map(item => {
     const result = item.fields.key.fields;
-    console.log(result);
     if(result.hasRefer == "1") {
       if(result.trader == wallet) {
         tradingAmount += Number(result.tradingAmount);
@@ -531,6 +515,5 @@ export const getTradingResult = async (provider, wallet) => {
       }
     }
   }) 
-  console.log(tradingAmount);
   return {tradingAmount: changeDecimal5Fix(tradingAmount), rebate: changeDecimal5Fix(rebate)};
 }

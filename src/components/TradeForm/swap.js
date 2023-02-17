@@ -132,7 +132,6 @@ const Swap = (props) => {
     }
 
     const handleFirstTokenChange = (value) => {
-        console.log(value)
         setFirstTokenValue(value);
         let _secondTokenValue = 0;
         const _firstTokenType = firstToken[0].label;

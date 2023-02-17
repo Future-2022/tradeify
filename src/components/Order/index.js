@@ -57,7 +57,7 @@ const Order = () => {
                                 <p>${item.markPrice}</p>
                                 <p>${item.markPrice}</p>                                    
                                 <p className={item.earnType == "-" ? 'PNL-red' : 'PNL-green'}>{item.earnType} ${item.earnAmount}</p>                                    
-                                {item.netValue < 0 ? (<div className='text-gray-closed mt-2'>Position losed!</div>):(
+                                {item.netValue < 0 ? (<div className='text-gray-closed mt-2'>Position lost!</div>):(
                                     <div><div className='btn btn-primary-custom mt-1 mr-2' onClick={() => closeOrder(item.createdTimeStamp, item.poolID, item.netValue, item.tokenA, item.tokenB, item.isDiff, item.isACS)}>Close</div></div>
                                 )}
                             </div>

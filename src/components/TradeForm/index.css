@@ -19,6 +19,13 @@
     scrollbar-width: none;
     width: 25%;
     border-radius: 8px;
+    color: #6b4633;
+}
+.rc-slider-handle {
+    border: solid 2px #ffe18a!important;
+}
+.rc-slider-mark-text-active {
+    color: #e9b72d!important;
 }
 .border-radius-0 {
     border-radius: 0px;

@@ -10,7 +10,8 @@ import {
     GetObjectDataResponse,
     JsonRpcProvider,
 } from '@mysten/sui.js'
-import { Slider } from 'rsuite';
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
 import { ToastContainer, toast } from 'react-toastify';
 
 import { useSuiWallet } from '../../context/ConnectWallet/useSuiWallet';
@@ -35,6 +36,7 @@ import { getTradeDatas, getCoins, getReferralIDByCode,
     getTraderStatus, getUniqueCoinTypes, getCoinBalances, 
     changeDecimal, fetchLPCoins, getTraderMetaData } from '../../control/main';
 import { createLongPositionAOrder, createLongPositionBOrder } from '../../lib/tradeify-sdk/trading';
+
 const customStyles = {
     content: {
         top: '50%',
@@ -53,6 +55,18 @@ const customStyles = {
       backgroundColor: 'rgb(0 0 0 / 86%)'
     }
 };
+const sliderGreen = ['rgba(220, 66, 9, 0.1)', 'rgba(220, 66, 9, 1)'];
+const sliderRed = ['rgba(240, 68, 56, .3)', 'rgba(240, 68, 56, 1)'];
+
+const leverageMarks = {
+    2: "2x",
+    5: "5x",
+    10: "10x",
+    15: "15x",
+    20: "20x",
+    25: "25x",
+    30: "30x",
+};
 
 const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 const ShortPosition = () => {   
@@ -66,8 +80,10 @@ const ShortPosition = () => {
     const [isOrderMenu, setIsOrderMenu] = useState(false);
     const [isTokenMenu, setIsTokenMenu] = useState(false);
     const [orderType, setOrderType] = useState(1);
-    const [leverageValue, setLeverageValue] = useState(6);
+    const [leverageValue, setLeverageValue] = useState(5);
 
+    const [trade, setTrade] = useState(0); 
+    
     const [isSelectActive, setIsSelectActive] = useState(1);
     const [coins, setCoins] = useState(undefined);
     const [coinBalance, setCoinBalance] = useState([]);
@@ -347,20 +363,20 @@ const ShortPosition = () => {
                 )}
                 <div>
                     <div className='text-left pt-2 d-flex justify-content-between'><p className='mt-3'>Leverage: {leverageValue}</p> <input type='text' className='form-control w-25 leverage' value={leverageValue} onChange={(e) => setLeverageValue(e.target.value)}/></div>
-                    <div className='pt-3'>
+                    <div className='py-3'>
                         <Slider
-                            defaultValue={leverageValue}
-                            min={2}
-                            step={3}
-                            max={50}
-                            graduated
-                            progress
+                            min={1.1}
+                            max={30}
+                            step={0.1}
+                            marks={leverageMarks}
+                            onChange={(value) => { setLeverageValue(value) }}
                             value={leverageValue}
-                            onChange={(value) => { selectLeverage(value) }}
-                            renderMark={mark => {
-                                return mark;
-                            }}
-                            className='custom-slider'
+                            defaultValue={leverageValue}
+                            dotStyle={{ backgroundColor: trade === 0 ? sliderGreen[0] : sliderRed[0], border: '0 none', borderRadius: '2px', width: '2px' }}
+                            handleStyle={{ backgroundColor: trade === 0 ? sliderGreen[1] : sliderRed[1], opacity: 1, boxShadow: 'none' }}
+                            trackStyle={{ background: trade === 0 ? sliderGreen[1] : sliderRed[1] }}
+                            railStyle={{ backgroundColor: '#6b4633' }}
+                            activeDotStyle={{ backgroundColor: trade === 0 ? sliderGreen[1] : sliderRed[1] }}
                         />
                     </div>
                 </div>
@@ -428,47 +444,79 @@ const ShortPosition = () => {
                     </div>
                     <div>
                         <div className='pt-4'>
-                            {isSelectActive == 1 && (
-                                <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
-                                    <div className='d-flex'>
-                                        <img src={TokenIcon1} width={45} />
-                                        <div className='ml-4'>
-                                            <h5 className='text-white text-left'>SUI</h5>
-                                            <p className='text-gray'>Sui</p>
+                            {(isSelectActive == 2 && firstToken[0].label == 'SUI') ? (
+                                <>
+                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
+                                        <div className='d-flex'>
+                                            <img src={TokenIcon3} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>ETH</h5>
+                                                <p className='text-gray'>Ethereum</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5 className='text-white text-right'>$1234.32</h5>
+                                            <p className='text-red text-right'>-0.87</p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <h5 className='text-white text-right'>$1.0034</h5>
-                                        <p className='text-green text-right'>+0.02</p>
+                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
+                                        <div className='d-flex'>
+                                            <img src={TokenIcon2} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>BTC</h5>
+                                                <p className='text-gray'>Bitcoin</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5 className='text-white text-right'>$14034.43</h5>
+                                            <p className='text-red text-right'>-0.34</p>
+                                        </div>
                                     </div>
-                                </div>
+                                </>
+                            ): (
+                                <>
+                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
+                                        <div className='d-flex'>
+                                            <img src={TokenIcon1} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>SUI</h5>
+                                                <p className='text-gray'>Sui</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5 className='text-white text-right'>$1.0034</h5>
+                                            <p className='text-green text-right'>+0.02</p>
+                                        </div>
+                                    </div>
+                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
+                                        <div className='d-flex'>
+                                            <img src={TokenIcon3} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>ETH</h5>
+                                                <p className='text-gray'>Ethereum</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5 className='text-white text-right'>$1234.32</h5>
+                                            <p className='text-red text-right'>-0.87</p>
+                                        </div>
+                                    </div>
+                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
+                                        <div className='d-flex'>
+                                            <img src={TokenIcon2} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>BTC</h5>
+                                                <p className='text-gray'>Bitcoin</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5 className='text-white text-right'>$14034.43</h5>
+                                            <p className='text-red text-right'>-0.34</p>
+                                        </div>
+                                    </div>
+                                </>
                             )}
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon3} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>ETH</h5>
-                                        <p className='text-gray'>Ethereum</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1234.32</h5>
-                                    <p className='text-red text-right'>-0.87</p>
-                                </div>
-                            </div>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon2} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>BTC</h5>
-                                        <p className='text-gray'>Bitcoin</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$14034.43</h5>
-                                    <p className='text-red text-right'>-0.34</p>
-                                </div>
-                            </div>
+                            
                         </div>
                     </div>
                 </div>

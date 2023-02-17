@@ -62,5 +62,6 @@ export const UnStakeTLP = async (provider, wallet, args) => {
     const tx = unStakeSdk([args.tlpType, args.tryType], {
         stakingMetaId: args.stakingMetaId,
     })
+    console.log(tx);
     return await wallet.signAndExecuteTransaction(tx)
 }

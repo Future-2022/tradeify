@@ -27,7 +27,6 @@ export class Pool {
 
   static async fromSuiObject(obj) {
     const state = PoolObj.fromSuiObject(obj)
-    // console.log(state);
     const metadata = await Promise.all([
       CoinMetadataLoader.loadMetadata(state.typeArgs[0]),
       CoinMetadataLoader.loadMetadata(state.typeArgs[1]),
@@ -62,7 +61,6 @@ const calcLpValue = (lpAmount, pool) => {
 
   const amountA = (balanceA * BigInt(lpAmount)) / poolLpAmount
   const amountB = (balanceB * BigInt(lpAmount)) / poolLpAmount
-  // console.log(fromInt(amountA, pool.metadata[0].decimals));
   return [
     amountA, amountB
   ]
@@ -103,13 +101,11 @@ const withdrawTx = (args) => {
 // Sell tlp function
 export const sellTLPSdk = async (wallet, args) => {
   const tx = withdrawTx(args);
-  console.log(tx);
   return await wallet.signAndExecuteTransaction(tx)
 }
 
 // Buy tlp function
 export const buyTLPSdk = async (provider, wallet, args) => {
-  console.log(args);
   const [inputA, inputB] = await Promise.all([
     await getOrCreateCoinOfLargeEnoughBalance(
       provider,
@@ -134,13 +130,11 @@ export const buyTLPSdk = async (provider, wallet, args) => {
     amountB: args.amountB,
     minLpOut,
   })
-  console.log(tx);
   return await wallet.signAndExecuteTransaction(tx)
 }
 // const sellTLPSdk
 
 export const swap = async (provider, wallet, args) => {
-  console.log(args);
   const input = await getOrCreateCoinOfLargeEnoughBalance(
     provider,
     wallet,
@@ -150,14 +144,12 @@ export const swap = async (provider, wallet, args) => {
   const expOut = calcSwapOut(args.lpCoin, args.amount, args.isACS)
   const minOut = (BigInt(expOut) * (100n - BigInt(args.maxSlippagePct))) / 100n
   if (args.isACS == true) {
-    // console.log(args.lpCoin.metadata);
     const tx = maybeSplitThenSwapA({first: args.lpCoin.metadata[0].typeArg, second: args.lpCoin.metadata[1].typeArg}, {
       pool: args.lpCoin.id,
       input: input.id,
       amount: args.amount,
       minOut,
     })
-    // console.log(tx)
     return await wallet.signAndExecuteTransaction(tx)
   } else {
     const tx = maybeSplitThenSwapB({first: args.lpCoin.metadata[0].typeArg, second: args.lpCoin.metadata[1].typeArg}, {
@@ -166,7 +158,6 @@ export const swap = async (provider, wallet, args) => {
       amount: args.amount,
       minOut,
     })
-    // console.log(tx)
     return await wallet.signAndExecuteTransaction(tx)
   }
 }

@@ -9,6 +9,8 @@ import { CONFIG } from '../../lib/config';
 import { StoreContext } from '../../store';
 import { stakeTLP, depositTLPStake, getStakingReward, UnStakeTLP } from '../../lib/tradeify-sdk/staking';
 
+import { ToastContainer, toast } from 'react-toastify';
+
 const Earn = (props) => {
     
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
@@ -53,6 +55,9 @@ const Earn = (props) => {
                 currentTimestamp: currentTimestamp,
                 tlpType: CONFIG.tlp,
                 tryType: CONFIG.try
+            }).then(res => {
+                toast.info(`${tlpValue} TLP has been staked!`)
+                setTLPvalue(0)
             })
         } else {
             const metaPoolId = userStakingStatus.data.fields.id.id;
@@ -63,6 +68,9 @@ const Earn = (props) => {
                 currentTimestamp: currentTimestamp,
                 tlpType: CONFIG.tlp,
                 tryType: CONFIG.try
+            }).then(res => {
+                toast.info(`${tlpValue} TLP has been staked!`)
+                setTLPvalue(0)
             })
         }
     }
@@ -76,6 +84,9 @@ const Earn = (props) => {
                 currentTimestamp: currentTimestamp,
                 tlpType: CONFIG.tlp,
                 tryType: CONFIG.try
+            }).then(res => {
+                toast.info(`TLP has been rewarded!`)
+                setUserReward(0);
             })
         }
     }
@@ -87,6 +98,8 @@ const Earn = (props) => {
                 stakingMetaId: metaPoolId,
                 tlpType: CONFIG.tlp,
                 tryType: CONFIG.try
+            }).then(res => {
+                toast.info(`${userStakingStatus.data.fields.staking_amount} TLP has been unstaked!`)
             })
         }
     }
@@ -103,7 +116,6 @@ const Earn = (props) => {
         });
         findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
             res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
-                console.log(item);
                 setHasStakingMeta(true);
                 setUserStakingStatus(item);
             })
@@ -111,7 +123,6 @@ const Earn = (props) => {
         getStakingPoolStatus(globalContext.provider).then(res => {
             setStakingPoolStatus(res);
             totalSupplyTLP = res.details.data.fields.balance_tlp;
-            console.log(totalSupplyTLP);
         })
         
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
@@ -119,7 +130,6 @@ const Earn = (props) => {
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
             })
-            console.log(totalLPValue);
             if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
                 let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
                 let currentTimestamp = Date.now();
@@ -128,15 +138,14 @@ const Earn = (props) => {
                 setUserReward(Reward);
             }
             setTotalLPValue(totalLPValue);
-            // console.log(APR);
         })
-        calculateReward()
-    }, [globalContext.newCoins, totalLPValue])
+        // calculateReward()
+    }, [globalContext.newCoins, totalLPValue, tlpValue])
 
-    const calculateReward = () => {
-        let currentTimestamp = Date.now();
-        console.log(currentTimestamp); 
-    }
+    // const calculateReward = () => {
+    //     let currentTimestamp = Date.now();
+    //     console.log(currentTimestamp); 
+    // }
 
     return (
         <div>
@@ -192,17 +201,17 @@ const Earn = (props) => {
                                         <p className='text-gray py-2 pt-3'>Stake APR</p>
                                         <h4 className='py-2'>{stakingAPR.toFixed(2)}%</h4>
                                     </div>
-                                    <div className='d-flex justify-content-between'>
+                                    <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>TRY Price</p>
-                                        <p className='py-2 text-pink-sharp'>$ 0.782</p>
+                                        <p className='text-pink-sharp'>$ 0.782</p>
                                     </div>
-                                    <div className='d-flex justify-content-between'>
+                                    <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total staked</p>
-                                        <p className='py-2 text-pink-sharp'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</p>
+                                        <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</p>
                                     </div>
-                                    <div className='d-flex justify-content-between'>
+                                    <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total TLP value</p>
-                                        <p className='py-2 text-pink-sharp'>{totalLPValue} TLP</p>
+                                        <p className='text-pink-sharp'>{totalLPValue} TLP</p>
                                     </div>
                                 </div>                         
                             </div>
@@ -211,17 +220,17 @@ const Earn = (props) => {
                                     <div className='d-flex'>
                                         <h4>Your Stats</h4>
                                     </div>
-                                    <div className='d-flex justify-content-between'>
+                                    <div className='d-flex justify-content-between py-1 mt-3'>
                                         <p className='text-gray py-2'>Balance</p>
-                                        <p className='py-2'>{totalUserLP} TLP</p>
+                                        <p>{totalUserLP} TLP</p>
                                     </div>
-                                    <div className='d-flex justify-content-between'>
+                                    <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Staked TLP</p>
-                                        <p className='py-2'>{userStakingStatus != undefined ? userStakingStatus.data.fields.staking_amount : 0} TLP</p>
+                                        <p>{userStakingStatus != undefined ? userStakingStatus.data.fields.staking_amount : 0} TLP</p>
                                     </div>
-                                    <div className='d-flex justify-content-between'>
+                                    <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Claimable rewards</p>
-                                        <p className='py-2'>{changeDecimal(userReward)} TRY</p>
+                                        <p>{changeDecimal(userReward)} TRY</p>
                                     </div>
                                     <div className='d-flex mt-3'>
                                         <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2' onClick={() => getReward()}>Claim rewards</div>

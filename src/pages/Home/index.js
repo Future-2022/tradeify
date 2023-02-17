@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import './index.css';
 
 import TokenIcon1 from '../../img/png/SUI.png';
@@ -6,13 +6,48 @@ import TokenIcon2 from '../../img/png/eth-bg.png';
 import TokenIcon3 from '../../img/svg/BTC.svg';
 
 import TLP from '../../img/png/token-logo.png';
+import { getTotalTRYValue, getStakingPoolStatus, 
+    fetchLPCoins } from '../../control/main';
+import { StoreContext } from '../../store';
 
 import { FaAngleDown } from 'react-icons/fa';
-
 import { useMediaQuery } from 'react-responsive';
 
 const Home = (props) => {
-    const isMobile = useMediaQuery({ query: '(max-width: 480px)' });    
+    const isMobile = useMediaQuery({ query: '(max-width: 480px)' });  
+    const globalContext = useContext(StoreContext); 
+    // TRY part
+    const [totalTRYValue, setTotalTRYValue] = useState(false);
+
+
+    // TLP part 
+    const [totalLPValue, setTotalLPValue] = useState(false);
+    const [stakingAPR, setStakingAPR] = useState(0);
+    const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
+    const [userStakingStatus, setUserStakingStatus] = useState(undefined);
+
+    useEffect(() => {
+        let totalSupplyTLP = 0;
+        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+            let totalLPValue = 0;
+            lpCoins.map(item => {
+                totalLPValue += Number(item.data.lpSupply.value);
+            })
+            if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
+                let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
+                let currentTimestamp = Date.now();
+                setStakingAPR(APR);
+            }
+            setTotalLPValue(totalLPValue);
+        })
+        getStakingPoolStatus(globalContext.provider).then(res => {
+            setStakingPoolStatus(res);
+            totalSupplyTLP = res.details.data.fields.balance_tlp;
+        })
+        getTotalTRYValue(globalContext.provider).then(res => {
+            setTotalTRYValue(res);
+        })
+    }, [])
 
     return (
         <div className='pb-5'>
@@ -115,7 +150,7 @@ const Home = (props) => {
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Supply</h6>
-                                            <h6 className='text-white'>8,307,163 TRY</h6>
+                                            <h6 className='text-white'>{totalTRYValue} TRY</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Total Staked</h6>
@@ -151,11 +186,11 @@ const Home = (props) => {
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Supply</h6>
-                                            <h6 className='text-white'>8,307,163 TRY</h6>
+                                            <h6 className='text-white'>{totalLPValue} TLP</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Total Staked</h6>
-                                            <h6 className='text-white'>$801,951,732</h6>
+                                            <h6 className='text-white'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Market Cap</h6>
@@ -195,7 +230,6 @@ const Home = (props) => {
                                                         <h6 className='mb-0'>Sui</h6>
                                                         <p className='text-gray text-left'>SUI</p>
                                                     </div>
-                                                    <FaAngleDown className='text-white mt-1 ml-3 cursor-pointer'/>
                                                 </div>
                                                 <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
                                                 <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
@@ -213,7 +247,6 @@ const Home = (props) => {
                                                         <h6 className='mb-0'>Ethereum</h6>
                                                         <p className='text-gray text-left'>ETH</p>
                                                     </div>
-                                                    <FaAngleDown className='text-white mt-1 ml-3 cursor-pointer'/>
                                                 </div>
                                                 <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
                                                 <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
@@ -231,7 +264,6 @@ const Home = (props) => {
                                                         <h6 className='mb-0'>Bitcoin</h6>
                                                         <p className='text-gray text-left'>BTC</p>
                                                     </div>
-                                                    <FaAngleDown className='text-white mt-1 ml-3 cursor-pointer'/>
                                                 </div>
                                                 <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
                                                 <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>

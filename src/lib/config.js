@@ -13,7 +13,7 @@ export const CONFIG = {
     btc: '0xabc7c056bfde290ea841e04f3e5439a0b4d56eab::btc::BTC',
     try_id: '0xae7235a7faf97bb871d8554e9c9da9408bf62508',
     try: '0xefd6df06a300258833fd91bf69439077e059cf03::try::TRY',    
-    tlp: '0xde36bc4b0e9f603ff4c649734adf2e82ed71da59::pool::TLP',
+    tlp: '0x942583684b4ef0d79be228763879ba53ddbbd96b::pool::TLP',
 
     // mint, buy/sell, swap package
     tradeifyPackageId: '0x942583684b4ef0d79be228763879ba53ddbbd96b',
@@ -21,8 +21,8 @@ export const CONFIG = {
     poolRegistryId: '0xce0c9d31693d4714510cc1abed8940293b070171',
 
     // staking package
-    stakingPackageId: '0x942583684b4ef0d79be228763879ba53ddbbd96b',
-    stakingPoolId: '0x9c5216bbeaef96ae361cd61fc61aaffe8242cc75',
+    stakingPackageId: '0xcd5737c56320ef48565d80b13585e089338bec65',
+    stakingPoolId: '0xa0c34774c9217a5381b776e59e274836a0f293fc',
 
     // referral package
     referralPackageId: '0x942583684b4ef0d79be228763879ba53ddbbd96b',
