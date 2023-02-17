@@ -176,7 +176,7 @@ const Header = () => {
                                             <div className='text-white' onClick={() => setIsMenu(false)}><h3 className='text-white'>x</h3></div>
                                         </div>
                                         <hr className='text-white' />
-                                        <div className={`pt-1 ${menuItem !== 'home' ? '' : 'menu-active'}`} onClick={() => goLink('home')}><h4 className='text-white'>Dashboard</h4></div>
+                                        <div className={`pt-1 ${menuItem !== '' ? '' : 'menu-active'}`} onClick={() => goLink('')}><h4 className='text-white'>Dashboard</h4></div>
                                         <div className={`${menuItem !== 'trade' ? '' : 'menu-active'}`} onClick={() => goLink('trade')}><h4 className='text-white'>Trade</h4></div>
                                         <div className={`${menuItem !== 'liquidity' ? '' : 'menu-active'}`} onClick={() => goLink('liquidity')}><h4 className='text-white'>Liquidity</h4></div>
                                         <div className={`${menuItem !== 'earn' ? '' : 'menu-active'}`}>
