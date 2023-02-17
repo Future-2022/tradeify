@@ -55,7 +55,7 @@ const Swap = (props) => {
     const [isOpenModal, setIsOpenModal] = useState(false);
     const [isSelectActive, setIsSelectActive] = useState(1);
     
-    const [coins, setCoins] = useState([]);
+    const [coins, setCoins] = useState(undefined);
     const [coinBalance, setCoinBalance] = useState([]);
     const [lpCoin, SetLPCoin] = useState([]);
     const [poolId, setPoolId] = useState(null);  
@@ -67,10 +67,12 @@ const Swap = (props) => {
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
     const [firstTokenValue, setFirstTokenValue] = useState(0);
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
+    const [firstTokenPrice, setFirstTokenPrice] = useState(0);
+    const [availableLiquidity, setAvailableLiquidity] = useState(0);
 
     const [secondToken, setSecondToken] = useState([{label: "Select"}]);
     const [secondTokenValue, setSecondTokenValue] = useState(0);
-    const [secondTokenMaxValue, setSecondTokenMaxValue] = useState(0);
+    const [secondTokenPrice, setSecondTokenPrice] = useState(0);
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -83,21 +85,46 @@ const Swap = (props) => {
         })
     }, [])
 
-    const selectToken = (type) => {
-        const token = coins.filter(item => item.label == type);
-        let value = undefined;
-        coinBalance.forEach((item, index) => {
-            if(index == token[0].value) {
-                value = item;
+    const selectToken = async (type) => {
+        if(coins == undefined) {
+            toast.info("please wait for a few sec. now loading data");
+            setIsOpenModal(false);
+        } else { 
+            const token = coins.filter(item => item.label == type);
+            let value = undefined;
+            coinBalance.forEach((item, index) => {
+                if(index == token[0].value) {
+                    value = item;
+                }
+            });
+            if(isSelectActive == 1) {
+                await setFirstToken(token);
+                setFirstTokenMaxValue(value);
+            } else {
+                await setSecondToken(token);
             }
-        });
-        if(isSelectActive == 1) {
-            setFirstToken(token);
-            setFirstTokenMaxValue(value);
-        } else {
-            setSecondToken(token);
+            setIsOpenModal(false);
+            getTokenPrice()
         }
-        setIsOpenModal(false);
+    }
+    const getTokenPrice = () => {
+        if (firstToken[0].label != 'Select' && firstToken[0].label != 'Select' ) {
+            lpCoin.map(item => {
+                if(item.metadata[0].symbol == firstToken[0].label && item.metadata[1].symbol == secondToken[0].label) {
+                    let price1 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
+                    let price2 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                    setFirstTokenPrice(price1);
+                    setSecondTokenPrice(price2);
+                    setAvailableLiquidity(Number(item.data.balanceA.value));
+                } else if (item.metadata[1].symbol == firstToken[0].label && item.metadata[0].symbol == secondToken[0].label){
+                    let price1 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                    let price2 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
+                    setFirstTokenPrice(price1);
+                    setSecondTokenPrice(price2);
+                    setAvailableLiquidity(Number(item.data.balanceB.value));
+                }
+            })
+        }
     }
     const closeModal = () => {
         setIsOpenModal(false);
@@ -187,21 +214,21 @@ const Swap = (props) => {
                 <div className='earn-button w-100 text-center' onClick={runSwap}>Swap</div>
             )}
             <div className='d-flex justify-content-between'>
-                <p className='text-left pt-2'>Fees</p>
-                <p className='text-gray pt-2'>--</p>
+                <p className='text-left text-gray pt-2'>Fees</p>
+                <p className='pt-2'>3%</p>
             </div>      
             <div className='pt-3'>
                 <div className='d-flex justify-content-between'>
-                    <p className='text-gray'>ETH price</p>
-                    <p>$1,219.14</p>
+                    <p className='text-gray'>{firstToken[0].label} price</p>
+                    <p>${firstTokenPrice}</p>
                 </div>
                 <div className='d-flex justify-content-between'>
-                    <p className='text-gray'>USDC price</p>
-                    <p>$1.00</p>
+                    <p className='text-gray'>{secondToken[0].label} price</p>
+                    <p>${secondTokenPrice}</p>
                 </div>
                 <div className='d-flex justify-content-between'>
                     <p className='text-gray'>Avaiable Liquidity</p>
-                    <p>$13,196,042.35</p>
+                    <p>{availableLiquidity} {firstToken[0].label}</p>
                 </div>
             </div> 
             

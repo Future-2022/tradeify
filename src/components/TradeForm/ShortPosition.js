@@ -24,6 +24,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import { FaAlignRight } from 'react-icons/fa';
 
+import TokenLogo from '../../img/png/token-logo.png';
 import ExchangeLogo from '../../img/png/exchange.png';
 import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
@@ -95,11 +96,13 @@ const ShortPosition = () => {
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
     const [firstTokenValue, setFirstTokenValue] = useState(undefined);
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
+    const [firstTokenPrice, setFirstTokenPrice] = useState(0);
+    const [availableLiqudity, setAvailableLiqudity] = useState(0);  
 
     const [secondToken, setSecondToken] = useState([{label: "Select"}]);
     const [secondTokenValue, setSecondTokenValue] = useState(undefined);
     const [secondTokenMaxValue, setSecondTokenMaxValue] = useState(0);
-
+    const [secondTokenPrice, setSecondTokenPrice] = useState(0);    
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -179,10 +182,20 @@ const ShortPosition = () => {
                     setIsACS(1);
                     setPoolId(item);                
                     _secondTokenValue = calcSwapOut(item, value, true);
+                    setAvailableLiqudity(Number(item.data.balanceA.value));
+                    let price1 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
+                    let price2 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                    setFirstTokenPrice(price1);
+                    setSecondTokenPrice(price2);
                 } else if (_firstTokenType == item.metadata[1].symbol && _secondTokenType == item.metadata[0].symbol){
                     setIsACS(0);
                     setPoolId(item);
                     _secondTokenValue = calcSwapOut(item, value, false);
+                    setAvailableLiqudity(Number(item.data.balanceB.value));
+                    let price1 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                    let price2 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
+                    setFirstTokenPrice(price1);
+                    setSecondTokenPrice(price2);
                 }
             }) 
         } else {
@@ -400,23 +413,23 @@ const ShortPosition = () => {
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Liquidity Source</p>
-                        <p>Tradeify</p>
+                        <div className='d-flex'><p>Tradeify</p><img src={TokenLogo} className=' img-circle-small ml-1' /></div>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Profits in</p>
-                        <p>ETH</p>
+                        <p>{secondToken[0].label}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Liq.Price</p>
-                        <p>-</p>
+                        <p>{secondTokenPrice}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Collateral</p>
-                        <p>-</p>
+                        <p>{(secondTokenPrice * secondTokenValue).toFixed(2)}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Fees</p>
-                        <p>-</p>
+                        <p>{(secondTokenPrice * secondTokenValue * 0.009).toFixed(2)}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Spread</p>
