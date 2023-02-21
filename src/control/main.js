@@ -24,6 +24,28 @@ export class Coin {
     }
 }
 
+export const getMainCoins = (lpPool) => {
+  const mainCoinList = ['SUI', 'ETH', 'BTC'];
+  let mainCoin = [];
+  mainCoinList.map(item => {
+    let price = 0;
+    let tokenName = getTokenName(item);
+    let tokenIcon = importImage(item);
+    lpPool.map(itemValue => {
+      if(itemValue.metadata[0].symbol == item) {
+        price = Number(itemValue.data.balanceB.value) / Number(itemValue.data.balanceA.value);
+      }
+    })
+    let value = {
+      symbol: item,
+      price: price.toFixed(3),
+      tokenName: tokenName,
+      tokenIcon: tokenIcon,
+    }
+    mainCoin.push(value);
+  })
+  return mainCoin;
+}
     
 export const getSwapPrice = (inPool, outPool, value) => {
   let bigIntAmount = changeBigNumber(value);
@@ -194,6 +216,19 @@ export const getTraderMetaData = (lpCoin, value) => {
   }) 
   return returnValue;
 }
+export const getTokenName = (LPSymbol) => {  
+  let tokenName = undefined;
+  if(LPSymbol == 'TRY') {
+    tokenName = 'Tradeify';
+  } else if (LPSymbol == "BTC"){
+    tokenName = 'bitcoin';
+  } else if (LPSymbol == "ETH"){
+    tokenName = 'Ethereum';
+  } else if (LPSymbol == "SUI"){
+    tokenName = 'Sui';
+  } 
+  return tokenName;
+}
 export const LPMetaData = (totalLPValue, metaValue) => {
     let MetaValue = {
         "meta": []
@@ -202,26 +237,32 @@ export const LPMetaData = (totalLPValue, metaValue) => {
       const PoolId = item.id;
 
       const LPSymbol = item.metadata[0].symbol;
+      const tokenName = getTokenName(LPSymbol);
       let LPFirstIcon = importImage(item.metadata[0].symbol);
-      // let LPSecondIcon = importImage(item.metadata[1].symbol);
-
+      const lpValue = Number(item.data.lpSupply.value);
+      const balanceA = Number(item.data.balanceA.value);
+      const balanceB = Number(item.data.balanceB.value);
       const LPTokenValue = Number(item.data.lpSupply.value);
       const LPPercentage = Number(LPTokenValue/totalLPValue * 100);
-      const LPPrice = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(2);
-      const LPFee = Number(Number(item.data.lpFeeBps) / 1000 * 100).toFixed(2);
 
+      const LPPrice = (balanceB / balanceA).toFixed(3);
+      const LPFee = (Number(item.data.lpFeeBps) / 10).toFixed(2);
+      const currentWeight = balanceA / (balanceA + balanceB) * 100;
+      const totalPooledValue = balanceA * LPPrice;
       const newItem = {
         PoolId: PoolId,
+        TokenName: tokenName,
         LPFirstTokenSymbol: item.metadata[0].symbol,
         LPSecondTokenSymbol: item.metadata[1].symbol,
-        LPFirstTokenValue: Number(item.data.balanceA.value) / (10 ** Number(item.metadata[0].decimals)).toFixed(4),
-        LPSecondTokenValue: Number(item.data.balanceB.value) / (10 ** Number(item.metadata[1].decimals)).toFixed(4),
+        LPFirstTokenValue: balanceA / (10 ** Number(item.metadata[0].decimals)).toFixed(4),
+        LPSecondTokenValue: balanceB / (10 ** Number(item.metadata[1].decimals)).toFixed(4),
         LPSymbol: LPSymbol,
         LPTokenValue: LPTokenValue,
         LPPercentage: LPPercentage,
         LPFirstIcon: LPFirstIcon,
-        // LPSecondIcon: LPSecondIcon,
         LPPrice: LPPrice,
+        currentWeight: currentWeight.toFixed(2),
+        totalPooledValue: changeDecimal(totalPooledValue),
         LPFee: LPFee
       }
       MetaValue = { "meta" : MetaValue['meta'] ? [...MetaValue['meta'], newItem] : [newItem] }

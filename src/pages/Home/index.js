@@ -7,7 +7,7 @@ import TokenIcon3 from '../../img/svg/BTC.svg';
 
 import TLP from '../../img/png/token-logo.png';
 import { getTotalTRYValue, getStakingPoolStatus, 
-    fetchLPCoins } from '../../control/main';
+    fetchLPCoins, LPMetaData } from '../../control/main';
 import { StoreContext } from '../../store';
 
 import { FaAngleDown } from 'react-icons/fa';
@@ -26,13 +26,25 @@ const Home = (props) => {
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
     const [userStakingStatus, setUserStakingStatus] = useState(undefined);
 
+    
+    const [tryPrice, setTryPrice] = useState(0);   
+    const [lpCoin, SetLPCoin] = useState(undefined);
+    
     useEffect(() => {
         let totalSupplyTLP = 0;
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
+                if(item.metadata[0].symbol == "TRY") {
+                    let TRYPrice = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
+                    setTryPrice(TRYPrice);
+                }
             })
+
+            const newMetaData = LPMetaData(totalLPValue, lpCoins);
+            SetLPCoin(newMetaData);
+
             if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
                 let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
                 let currentTimestamp = Date.now();
@@ -146,7 +158,7 @@ const Home = (props) => {
                                     <div className='w-80 pri-0 wmin-340'>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>AUM</h6>
-                                            <h6 className='text-white'>$80.4</h6>
+                                            <h6 className='text-white'>${tryPrice}</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Supply</h6>
@@ -182,7 +194,7 @@ const Home = (props) => {
                                     <div className='w-80 pri-0 wmin-340'>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>AUM</h6>
-                                            <h6 className='text-white'>$80.4</h6>
+                                            <h6 className='text-white'>$ 1</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Supply</h6>
@@ -221,56 +233,24 @@ const Home = (props) => {
                                 </div>
                                 <div>
                                     <div className='w-100 py-2'>
-                                        {!isMobile && (
-                                        <div>
-                                            <div className='d-flex py-1'>
-                                                <div className='w-20 d-flex'>
-                                                    <img src={TokenIcon1} width={40} height={20} />
-                                                    <div className='pl-4'>
-                                                        <h6 className='mb-0'>Sui</h6>
-                                                        <p className='text-gray text-left'>SUI</p>
+                                        {lpCoin != undefined && lpCoin.meta.map((item, index) => {
+                                            return <div>
+                                                <div className='d-flex py-1'>
+                                                    <div className='w-20 d-flex'>
+                                                        <img className='img-circle' src={item.LPFirstIcon} width={40} height={20} />
+                                                        <div className='pl-4'>
+                                                            <h6 className='mb-0'>{item.LPSymbol}</h6>
+                                                            <p className='text-gray text-left'>{item.TokenName}</p>
+                                                        </div>
                                                     </div>
+                                                    <div className='w-20'><h6 className='text-gray'>$ {item.LPPrice}</h6></div>
+                                                    <div className='w-20'><h6 className='text-gray'>$ {item.totalPooledValue}</h6></div>
+                                                    <div className='w-20'><h6 className='text-gray'>{item.currentWeight} % / {(item.LPSecondTokenValue * 1000).toFixed(2)} %</h6></div>
+                                                    <div className='w-20'><h6 className='text-gray'>{item.LPFee} %</h6></div>
                                                 </div>
-                                                <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>34.5% / 45%</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>46.20%</h6></div>
+                                                <hr className='text-gray my-1'/>
                                             </div>
-                                            <hr className='text-gray my-1'/>
-                                        </div>)}
-                                        {!isMobile && (
-                                        <div>
-                                            <div className='d-flex py-1'>
-                                                <div className='w-20 d-flex'>
-                                                    <img src={TokenIcon2} className='token-logo' />
-                                                    <div className='pl-4'>
-                                                        <h6 className='mb-0'>Ethereum</h6>
-                                                        <p className='text-gray text-left'>ETH</p>
-                                                    </div>
-                                                </div>
-                                                <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>34.5% / 45%</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>46.20%</h6></div>
-                                            </div>
-                                            <hr className='text-gray my-1'/>
-                                        </div>)}
-                                        {!isMobile && (
-                                        <div>
-                                            <div className='d-flex py-1'>
-                                                <div className='w-20 d-flex'>
-                                                    <img src={TokenIcon3} width={40} height={20} />
-                                                    <div className='pl-4'>
-                                                        <h6 className='mb-0'>Bitcoin</h6>
-                                                        <p className='text-gray text-left'>BTC</p>
-                                                    </div>
-                                                </div>
-                                                <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>34.5% / 45%</h6></div>
-                                                <div className='w-20'><h6 className='text-gray'>46.20%</h6></div>
-                                            </div>
-                                        </div>)}
+                                        })}
                                         {isMobile && (
                                         <div>
                                             <div className='py-0'>

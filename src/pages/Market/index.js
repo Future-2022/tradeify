@@ -21,8 +21,10 @@ import { changeDecimal, fetchLPCoins, getStakingPoolStatus,
 import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
 import { buyTLPSdk, calcSwapOut, sellTLPSdk } from '../../lib/tradeify-sdk/pool';
-
+import { UnStakeTLP, getStakingReward } from '../../lib/tradeify-sdk/staking';
 import ExchangeLogo from '../../img/png/exchange.png';
+import Exchange1Logo from '../../img/png/exchange1.png';
+import Exchange2Logo from '../../img/png/exchange2.png';
 import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
@@ -64,6 +66,9 @@ const Market = (props) => {
     const [secondToken, setSecondToken] = useState([{label: "Select"}]);
     const [secondTokenValue, setSecondTokenValue] = useState(0);
     const [secondTokenMaxValue, setSecondTokenMaxValue] = useState(0);
+    
+    // 
+    const [hasStakingMeta, setHasStakingMeta] = useState(false);
 
     const [isSelectActive, setIsSelectActive] = useState(1);
     const [isTokenMenu, setIsTokenMenu] = useState(false);
@@ -86,6 +91,23 @@ const Market = (props) => {
         setIsSelectActive(part);
         setIsTokenMenu(true);
     }
+
+    const getReward = () => {
+        if(hasStakingMeta == true) {
+            const currentTimestamp = Date.now();      
+            const metaPoolId = userStakingStatus.data.fields.id.id;
+            getStakingReward(globalContext.provider, globalContext.wallet, {
+                stakingMetaId: metaPoolId,
+                currentTimestamp: currentTimestamp,
+                tlpType: CONFIG.tlp,
+                tryType: CONFIG.try
+            }).then(res => {
+                toast.info(`TLP has been rewarded!`)
+                setUserReward(0);
+            })
+        }
+    }
+
     useEffect(() => {
         let totalSupplyTLP = 0;
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -104,6 +126,7 @@ const Market = (props) => {
         findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
             res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
                 setUserStakingStatus(item);
+                setHasStakingMeta(true);
             })
         });
         fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(async (items) => {          
@@ -119,7 +142,7 @@ const Market = (props) => {
             setStakingPoolStatus(res);
             totalSupplyTLP = res.details.data.fields.balance_tlp;
         })
-
+    
         // staking part
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
@@ -130,12 +153,27 @@ const Market = (props) => {
             if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
                 let currentTimestamp = Date.now();
                 let Reward = 100 * (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+                console.log('rew', Reward);
                 setStakingAPR(APR);
                 setUserReward(Reward);
             }
             setTotalLPValue(totalLPValue);
         })
-    }, [])
+    }, [totalLPValue])
+    
+    const unStake = () => {
+        if(hasStakingMeta == true) {   
+            const metaPoolId = userStakingStatus.data.fields.id.id;
+            UnStakeTLP(globalContext.provider, globalContext.wallet, {
+                stakingMetaId: metaPoolId,
+                tlpType: CONFIG.tlp,
+                tryType: CONFIG.try
+            }).then(res => {
+                console.log(res);
+                toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
+            })
+        }
+    }
     const selectToken = (type) => {        
         if(coins == undefined) {
             toast.info("please wait for a few sec. now loading data");
@@ -323,13 +361,13 @@ const Market = (props) => {
                 <div className='d-flex mt-3 flex-wrap'>
                     <div className={`market-form window ${isMobile == true ? `p-3`:`px-5 py-4 w-50`}`}>
                         
-                        <div className='market-form-input d-flex justify-content-center mt-5'>
-                            <div className={`py-3 w-50 ${switchMarket == 1 && 'active'}`}><p className={`text-center ${switchMarket != 1 ? 'text-grey':'text-white'}`} onClick={() => setSwitchMarket(1)}>Buy TLP</p></div>
-                            <div className={`py-3 w-50 ${switchMarket == 2 && 'active'}`}><p className={`text-center ${switchMarket != 2 ? 'text-grey ':'text-white'}`} onClick={() => setSwitchMarket(2)}>Sell TLP</p></div>
+                        <div className={`market-form-input d-flex justify-content-center mt-5 ${switchMarket != 1 ? 'border-red': 'border-green'}`}>
+                            <div className={`py-3 w-50 ${switchMarket == 1 && 'active-green'}`}><p className={`text-center ${switchMarket != 1 ? 'text-grey':'text-white'}`} onClick={() => setSwitchMarket(1)}>Buy TLP</p></div>
+                            <div className={`py-3 w-50 ${switchMarket == 2 && 'active-red'}`}><p className={`text-center ${switchMarket != 2 ? 'text-grey ':'text-white'}`} onClick={() => setSwitchMarket(2)}>Sell TLP</p></div>
                         </div>
                         {switchMarket == 1 && (
                             <div>
-                                <div className='trade-token-select mb-2 p-4 mt-4'>
+                                <div className='trade-token-select only-border-green mb-2 p-4 mt-4'>
                                     <div><div><p className='text-gray text-left fs-12'>Max Amount: <span className='text-white'>{firstTokenMaxValue}</span> {firstToken[0].label}</p></div></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input' placeholder='0.0' value={firstTokenValue} onChange={(e) => handleFirstTokenChange(e.target.value)} />
@@ -342,8 +380,8 @@ const Market = (props) => {
                                         <div className='percent-item' onClick={() => selectPercentage(1, 100)}><p>100%</p></div>
                                     </div>
                                 </div>
-                                <div className='ex-logo-part'><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
-                                <div className='trade-token-select mt-3 p-4'>
+                                <div className='ex-logo-part'><img src={Exchange1Logo} width={45} className='exchange-logo' /></div>
+                                <div className='trade-token-select only-border-green mt-1 p-4'>
                                     <div className='d-flex justify-content-between'><p className='text-gray text-left'>Receive</p></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input text-gray' value={lpToken} disabled placeholder='0.0' />
@@ -364,7 +402,7 @@ const Market = (props) => {
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={connectWallet}>Connect Wallet</div>
                                 )}                       
                                 {globalContext.account != '' && connected == true && (
-                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={() => buyTLP()}>Buy TLP</div>
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-green' onClick={() => buyTLP()}>Buy TLP</div>
                                 )}    
                             </div> 
                         )}
@@ -372,7 +410,7 @@ const Market = (props) => {
                         {/* sell TLP part */}
                         {switchMarket == 2 && (
                             <div>
-                                <div className='trade-token-select my-2 px-4 py-2'>
+                                <div className='trade-token-select only-border-red my-2 px-4 py-2 mt-4'>
                                     <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Liquitidy Pool</h5></div>
                                     <div className='d-flex w-100 justify-content-between'>
                                         {activeLP == null && (<div className='px-3'>Select</div>)}
@@ -383,7 +421,7 @@ const Market = (props) => {
                                         <div className='d-flex cursor-pointer mt-1' disabled={true} onClick={() => setIsLPMenu(true)} ><h5>LP</h5><FaAngleRight /></div>
                                     </div>
                                 </div>
-                                <div className='trade-token-select my-2 px-4 py-2'>
+                                <div className='trade-token-select only-border-red my-2 px-4 py-2'>
                                     <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Max Amount : {poolLPValue}</h5><h5 className='text-gray-light text-left fs-12'>TLP balance: {TLPbalance}</h5></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input' value={lpToken} placeholder='0.0' onChange={(e) => handleTLPTokenChange(e.target.value)}/>
@@ -396,9 +434,9 @@ const Market = (props) => {
                                         <div className='percent-item' onClick={() => selectPercentage(3, 100)}><p>100%</p></div>
                                     </div>
                                 </div>
-                                <div className='ex-logo-part'><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
+                                <div className='ex-logo-part'><img src={Exchange2Logo} width={45} className='exchange-logo' /></div>
 
-                                <div className='trade-token-select mb-2 p-4 mt-2'>
+                                <div className='trade-token-select only-border-red mb-2 p-4 mt-1'>
                                     <div><div><p className='text-gray text-left fs-12'>LP {sellFirstTokenSymbol} Amount: <span className='text-white'>{sellSecondTokenValue}</span> {sellFirstTokenSymbol}</p></div></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={changeDecimal5Fix(sellFirstTokenGetValue)} />
@@ -430,7 +468,7 @@ const Market = (props) => {
                                     <div className='earn-button w-100 text-center py-2 mt-4 border-radius mb-3'>Connect Wallet</div>
                                 )}                       
                                 {globalContext.account != '' && connected == true && (
-                                    <div className='earn-button w-100 text-center py-2 mt-4 border-radius mb-3' onClick={() => sellTLP()}>SELL TLP</div>
+                                    <div className='earn-button w-100 text-center py-2 mt-4 border-radius mb-3 background-red' onClick={() => sellTLP()}>SELL TLP</div>
                                 )}    
                             </div>
                         )}

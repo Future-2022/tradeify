@@ -33,20 +33,20 @@ const Trade = (props) => {
                         </div>
                         <div className='d-flex trade-result flex-wrap justify-content-between'>
                             <div>
-                                <p className='text-gray'>1,322.26</p>
-                                <h6 className='text-white'>$1,322.26</h6>
+                                <p className='text-gray'>{globalContext.marketTokenPrice}</p>
+                                <h6 className='text-white'>${globalContext.marketTokenPrice}</h6>
                             </div>
                             <div>
                                 <p className='text-gray'>24h Change</p>
                                 <h6 className='text-green'>+4.19%</h6>
                             </div>
                             <div>
-                                <p className='text-gray'>24h high</p>
-                                <h6 className='text-white'>$1,346.79</h6>
+                                <p className='text-gray'>24h High</p>
+                                <h6 className='text-white'>${(globalContext.marketTokenPrice * 1.2).toFixed(3)}</h6>
                             </div>
                             <div>
-                                <p className='text-gray'>1,322.26</p>
-                                <h6 className='text-white'>$1,322.26</h6>
+                                <p className='text-gray'>24h Low</p>
+                                <h6 className='text-white'>${(globalContext.marketTokenPrice * 0.8).toFixed(3)}</h6>
                             </div>
                         </div>
                     </div>                    

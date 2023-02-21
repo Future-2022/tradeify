@@ -12,14 +12,22 @@ import TokenIcon3 from '../../img/svg/BTC.svg';
 import { fetchLPCoins, LPMetaData } from '../../control/main';
 import { StoreContext } from '../../store';
 import { useMediaQuery } from 'react-responsive';
+import { getStakingPoolStatus } from '../../control/main';
 
 const Liquidity = (props) => {
 
     const navigate = useNavigate();    
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);        
-    const [lpCoin, SetLPCoin] = useState([]);      
-    const [chartData, SetChartData] = useState(undefined);      
+    const [lpCoin, SetLPCoin] = useState(undefined);        
+    const [chartData, SetChartData] = useState(undefined);     
+
+    const [totalLPValue, setTotalLPValue] = useState(0);  
+    const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);     
+    const [protocolOwned, setProtocolOwned] = useState(0);     
+    const [stakingAPR, setStakingAPR] = useState(0);     
+    const [tlpPoolValue, setTLPPoolValue] = useState(0);     
+    
     let ChartData = {
         "meta": []
     }
@@ -28,7 +36,6 @@ const Liquidity = (props) => {
     }
     useEffect(() => {        
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
-            console.log(lpCoins);
             let totalLPValue = 0;
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
@@ -47,8 +54,27 @@ const Liquidity = (props) => {
             });
             SetLPCoin(newMetaData);
             SetChartData(ChartData.meta);
-        })
+            setTotalLPValue(totalLPValue);
+        })        
     }, []);
+
+    useEffect(() => {
+        getStakingPoolStatus(globalContext.provider).then(res => {
+            let tlpPoolValue = 0;
+            if(lpCoin != undefined) {
+                lpCoin.meta.map(item => {
+                    tlpPoolValue += Number(item.totalPooledValue);
+                })
+                
+                setTLPPoolValue(tlpPoolValue.toFixed(2));
+                setStakingPoolStatus(res);
+                const stakingAPR = ((res.details.data.fields.balance_tlp / totalLPValue) * 100).toFixed(2);
+                const totalOwned = 100 - stakingAPR;
+                setStakingAPR(stakingAPR)
+                setProtocolOwned(totalOwned);
+            }
+        })
+    }, [lpCoin])
 
     return (
         <div className='pb-5'>
@@ -70,7 +96,7 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2 pt-4'>Stake APR</p>
-                                    <h4 className='py-2 text-grey-sharp'>36.79% </h4>
+                                    <h4 className='py-2 text-grey-sharp'>{stakingAPR} %</h4>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Price</p>
@@ -78,19 +104,19 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Total Supply</p>
-                                    <div className='py-2 text-grey-sharp'>12,213,123 TLP</div>
+                                    <div className='py-2 text-grey-sharp'>{totalLPValue} TLP</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Total Staked</p>
-                                    <div className='py-2 text-grey-sharp'>12,213,123 TLP</div>
+                                    <div className='py-2 text-grey-sharp'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>TLP pool Value</p>
-                                    <div className='py-2 text-grey-sharp'>12,214,122</div>
+                                    <div className='py-2 text-grey-sharp'>$ {tlpPoolValue}</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Protocol Owned</p>
-                                    <div className='py-2 text-grey-sharp'>$ 0.782</div>
+                                    <div className='py-2 text-grey-sharp'>{protocolOwned}%</div>
                                 </div>
                                 <div className='d-flex mt-3'>
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3 mr-2' onClick={() => goLink('market')}>Buy / Sell TLP</div>
@@ -129,7 +155,7 @@ const Liquidity = (props) => {
                         <div className='pt-4'>
                             
                             <div className='d-flex pt-3 flex-wrap'>
-                                {lpCoin.meta && lpCoin.meta.map((item, index) => {
+                                {lpCoin != undefined && lpCoin.meta.map((item, index) => {
                                         if(item.LPSymbol != "TRY") {
                                             return <div className={`${isMobile == true ? `w-100 mt-3`:`w-50 mt-3`}`} key={index}>
                                                 <div className='composition mx-2'>
@@ -142,17 +168,17 @@ const Liquidity = (props) => {
                                                         <h5 className='py-2 text-white'>$ {item.LPPrice}</h5>
                                                     </div>
                                                     <div className='d-flex justify-content-between'>
-                                                        <p className='font-bold text-gray py-2'>Total LPToken Supply</p>
-                                                        <h5 className='py-2 text-white'>{item.LPTokenValue} <span className='text-gray fs-12'>TLP</span></h5>
+                                                        <p className='font-bold text-gray py-2'>Total Pooled</p>
+                                                        <h5 className='py-2 text-white'>$ {item.totalPooledValue}</h5>
                                                     </div>
                                                     <div className='d-flex justify-content-between'>
                                                         <p className='font-bold text-gray py-2'>Weight</p>
-                                                        <h5 className='py-2 text-white'>{item.LPFirstTokenValue * 1000} % / {item.LPSecondTokenValue * 1000} %</h5>
+                                                        <h5 className='py-2 text-white'>{item.currentWeight} % / {(item.LPSecondTokenValue * 1000).toFixed(2)} %</h5>
                                                     </div>
-                                                    {/* <div className='d-flex justify-content-between'>
-                                                        <p className='font-bold text-gray py-2'>Liquidity Pool Fee</p>
+                                                    <div className='d-flex justify-content-between'>
+                                                        <p className='font-bold text-gray py-2'>Margin Trading Utilization</p>
                                                         <h5 className='py-2 text-white'>{item.LPFee} %</h5>
-                                                    </div> */}
+                                                    </div>
                                                 </div>
                                             </div>  
                                         }

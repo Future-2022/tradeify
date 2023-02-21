@@ -16,6 +16,18 @@
     background-color: rgba(22, 22, 22, 0.632);
     transition-duration: 500ms;
 }
+.staking-menu {
+    position: absolute;
+    top: 50px;
+    background-color: #342D55;
+    color: white;
+    width: 120px;
+    text-align: center;
+    border: 1px solid rgba(198, 198, 198, 0.16);
+    padding: 6px 6px;
+    cursor: pointer;
+
+}
 .no-effect {
     text-decoration: none;
     color: white;
@@ -78,22 +90,23 @@ p {
 }
 .stake-menu {
     position: absolute;
-    top: 25px;
-    width: 120px;
-    background-color: #342d55;
-    padding: 12px 25px;
-    left: -12px;
-    text-align:center;
-    border-radius: 0px 0px 12px 12px;
-    border: 1px solid rgb(133, 99, 181);
-    border-top: 0px;
+    top: 45px;
+    left: 0px;
+    background-color: #342D55;
     color: white;
+    width: 120px;
+    text-align: center;
+    border: 1px solid rgba(198, 198, 198, 0.16);
+    padding: 6px 6px;
+    cursor: pointer;
 }
 .stake-menu > div {
     cursor: pointer;
 }
 .stake-menu > div:hover {
-    color: rgb(179, 150, 220);
+    /* color: rgb(179, 150, 220); */
+    background-color: #564a8d;
+    border-radius: 5px;
     transition: 200ms;
 }
 .lh-33 {

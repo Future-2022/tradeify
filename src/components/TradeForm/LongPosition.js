@@ -31,7 +31,7 @@ import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 
 import { getTradeDatas, getSwapPrice, getCoins, getReferralIDByCode, changeDecimal8Fix, 
-    getTraderStatus, getUniqueCoinTypes, getCoinBalances, 
+    getTraderStatus, getUniqueCoinTypes, getCoinBalances, getMainCoins,
     changeDecimal, fetchLPCoins, getTraderMetaData, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 
 import { createPosition } from '../../lib/tradeify-sdk/trading';
@@ -85,6 +85,7 @@ const LongPosition = () => {
 
     const [isSelectActive, setIsSelectActive] = useState(1);
     const [coins, setCoins] = useState(undefined);
+    const [mainCoins, setMainCoins] = useState([]);
     const [coinBalance, setCoinBalance] = useState([]);
     const [lpCoin, SetLPCoin] = useState([]);
     const [inPoolId, setInPoolId] = useState(null);  
@@ -109,7 +110,7 @@ const LongPosition = () => {
             SetLPCoin(lpCoins);            
             getTradeData(lpCoins);
         });
-    }, [globalContext.traderData])
+    }, [])
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -117,10 +118,12 @@ const LongPosition = () => {
                 return { value: arg, label: Coin.getCoinSymbol(arg) }
             });
             const balance = getCoinBalances(item);
+            const mainCoins = getMainCoins(lpCoin);
             setCoinBalance(balance);
             setCoins(newCoins);
+            setMainCoins(mainCoins);
         })
-    }, [])
+    }, [lpCoin])
     
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);
@@ -169,6 +172,7 @@ const LongPosition = () => {
                         setOutPoolId(item);       
                         let price = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
                         setSecondTokenPrice(price);
+                        globalContext.setMarketTokenPrice(price);
                     }
                 });
             }
@@ -191,8 +195,6 @@ const LongPosition = () => {
         if(_firstTokenType != _secondTokenType) { 
             lpCoin.map((item) => {
                 if(_firstTokenType == item.metadata[0].symbol) {
-                    console.log(firstTokenPrice);
-                    console.log(secondTokenPrice);
                     _secondTokenValue = firstTokenPrice * Invalue / secondTokenPrice;
                 }
             }) 
@@ -398,45 +400,21 @@ const LongPosition = () => {
                     </div>
                     <div>
                         <div className='pt-4'>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon1} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>SUI</h5>
-                                        <p className='text-gray'>Sui</p>
+                            {mainCoins.map(item => {
+                                return <div className='d-flex token-item justify-content-between' onClick={() => selectToken(item.symbol)}>
+                                    <div className='d-flex'>
+                                        <img src={item.tokenIcon} width={45} />
+                                        <div className='ml-4'>
+                                            <h5 className='text-white text-left'>{item.symbol}</h5>
+                                            <p className='text-gray'>{item.tokenName}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5 className='text-white text-right'>$ {item.price}</h5>
+                                        <p className='text-green text-right'>+0.17</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1.32</h5>
-                                    <p className='text-green text-right'>+0.87</p>
-                                </div>
-                            </div>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon3} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>ETH</h5>
-                                        <p className='text-gray'>Ethereum</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1234.32</h5>
-                                    <p className='text-red text-right'>-0.87</p>
-                                </div>
-                            </div>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon2} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>BTC</h5>
-                                        <p className='text-gray'>Bitcoin</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$14034.43</h5>
-                                    <p className='text-red text-right'>-0.34</p>
-                                </div>
-                            </div>                                  
+                            })}
                         </div>
                     </div>
                 </div>

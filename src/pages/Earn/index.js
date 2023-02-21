@@ -145,8 +145,7 @@ const Earn = (props) => {
             }
             setTotalLPValue(totalLPValue);
         })
-    }, [globalContext.newCoins, totalLPValue, tlpValue])
-
+    }, [totalLPValue, tlpValue])
     return (
         <div>
             <div className={`d-flex ${isMobile == true ? `px-3`:`px-5`}`}>
@@ -158,7 +157,7 @@ const Earn = (props) => {
                         <div className={`market-form window ${isMobile == true ? `p-3`:`w-50 p-5`}`}>
                             <h4 className='mt-4'>Stake TLP</h4>  
                     
-                            <div className='trade-token-select mb-2 p-4 mt-5'>
+                            <div className='trade-token-select only-border-warning mb-2 p-4 mt-5'>
                                 <div className='d-flex justify-content-between'>
                                     <h5 className='font-bold text-gray text-left fs-12'>TLP Balance</h5>
                                     <h5 className='text-gray text-left fs-12 font-bold'>Max: {totalUserLP} TLP</h5>
@@ -174,7 +173,7 @@ const Earn = (props) => {
                                     <div className='percent-item' onClick={() => handleChangeTLPByPercentage(100)}><p>100%</p></div>
                                 </div>
                             </div>
-                            <div className='trade-token-select mb-2 p-4 mt-3'>
+                            <div className='trade-token-select only-border-warning mb-2 p-4 mt-3'>
                                 <div className='d-flex justify-content-between'>
                                     <h5 className='font-bold fs-12 text-gray text-left'>Staking Lock Time</h5>
                                     <h5 className='font-bold fs-12 text-gray text-left'>Min: 50</h5>

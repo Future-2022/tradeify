@@ -50,7 +50,7 @@ const Referral = (props) => {
             setTraderTradingVolume(item.tradingAmount);
             setTraderTradingRebate(item.rebate);
         })
-    }, [traderReferralCode])
+    }, [])
     
     const selectFormIndex = (value) => {
         setFormIndex(value);

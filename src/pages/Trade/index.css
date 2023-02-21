@@ -55,12 +55,14 @@
 }
 .trade-form-select > .trade-token-select-1 {
     padding: 6px 6px;
+    border: 1px solid #f8d2ff27;
 }
 .trade-token-select, .trade-token-select-1 {
     background-color: #241F3E;
     padding: 14px;
     font-size: 22px;
     border-radius: 5px;
+    border: 1px solid #f8d2ff27;
 }
 .trade-token-select > p, .trade-token-select-1 > p {
     font-size: 15px;
@@ -86,11 +88,13 @@
 }
 .exchange-logo {
     position: absolute;
-    width: 3.565rem;
-    height: 3.565rem;
+    /* width: 3.565rem;
+    height: 3.565rem; */
     left: 50%;
+    width: 45px;
+    height: 45px;
     margin-left: -1.7825rem;
-    top: -1.9375rem;
+    top: -1.39375rem;
     border-radius: 3.1rem;
     cursor: pointer;
     -webkit-user-select: none;

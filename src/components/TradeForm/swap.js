@@ -116,7 +116,8 @@ const Swap = (props) => {
                         let price2 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
                         setSecondTokenPrice(price2);
                     }
-                })
+                })                
+                globalContext.setMarketToken(token[0].label);
                 await setSecondToken(token);
             }
             setIsOpenModal(false);
