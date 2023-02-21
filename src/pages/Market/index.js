@@ -17,10 +17,10 @@ import './index.css';
 
 import { changeDecimal, fetchLPCoins, getStakingPoolStatus,
      LPMetaData, isLoggedIn, fetchUserLpCoins, getUniqueCoinTypes, 
-     getCoinBalances, getCoins, findStakingMeta } from '../../control/main';
+     getCoinBalances, getCoins, findStakingMeta, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
-import { buyTLPSdk, sellTLPSdk } from '../../lib/tradeify-sdk/pool';
+import { buyTLPSdk, calcSwapOut, sellTLPSdk } from '../../lib/tradeify-sdk/pool';
 
 import ExchangeLogo from '../../img/png/exchange.png';
 import TokenIcon1 from '../../img/png/SUI.png';
@@ -28,6 +28,7 @@ import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 import TokenIcon from '../../img/png/token-logo.png';
 import { sqrt } from '../../lib/tradeify-sdk/core/math';
+import BigNumber from 'big-number/big-number';
 
 const Market = (props) => {
     const { wallets, wallet, select, connected, disconnect } = useWallet();
@@ -57,14 +58,12 @@ const Market = (props) => {
 
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
-    const [firstTokenValue, setFirstTokenValue] = useState(0);
+    const [firstTokenValue, setFirstTokenValue] = useState(undefined);
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
 
     const [secondToken, setSecondToken] = useState([{label: "Select"}]);
     const [secondTokenValue, setSecondTokenValue] = useState(0);
     const [secondTokenMaxValue, setSecondTokenMaxValue] = useState(0);
-
-    const [isACS, setIsACS] = useState(true);
 
     const [isSelectActive, setIsSelectActive] = useState(1);
     const [isTokenMenu, setIsTokenMenu] = useState(false);
@@ -74,7 +73,7 @@ const Market = (props) => {
     const [userLpCoin, setUserLPCoin] = useState(undefined);
     const [lpCoin, SetLPCoin] = useState([]);
     const [lpMetaData, SetLPMetaData] = useState([]);
-    const [lpToken, setLPToken] = useState(0);  
+    const [lpToken, setLPToken] = useState(undefined);  
     const [poolId, setPoolId] = useState(null);  
 
     const [coins, setCoins] = useState(undefined);
@@ -88,12 +87,12 @@ const Market = (props) => {
         setIsTokenMenu(true);
     }
     useEffect(() => {
+        let totalSupplyTLP = 0;
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             const newCoins = getUniqueCoinTypes(item).map(arg => {
                 return { value: arg, label: Coin.getCoinSymbol(arg) }
             });
             const balance = getCoinBalances(item);
-            console.log(balance)
             balance.forEach((item, key) => {
                 if(key == CONFIG.tlp) {
                     setTLPbalace(Number(item).toString())
@@ -104,12 +103,11 @@ const Market = (props) => {
         })
         findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
             res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
-                console.log(item);
                 setUserStakingStatus(item);
             })
         });
         fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(async (items) => {          
-            let totalUserLPValue = 0;            
+            let totalUserLPValue = 0; 
             items.map(args => {
                 totalUserLPValue += Number(args.balance.value);
                 setTotalUserLP(totalUserLPValue);
@@ -120,7 +118,6 @@ const Market = (props) => {
         getStakingPoolStatus(globalContext.provider).then(res => {
             setStakingPoolStatus(res);
             totalSupplyTLP = res.details.data.fields.balance_tlp;
-            console.log(totalSupplyTLP);
         })
 
         // staking part
@@ -129,16 +126,14 @@ const Market = (props) => {
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
             })
-            console.log(totalLPValue);
-            if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
-                let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
+            let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
+            if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
                 let currentTimestamp = Date.now();
                 let Reward = 100 * (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
                 setStakingAPR(APR);
                 setUserReward(Reward);
             }
             setTotalLPValue(totalLPValue);
-            // console.log(APR);
         })
     }, [])
     const selectToken = (type) => {        
@@ -155,14 +150,12 @@ const Market = (props) => {
             coinBalance.forEach((item, index) => {
                 if(index == token[0].value) {
                     value = item;
+                    console.log(changeDecimal(Number(value)));
                 }
             });
             if(isSelectActive == 1) {
                 setFirstToken(token);
-                setFirstTokenMaxValue(value);
-            } else {
-                setSecondToken(token);
-                setSecondTokenMaxValue(value);
+                setFirstTokenMaxValue(changeDecimal(Number(value)));
             }
             setIsTokenMenu(false);
         }
@@ -172,59 +165,52 @@ const Market = (props) => {
         if(index == 1) {
             setFirstTokenValue(Number(firstTokenMaxValue) * value / 100);
             handleFirstTokenChange(Number(firstTokenMaxValue) * value / 100);
-        } else if(index ==2) {
-            setSecondTokenValue(Number(secondTokenMaxValue) * value / 100);
-            handleFirstTokenChange(Number(secondTokenMaxValue) * value / 100);
-        } else {
-            setLPToken(Number(poolLPValue) * value / 100);            
-            handleTLPTokenChange(Number(poolLPValue) * value / 100);
+        } else if(index == 3) {
+            let inValue = (Number(poolLPValue) * value / 100).toFixed(0);
+            setLPToken(inValue);
+            handleTLPTokenChange(inValue);
         }
     }
 
     const handleFirstTokenChange = (value) => {
         setFirstTokenValue(value);
-        let _secondTokenValue = 0;
         let _getLpValue = 0;
         const _firstTokenType = firstToken[0].label;
-        const _secondTokenType = secondToken[0].label;
         lpCoin.map((item) => {
-            if(_firstTokenType == item.metadata[0].symbol && _secondTokenType == item.metadata[1].symbol) {
-                setIsACS(true);
+            if(_firstTokenType == item.metadata[0].symbol) {
                 setPoolId(item);
-                _secondTokenValue = value * Number(item.data.balanceB.value) / Number(item.data.balanceA.value);
-                _getLpValue = (value * Number(item.data.lpSupply.value)) / Number(item.data.balanceA.value);
-            } else if (_firstTokenType == item.metadata[1].symbol && _secondTokenType == item.metadata[0].symbol){
-                setIsACS(false);
-                setPoolId(item);
-                _secondTokenValue = value * Number(item.data.balanceA.value) / Number(item.data.balanceB .value);
-                _getLpValue = (value * Number(item.data.lpSupply.value)) / Number(item.data.balanceB.value);
-            }
+                _getLpValue = getTLPValue(item, changeBigNumber(value));
+                setLPToken(_getLpValue);
+            } 
         })        
-        setSecondTokenValue(_secondTokenValue.toFixed(0));
-        setLPToken(_getLpValue.toFixed(0));
     }
+
+    const getTLPValue = (item, value) => {
+        console.log('invalue', value);
+        let balance_a = Number(item.data.balanceA.value);
+        let balance_b = Number(item.data.balanceB.value);
+        console.log(balance_a);
+        console.log(balance_b);
+        let split_amount = (value * balance_a / (balance_a + balance_b)).toFixed(0);
+        console.log('split_amount', split_amount);
+        let amount_a = split_amount; 
+        console.log('swap_amount')
+        let amount_b = calcSwapOut(item, (value - split_amount), true);
+        console.log('amount_b', amount_b);
+
+        let dab = amount_a * balance_b;
+        let dba = amount_b * balance_a;
+        let LPAmount = 0 
     
-    const handleSecondTokenChange = (value) => {
-        setSecondTokenValue(value);
-        let _firstTokenValue = 0;
-        let _getLpValue = 0;
-        const _firstTokenType = firstToken[0].label;
-        const _secondTokenType = secondToken[0].label;
-        lpCoin.map((item) => {
-            if(_firstTokenType == item.metadata[0].symbol && _secondTokenType == item.metadata[1].symbol) {
-                setIsACS(true);
-                setPoolId(item);
-                _firstTokenValue = value * Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
-                _getLpValue = (value * Number(item.data.lpSupply.value)) / Number(item.data.balanceB.value);
-            } else if (_firstTokenType == item.metadata[1].symbol && _secondTokenType == item.metadata[0].symbol){
-                setIsACS(false);
-                setPoolId(item);
-                _firstTokenValue = value * Number(item.data.balanceB.value) / Number(item.data.balanceA.value);
-                _getLpValue = (value * Number(item.data.lpSupply.value)) / Number(item.data.balanceA.value);
-            }
-        })        
-        setFirstTokenValue(_firstTokenValue);
-        setLPToken(_getLpValue);
+        if(dab > dba) {
+            LPAmount = Number(amount_b) * Number(item.data.lpSupply.value) / balance_b * 0.98;
+        } else if(dab < dba) {
+            LPAmount = Number(amount_a) * Number(item.data.lpSupply.value) / balance_a * 0.98;
+        } else {
+            LPAmount = Number(amount_a) * Number(item.data.lpSupply.value) / balance_a * 0.98;
+        }
+        console.log(LPAmount);
+        return LPAmount.toFixed(0);
     }
 
     const buyTLP = async () => {
@@ -234,20 +220,12 @@ const Market = (props) => {
         } else {
             try {  
                 let inputAmountA = 0;
-                let inputAmountB = 0;
 
-                if(isACS == true) {
-                    inputAmountA = BigInt(firstTokenValue);
-                    inputAmountB = BigInt(secondTokenValue);
-                } else {
-                    inputAmountA = BigInt(secondTokenValue);
-                    inputAmountB = BigInt(firstTokenValue);
-                }
+                inputAmountA = BigInt(changeBigNumber(firstTokenValue));
+                
                 await buyTLPSdk(globalContext.provider, wallet, { 
                     amountA: inputAmountA,
-                    amountB: inputAmountB,
                     pool: poolId,
-                    lpAmount: lpToken,
                     maxSlippagePct : CONFIG.defaultSlippagePct
                 }).then((args) => {
                     toast.info("Token TLP has been bought successfully!");
@@ -260,10 +238,12 @@ const Market = (props) => {
     }
 
     const sellTLP = async () => {
+        console.log(lpToken);
         await userLpCoin.map(variable => {
             if (variable.balance.value > lpToken) {
                 lpCoin.map((item) => {
                     if(item.id == activeLP) {
+                        console.log(item);
                         console.log(userLpCoin);
                         sellTLPSdk(wallet, {
                             pool: item,
@@ -281,14 +261,26 @@ const Market = (props) => {
 
     const handleTLPTokenChange = (value) => {
         setLPToken(value);
-        {lpMetaData.map((item) => {
-            if(item.PoolId == activeLP) {
-                let temp = Number(sqrt(BigInt(Number(item.LPFirstTokenValue) * 10 ** (CONFIG.MainDecimal)))) / Number(sqrt(BigInt(Number(item.LPSecondTokenValue) * 10 ** (CONFIG.MainDecimal)))) * value;
-                let temp2 = Number(sqrt(BigInt(Number(item.LPSecondTokenValue) * 10 ** (CONFIG.MainDecimal)))) / Number(sqrt(BigInt(Number(item.LPFirstTokenValue) * 10 ** (CONFIG.MainDecimal)))) * value;
-                setSellFirstTokenGetValue(temp2);
-                setSellSecondTokenGetValue(temp);
+        getTokenValue(value);
+    }
+    const getTokenValue = (value) => {
+        lpCoin.map((item) => {
+            if(item.id == activeLP) {
+                let getValue = 0;
+                let pool_a_value = Number(item.data.balanceA.value);
+                let pool_b_value = Number(item.data.balanceB.value);
+                let pool_lp_value = Number(item.data.lpSupply.value);
+
+                let a_out = (value * pool_a_value / pool_lp_value).toFixed(0);
+                let b_out = (value * pool_b_value / pool_lp_value).toFixed(0);
+                console.log(a_out);
+                console.log(b_out);
+                let out_value = calcSwapOut(item, b_out, false);
+                getValue = Number(a_out) + Number(out_value);
+                console.log(getValue);
+                setSellFirstTokenGetValue(getValue);
             }
-        })}
+        })
     }
 
     const setLP = (index) => {
@@ -329,16 +321,16 @@ const Market = (props) => {
             <div className='w-65 pb-3'>
                 <div className='mt-5'><h3 className='text-white font-bold'>BUY/SELL TLP</h3></div>
                 <div className='d-flex mt-3 flex-wrap'>
-                    <div className={`market-form window ${isMobile == true ? `p-3`:`p-5 w-50`}`}>
+                    <div className={`market-form window ${isMobile == true ? `p-3`:`px-5 py-4 w-50`}`}>
                         
-                        <div className='market-form-input d-flex justify-content-center mt-3'>
+                        <div className='market-form-input d-flex justify-content-center mt-5'>
                             <div className={`py-3 w-50 ${switchMarket == 1 && 'active'}`}><p className={`text-center ${switchMarket != 1 ? 'text-grey':'text-white'}`} onClick={() => setSwitchMarket(1)}>Buy TLP</p></div>
                             <div className={`py-3 w-50 ${switchMarket == 2 && 'active'}`}><p className={`text-center ${switchMarket != 2 ? 'text-grey ':'text-white'}`} onClick={() => setSwitchMarket(2)}>Sell TLP</p></div>
                         </div>
                         {switchMarket == 1 && (
                             <div>
                                 <div className='trade-token-select mb-2 p-4 mt-4'>
-                                    <div><div><p className='text-gray text-left fs-12'>Max Amount: <span className='text-white'>{changeDecimal(firstTokenMaxValue)}</span> {firstToken[0].label}</p></div></div>
+                                    <div><div><p className='text-gray text-left fs-12'>Max Amount: <span className='text-white'>{firstTokenMaxValue}</span> {firstToken[0].label}</p></div></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input' placeholder='0.0' value={firstTokenValue} onChange={(e) => handleFirstTokenChange(e.target.value)} />
                                         <div className='d-flex cursor-pointer token-select' onClick={() => openTokenModal(1)}><h6>{firstToken[0].label}</h6><FaAngleDown className='fs-26' /></div>
@@ -348,19 +340,6 @@ const Market = (props) => {
                                         <div className='percent-item' onClick={() => selectPercentage(1, 50)}><p>50%</p></div>
                                         <div className='percent-item' onClick={() => selectPercentage(1, 75)}><p>75%</p></div>
                                         <div className='percent-item' onClick={() => selectPercentage(1, 100)}><p>100%</p></div>
-                                    </div>
-                                </div>
-                                <div className='trade-token-select mb-2 p-4 mt-1'>
-                                    <div><div><p className='text-gray text-left fs-12'>Max Amount: <span className='text-white'>{changeDecimal(secondTokenMaxValue)}</span> {secondToken[0].label}</p></div></div>
-                                    <div className='d-flex justify-content-between'>
-                                        <input type='text' className='token-select-input' placeholder='0.0' value={secondTokenValue} onChange={(e) => handleSecondTokenChange(e.target.value)} />
-                                        <div className='d-flex cursor-pointer token-select' onClick={() => openTokenModal(2)}><h6>{secondToken[0].label}</h6><FaAngleDown className='fs-26' /></div>
-                                    </div>
-                                    <div className='d-flex justify-content-between py-3'>
-                                        <div className='percent-item' onClick={() => selectPercentage(2, 25)}><p>25%</p></div>
-                                        <div className='percent-item' onClick={() => selectPercentage(2, 50)}><p>50%</p></div>
-                                        <div className='percent-item' onClick={() => selectPercentage(2, 75)}><p>75%</p></div>
-                                        <div className='percent-item' onClick={() => selectPercentage(2, 100)}><p>100%</p></div>
                                     </div>
                                 </div>
                                 <div className='ex-logo-part'><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
@@ -399,7 +378,7 @@ const Market = (props) => {
                                         {activeLP == null && (<div className='px-3'>Select</div>)}
                                         {lpMetaData.map((item) => {
                                             if(item.PoolId == activeLP) 
-                                            return <div className='d-flex justify-content-between w-100 px-3'><img src={item.LPFirstIcon} className='img-circle' /> {item.LPFirstTokenSymbol} : <img src={item.LPSecondIcon}  className='img-circle' /> {item.LPSecondTokenSymbol}</div>
+                                            return <div className='d-flex justify-content-between w-100 px-3'><img src={item.LPFirstIcon} className='img-circle' /> {item.LPFirstTokenSymbol}</div>
                                         })}
                                         <div className='d-flex cursor-pointer mt-1' disabled={true} onClick={() => setIsLPMenu(true)} ><h5>LP</h5><FaAngleRight /></div>
                                     </div>
@@ -422,36 +401,36 @@ const Market = (props) => {
                                 <div className='trade-token-select mb-2 p-4 mt-2'>
                                     <div><div><p className='text-gray text-left fs-12'>LP {sellFirstTokenSymbol} Amount: <span className='text-white'>{sellSecondTokenValue}</span> {sellFirstTokenSymbol}</p></div></div>
                                     <div className='d-flex justify-content-between'>
-                                        <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={sellFirstTokenGetValue.toFixed(0)} />
+                                        <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={changeDecimal5Fix(sellFirstTokenGetValue)} />
                                         <div className='d-flex token-select'><h6 className='text-gray'>{sellFirstTokenSymbol}</h6></div>
                                     </div>
                                 </div>
-                                <div className='trade-token-select mb-2 p-4 mt-1'>
+                                {/* <div className='trade-token-select mb-2 p-4 mt-1'>
                                     <div><div><p className='text-gray text-left fs-12'>LP {sellSecondTokenSymbol} Amount: <span className='text-white'>{sellFirstTokenValue}</span> {sellSecondTokenSymbol}</p></div></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={sellSecondTokenGetValue.toFixed(0)} />
                                         <div className='d-flex token-select'><h6 className='text-gray'>{sellSecondTokenSymbol}</h6></div>
                                     </div>
-                                </div>
+                                </div> */}
                                 
                                 <div className='pt-3'>
-                                    <div className='d-flex justify-content-between'>
+                                    {/* <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>Free - Buy TLP</p>
                                         <p className='py-2'>$0</p>
-                                    </div>
+                                    </div> */}
                                     <div className='d-flex justify-content-between'>
-                                        <p className='text-gray py-2'>You will receive</p>
+                                        <p className='text-gray'>You will receive</p>
                                         <div>
-                                            <p>{sellFirstTokenGetValue.toFixed(0)} {sellFirstTokenSymbol}</p>
-                                            <p>{sellSecondTokenGetValue.toFixed(0)} {sellSecondTokenSymbol}</p>
+                                            <p>{changeDecimal5Fix(sellFirstTokenGetValue)} {sellFirstTokenSymbol}</p>
+                                            {/* <p>{sellSecondTokenGetValue.toFixed(0)} {sellSecondTokenSymbol}</p> */}
                                         </div>
                                     </div>
                                 </div>  
                                 {globalContext.account == null && connected == false && (
-                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3'>Connect Wallet</div>
+                                    <div className='earn-button w-100 text-center py-2 mt-4 border-radius mb-3'>Connect Wallet</div>
                                 )}                       
                                 {globalContext.account != '' && connected == true && (
-                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={() => sellTLP()}>SELL TLP</div>
+                                    <div className='earn-button w-100 text-center py-2 mt-4 border-radius mb-3' onClick={() => sellTLP()}>SELL TLP</div>
                                 )}    
                             </div>
                         )}
@@ -459,7 +438,7 @@ const Market = (props) => {
                         
                     </div>
                     <div className={`${isMobile == true ? `w-100`:`pl-2 w-50`}`}>
-                        <div className={`market-form window ${isMobile == true ? `ml-0 mt-3 p-3`:`ml-2 p-5`}`}>
+                        <div className={`market-form window ${isMobile == true ? `ml-0 mt-2 p-3`:`ml-2 p-5`}`}>
                             <div className='pt-3'>
                                 <div className='d-flex'>
                                     <img src={TokenIcon} className='mr-3 img-circle' width={35} /> <h4>TLP</h4>
@@ -483,7 +462,7 @@ const Market = (props) => {
                                 <div className='d-flex'>
                                     <h4>Your TLP</h4>
                                 </div>
-                                <div className='d-flex justify-content-between py-1 mt-2'>
+                                <div className='d-flex justify-content-between py-1 mt-1'>
                                     <p className='text-gray py-2'>Balance</p>
                                     <p>{totalUserLP} TLP</p>
                                 </div>
@@ -508,30 +487,25 @@ const Market = (props) => {
                 <div>
                     <div className='token-menu p-4'>
                         <div className='d-flex justify-content-between'>
-                            <div className='d-flex py-2'><h5 className='text-white'>Select Collateral</h5></div>
+                            <div className='d-flex py-2'><h5 className='text-white'>Select Collaterals</h5></div>
                             <div className='text-white cursor-pointer' onClick={() => setIsLPMenu(false)}><h3 className='text-white'>x</h3></div>
                         </div>
                         <hr className='text-white my-1' />
                         <input className='referral text-gray mt-2 w-100 border-radius-0' type='text' placeholder='Search Token'/>
                         <div className='pt-4'>
-                            {lpMetaData.map((item, index) => (
-                                <div className='d-flex token-item justify-content-between' onClick={() => setLP(item.PoolId)}>
-                                    <div className='d-flex'>
-                                        <img src={item.LPFirstIcon} width={45} />
-                                        <div className='ml-4'>
-                                            <h5 className='text-white text-left'>{item.LPFirstTokenSymbol}</h5>
-                                            <p className='text-gray'>{item.LPFirstTokenValue.toFixed(3)}</p>
+                            {lpMetaData.map((item, index) => {     
+                                console.log(item);                           
+                                if(item.LPFirstTokenSymbol != "TRY")
+                                    return <div className='d-flex token-item justify-content-between' onClick={() => setLP(item.PoolId)}>
+                                        <div className='d-flex'>
+                                            <img src={item.LPFirstIcon} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>{item.LPFirstTokenSymbol}</h5>
+                                                <p className='text-gray'>{item.LPFirstTokenValue.toFixed(3)}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className='d-flex'>
-                                        <img src={item.LPSecondIcon} width={45} />
-                                        <div className='ml-4'>
-                                            <h5 className='text-white text-left'>{item.LPSecondTokenSymbol}</h5>
-                                            <p className='text-gray'>{item.LPSecondTokenValue.toFixed(3)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}                            
+                            })}                            
                         </div>
                     </div>
                 </div>

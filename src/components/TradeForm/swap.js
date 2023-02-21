@@ -26,7 +26,7 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 import { calcSwapOut, swap } from '../../lib/tradeify-sdk/pool';
-import { getCoins, getUniqueCoinTypes, getCoinBalances, changeDecimal, fetchLPCoins } from '../../control/main';
+import { getCoins, getSwapPrice, changeDecimal8Fix, getUniqueCoinTypes, getCoinBalances, changeDecimal, fetchLPCoins, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 
 const customStyles = {
     content: {
@@ -58,20 +58,21 @@ const Swap = (props) => {
     const [coins, setCoins] = useState(undefined);
     const [coinBalance, setCoinBalance] = useState([]);
     const [lpCoin, SetLPCoin] = useState([]);
-    const [poolId, setPoolId] = useState(null);  
-    const [isACS, setIsACS] = useState(true);
+    const [inPoolId, setInPoolId] = useState(null);  
+    const [outPoolId, setOutPoolId] = useState(null);  
+    // const [isACS, setIsACS] = useState(true);
     
     const {optionIndex} = props;
 
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
-    const [firstTokenValue, setFirstTokenValue] = useState(0);
+    const [firstTokenValue, setFirstTokenValue] = useState(undefined);
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
     const [firstTokenPrice, setFirstTokenPrice] = useState(0);
     const [availableLiquidity, setAvailableLiquidity] = useState(0);
 
     const [secondToken, setSecondToken] = useState([{label: "Select"}]);
-    const [secondTokenValue, setSecondTokenValue] = useState(0);
+    const [secondTokenValue, setSecondTokenValue] = useState(undefined);
     const [secondTokenPrice, setSecondTokenPrice] = useState(0);
 
     useEffect(() => {
@@ -98,34 +99,30 @@ const Swap = (props) => {
                 }
             });
             if(isSelectActive == 1) {
+                lpCoin.map(item => {
+                    if(item.metadata[0].typeArg == token[0].value) {
+                        setInPoolId(item);
+                        let price1 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                        setFirstTokenPrice(price1);
+                        setAvailableLiquidity(changeDecimal5Fix(Number(item.data.balanceA.value)));
+                    }
+                })
                 await setFirstToken(token);
                 setFirstTokenMaxValue(value);
             } else {
+                lpCoin.map(item => {
+                    if(item.metadata[0].typeArg == token[0].value) {
+                        setOutPoolId(item);
+                        let price2 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                        setSecondTokenPrice(price2);
+                    }
+                })
                 await setSecondToken(token);
             }
             setIsOpenModal(false);
-            getTokenPrice()
         }
     }
-    const getTokenPrice = () => {
-        if (firstToken[0].label != 'Select' && firstToken[0].label != 'Select' ) {
-            lpCoin.map(item => {
-                if(item.metadata[0].symbol == firstToken[0].label && item.metadata[1].symbol == secondToken[0].label) {
-                    let price1 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
-                    let price2 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
-                    setFirstTokenPrice(price1);
-                    setSecondTokenPrice(price2);
-                    setAvailableLiquidity(Number(item.data.balanceA.value));
-                } else if (item.metadata[1].symbol == firstToken[0].label && item.metadata[0].symbol == secondToken[0].label){
-                    let price1 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
-                    let price2 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
-                    setFirstTokenPrice(price1);
-                    setSecondTokenPrice(price2);
-                    setAvailableLiquidity(Number(item.data.balanceB.value));
-                }
-            })
-        }
-    }
+
     const closeModal = () => {
         setIsOpenModal(false);
     }
@@ -143,11 +140,12 @@ const Swap = (props) => {
     const runSwap = async () => {
         try {
             await swap(globalContext.provider, wallet, {
-                inputType: firstToken[0].value,
-                amount: BigInt(firstTokenValue),
+                inputType1: firstToken[0].value,
+                inputType2: secondToken[0].value,
+                amount: BigInt(changeBigNumber(firstTokenValue)),
                 maxSlippagePct: CONFIG.defaultSlippagePct,
-                lpCoin: poolId,
-                isACS: isACS
+                inPoolId: inPoolId,
+                outPoolId: outPoolId,
             }).then((item) => {
                 setFirstTokenValue(0);
                 setSecondTokenValue(0);
@@ -159,21 +157,11 @@ const Swap = (props) => {
     }
 
     const handleFirstTokenChange = (value) => {
+        console.log(value);
         setFirstTokenValue(value);
         let _secondTokenValue = 0;
-        const _firstTokenType = firstToken[0].label;
-        const _secondTokenType = secondToken[0].label;
-        lpCoin.map((item) => {
-            if(_firstTokenType == item.metadata[0].symbol && _secondTokenType == item.metadata[1].symbol) {
-                setIsACS(true);
-                setPoolId(item);                
-                _secondTokenValue = calcSwapOut(item, value, true);
-            } else if (_firstTokenType == item.metadata[1].symbol && _secondTokenType == item.metadata[0].symbol){
-                setIsACS(false);
-                setPoolId(item);
-                _secondTokenValue = calcSwapOut(item, value, false);
-            }
-        })        
+        _secondTokenValue = getSwapPrice(inPoolId, outPoolId, value);
+        console.log(_secondTokenValue);
         setSecondTokenValue(_secondTokenValue);
     }
 
@@ -193,7 +181,7 @@ const Swap = (props) => {
             <div className='trade-token-select mt-2'>
                 <div className='d-flex justify-content-between'><p className='text-gray text-left'>Receive</p></div>
                 <div className='d-flex justify-content-between'>
-                    <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={secondTokenValue.toFixed(0)} />
+                    <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={secondTokenValue} />
                     <div className='d-flex cursor-pointer token-select' onClick={() => openModal(2)}><h4>{secondToken[0].label}</h4><FaAngleDown className='fs-26 mt-2' /></div>
                 </div>
             </div>

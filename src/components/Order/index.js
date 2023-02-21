@@ -11,10 +11,17 @@ const Order = () => {
     const [orderIndex, setOrderIndex] = useState(1);
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);  
-    
-    const closeOrder = (index, poolID, value, tokenA, tokenB, isDiff, isACS) => {
-        closeOrderFun(globalContext.provider, globalContext.wallet, index, poolID, value, tokenA, tokenB, isDiff, isACS).then(item => {
-            toast.info("Order has been closed successfully!");
+    useEffect(() => {
+        console.log(globalContext.traderData);
+    }, [])
+    const closeOrder = (inPool, outPool, createdTimeStamp, earnAmount, isEarn, tradingAmount) => {
+        console.log(isEarn);
+        closeOrderFun(globalContext.provider, globalContext.wallet, inPool, outPool, createdTimeStamp, earnAmount, isEarn, tradingAmount).then(item => {
+            if(item == false) {
+                toast.error("You have lost order!");
+            } else {                
+                toast.info("Order has been closed successfully!");
+            }
         })
     }
     return (
@@ -51,7 +58,7 @@ const Order = () => {
                                         <p><span className={item.type == "SHORT" ? 'PNL-red' : 'PNL-green'}>{item.type}</span><br/> <span className='fs-15'>{item.leverageValue}</span>X</p>
                                     </div>
                                     <p>{item.calcAmount} {item.coinType}</p>
-                                    <p>{item.netValue}</p>
+                                    <p>{item.netValue} {item.coinType}</p>
                                     <div className='d-flex'>
                                         <p>{item.tradingAmount} {item.colletral}</p>
                                         <img src={item.colletralIcon} className='img-circle-small mt-1' width={25} height={25} />
@@ -61,7 +68,7 @@ const Order = () => {
                                     <p>${item.markPrice}</p>                                    
                                     <p className={item.earnType == "-" ? 'PNL-red' : 'PNL-green'}>{item.earnType} ${item.earnAmount}</p>                                    
                                     {item.netValue < 0 ? (<div className='text-gray-closed mt-2'>Position lost!</div>):(
-                                        <div><div className='btn btn-primary-custom mt-1 mr-2' onClick={() => closeOrder(item.createdTimeStamp, item.poolID, item.netValue, item.tokenA, item.tokenB, item.isDiff, item.isACS)}>Close</div></div>
+                                        <div><div className='btn btn-primary-custom mt-1 mr-2' onClick={() => closeOrder(item.inPool, item.outPool, item.createdTimeStamp, item.earnAmount, item.earnType, item.tradingAmount)}>Close</div></div>
                                     )}
                                 </div>
                             }
@@ -108,11 +115,11 @@ const Order = () => {
                                         </div>
                                     </div>
                                     <div className='d-flex'>
-                                        <p className='text-gray mr-3'>PNL & ROE</p>
+                                        <p className='text-gray mr-3 mt-2'>PNL & ROE</p>
                                         <p className={item.earnType == "-" ? 'PNL-red' : 'PNL-green'}>{item.earnType} ${item.earnAmount}</p>                                    
                                     </div>                                    
                                     {item.netValue < 0 ? (<div className='text-gray-closed mt-2'>Position lost!</div>):(
-                                        <div><div className='btn btn-primary-custom-m mt-1 mr-2' onClick={() => closeOrder(item.createdTimeStamp, item.poolID, item.netValue, item.tokenA, item.tokenB, item.isDiff, item.isACS)}>Close</div></div>
+                                        <div><div className='btn btn-primary-custom-m mt-1 mr-2' onClick={() => closeOrder(item.inPool, item.outPool, item.createdTimeStamp, item.earnAmount, item.earnType, item.tradingAmount)}>Close</div></div>
                                     )}
                                 </div>
                             }
@@ -147,6 +154,7 @@ const Order = () => {
                     <hr className='text-gray'/>   
                     {!isMobile && (<>
                         {globalContext.traderData.map((item, key) => {
+                            
                             if(item.tradingStatus == 2) {
                                 return <div className='order-content-value d-flex' key={key}>
                                     <div className='d-flex'>
@@ -163,7 +171,7 @@ const Order = () => {
                                     <p>${item.entryPrice}</p>
                                     <p>${item.markPrice}</p>
                                     <p>${item.markPrice}</p>                                    
-                                    <p className={item.earnType == "-" ? 'PNL-red' : 'PNL-green'}>{item.earnType} ${item.earnAmount}</p>                                    
+                                    <p className={item.isEarn == "2" ? 'PNL-red' : 'PNL-green'}>{item.earnType} ${item.earnAmount}</p>                                    
                                     <div><div className='mt-1 mr-2 text-gray'>Closed</div></div>
                                 </div>
                             }

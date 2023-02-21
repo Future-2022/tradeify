@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FaAngleDown, FaAngleLeft, FaArrowRight } from 'react-icons/fa';
 import { WalletAdapter } from '@mysten/wallet-adapter-base';
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
 import { useWallet } from '@mysten/wallet-adapter-react';
 import {
     ObjectId,
@@ -10,19 +12,17 @@ import {
     GetObjectDataResponse,
     JsonRpcProvider,
 } from '@mysten/sui.js'
-import Slider from "rc-slider";
-import "rc-slider/assets/index.css";
+// import { Slider } from 'rsuite';
+import Modal from 'react-modal';
 import { ToastContainer, toast } from 'react-toastify';
 
 import { useSuiWallet } from '../../context/ConnectWallet/useSuiWallet';
 import { StoreContext } from '../../store';
-import { CONFIG } from '../../lib/config';
 import { calcSwapOut } from '../../lib/tradeify-sdk/pool';
+import { CONFIG } from '../../lib/config';
 
 import './index.css';
 import 'react-toastify/dist/ReactToastify.css';
-
-import { FaAlignRight } from 'react-icons/fa';
 
 import TokenLogo from '../../img/png/token-logo.png';
 import ExchangeLogo from '../../img/png/exchange.png';
@@ -30,14 +30,11 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 
-import Swap from './swap';
-import Modal from 'react-modal';
-
-import { getTradeDatas, getCoins, getReferralIDByCode, 
+import { getTradeDatas, getSwapPrice, getCoins, getReferralIDByCode, changeDecimal8Fix, 
     getTraderStatus, getUniqueCoinTypes, getCoinBalances, 
-    changeDecimal, fetchLPCoins, getTraderMetaData } from '../../control/main';
-import { createLongPositionAOrder, createLongPositionBOrder } from '../../lib/tradeify-sdk/trading';
+    changeDecimal, fetchLPCoins, getTraderMetaData, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 
+import { createPosition } from '../../lib/tradeify-sdk/trading';
 const customStyles = {
     content: {
         top: '50%',
@@ -56,6 +53,7 @@ const customStyles = {
       backgroundColor: 'rgb(0 0 0 / 86%)'
     }
 };
+
 const sliderGreen = ['rgba(220, 66, 9, 0.1)', 'rgba(220, 66, 9, 1)'];
 const sliderRed = ['rgba(240, 68, 56, .3)', 'rgba(240, 68, 56, 1)'];
 
@@ -70,7 +68,7 @@ const leverageMarks = {
 };
 
 const provider = new JsonRpcProvider(CONFIG.rpcUrl);
-const ShortPosition = () => {   
+const LongPosition = () => {   
     const globalContext = useContext(StoreContext);     
 
     const { wallet, connected } = useWallet();
@@ -82,27 +80,36 @@ const ShortPosition = () => {
     const [isTokenMenu, setIsTokenMenu] = useState(false);
     const [orderType, setOrderType] = useState(1);
     const [leverageValue, setLeverageValue] = useState(5);
-
-    const [trade, setTrade] = useState(0); 
     
+    const [trade, setTrade] = useState(0); 
+
     const [isSelectActive, setIsSelectActive] = useState(1);
     const [coins, setCoins] = useState(undefined);
     const [coinBalance, setCoinBalance] = useState([]);
     const [lpCoin, SetLPCoin] = useState([]);
-    const [poolId, setPoolId] = useState(null);  
-    const [isACS, setIsACS] = useState(true);
-    
+    const [inPoolId, setInPoolId] = useState(null);  
+    const [outPoolId, setOutPoolId] = useState(null);  
+    const [isACS, setIsACS] = useState(undefined);
+
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
     const [firstTokenValue, setFirstTokenValue] = useState(undefined);
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
     const [firstTokenPrice, setFirstTokenPrice] = useState(0);
-    const [availableLiqudity, setAvailableLiqudity] = useState(0);  
+    const [availableLiqudity, setAvailableLiqudity] = useState(0);
 
     const [secondToken, setSecondToken] = useState([{label: "Select"}]);
     const [secondTokenValue, setSecondTokenValue] = useState(undefined);
-    const [secondTokenMaxValue, setSecondTokenMaxValue] = useState(0);
-    const [secondTokenPrice, setSecondTokenPrice] = useState(0);    
+    const [secondTokenPrice, setSecondTokenPrice] = useState(0);
+
+    
+
+    useEffect(() => {
+        fetchLPCoins(globalContext.provider, globalContext.wallet).then(lpCoins => {
+            SetLPCoin(lpCoins);            
+            getTradeData(lpCoins);
+        });
+    }, [globalContext.traderData])
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -111,15 +118,9 @@ const ShortPosition = () => {
             });
             const balance = getCoinBalances(item);
             setCoinBalance(balance);
-            setCoins(newCoins)
+            setCoins(newCoins);
         })
     }, [])
-
-    useEffect(() => {
-        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
-            SetLPCoin(lpCoins);
-        })
-    })
     
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);
@@ -135,6 +136,7 @@ const ShortPosition = () => {
         setOrderType(index)
         setIsOrderMenu(false);
     }
+
     const selectToken = (type) => {
         if(coins == undefined) {
             toast.info("please wait for a few sec. now loading data");
@@ -149,20 +151,31 @@ const ShortPosition = () => {
             });
             if(isSelectActive == 1) {
                 setFirstToken(token);
-                if(secondToken[0].label != "Select") {
-                    setMarketPrice(token, secondToken);
-                }
                 setFirstTokenMaxValue(value);
+                lpCoin.map(item => {
+                    if(type == item.metadata[0].symbol) {
+                        setInPoolId(item);                
+                        setAvailableLiqudity(Number(item.data.balanceA.value));
+                        let price = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                        setFirstTokenPrice(price);
+                    }
+                })
             } else {
-                setSecondToken(token);
-                if(firstToken[0].label != "Select") {
-                    setMarketPrice(firstToken, token);
-                }
+                setSecondToken(token);   
+                setMarketPrice(token);      
                 globalContext.setMarketToken(token[0].label);
+                lpCoin.map(item => {
+                    if(type == item.metadata[0].symbol) {
+                        setOutPoolId(item);       
+                        let price = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                        setSecondTokenPrice(price);
+                    }
+                });
             }
             setIsOpenModal(false);
         }
     }
+
     const closeModal = () => {
         setIsOpenModal(false);
     }
@@ -170,166 +183,96 @@ const ShortPosition = () => {
         setIsSelectActive(type);
         setIsOpenModal(true);
     }
-    const handleFirstTokenChange = (value) => {
-        setFirstTokenValue(value);
+    const handleFirstTokenChange = (Invalue) => {
+        setFirstTokenValue(Invalue);
         let _secondTokenValue = 0;
         const _firstTokenType = firstToken[0].label;
         const _secondTokenType = secondToken[0].label;
-
         if(_firstTokenType != _secondTokenType) { 
             lpCoin.map((item) => {
-                if(_firstTokenType == item.metadata[0].symbol && _secondTokenType == item.metadata[1].symbol) {
-                    setIsACS(1);
-                    setPoolId(item);                
-                    _secondTokenValue = calcSwapOut(item, value, true);
-                    setAvailableLiqudity(Number(item.data.balanceA.value));
-                    let price1 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
-                    let price2 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
-                    setFirstTokenPrice(price1);
-                    setSecondTokenPrice(price2);
-                } else if (_firstTokenType == item.metadata[1].symbol && _secondTokenType == item.metadata[0].symbol){
-                    setIsACS(0);
-                    setPoolId(item);
-                    _secondTokenValue = calcSwapOut(item, value, false);
-                    setAvailableLiqudity(Number(item.data.balanceB.value));
-                    let price1 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
-                    let price2 = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
-                    setFirstTokenPrice(price1);
-                    setSecondTokenPrice(price2);
+                if(_firstTokenType == item.metadata[0].symbol) {
+                    console.log(firstTokenPrice);
+                    console.log(secondTokenPrice);
+                    _secondTokenValue = firstTokenPrice * Invalue / secondTokenPrice;
                 }
             }) 
         } else {
-            _secondTokenValue = value - value * 1.3 / 100;
+            _secondTokenValue = Invalue;
         }
-
-        console.log(_secondTokenValue);
-        setSecondTokenValue((_secondTokenValue * leverageValue).toFixed(3));
-    }
-
-    const selectLeverage = (value) => {
-        setLeverageValue(value);
+        setSecondTokenValue((_secondTokenValue * leverageValue).toFixed(6));
     }
 
     useEffect(() => {
         handleFirstTokenChange(firstTokenValue);
-        console.log(secondTokenValue)
-        console.log(firstTokenValue)
     }, [leverageValue])
 
     const createOrder = () => {
+        console.log(outPoolId);
         let createdTimeStamp = (Date.now() / 1000).toFixed(0);
-        let marketPrice = limitPrice * 1000;
+        let marketPrice = (limitPrice * 10000).toFixed(0);
         let referID= undefined;
         let hasRefer = undefined;
-        let isDiff = undefined;
         let tradingType = 1; // trading type = 1 : short position
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             let referralCode = item.referralCode;
             getReferralIDByCode(globalContext.provider, localStorage.getItem('walletAddress'), referralCode).then(item => {
+                
                 if(item == undefined) {
                     hasRefer = 0;                 
                     referID = CONFIG.nullAddress;
                 } else {
                     hasRefer = 1;                 
                     referID = item;
-                }
-                if(firstToken[0].value == secondToken[0].value) {
-                    isDiff = 0;
-                    setIsACS(0);
-                    console.log(isACS);
-                    lpCoin.map(item => {
-                        if(item.metadata[0].typeArg == "0x2::sui::SUI" && item.metadata[1].typeArg == secondToken[0].value) {
-                            console.log(item.metadata[0].typeArg);
-                            createLongPositionBOrder(globalContext.provider, globalContext.wallet, {
-                                poolID: item.id,
-                                tokenTypeA: "0x2::sui::SUI",
-                                tokenTypeB: secondToken[0].value,
-                                marketPrice: marketPrice,
-                                tradingAmount: firstTokenValue,
-                                calcAmount: Number(secondTokenValue).toFixed(0),
-                                leverageValue: leverageValue,
-                                hasRefer: hasRefer,
-                                referID: referID,
-                                isDiff: isDiff,
-                                isACS: 0, // placeholder
-                                createdTimeStamp: createdTimeStamp,
-                                tradingType: tradingType
-                            }).then(res => {
-                                toast.info("You have created position successfully!");
-                            })
-                        }
-                    }) 
-                } else {
-                    isDiff = 1;
-                    if(isACS == 0) {
-                        createLongPositionBOrder(globalContext.provider, globalContext.wallet, {
-                            poolID: poolId.id,
-                            tokenTypeA: firstToken[0].value,
-                            tokenTypeB: secondToken[0].value,
-                            marketPrice: marketPrice,
-                            tradingAmount: firstTokenValue,
-                            calcAmount: Number(secondTokenValue).toFixed(0),
-                            leverageValue: leverageValue,
-                            hasRefer: hasRefer,
-                            referID: referID,
-                            isDiff: isDiff,
-                            isACS: isACS,
-                            createdTimeStamp: createdTimeStamp,
-                            tradingType: tradingType
-                        }).then(res => {
-                            toast.info("You have created position successfully!");
-                        })
-                    } else {
-                        createLongPositionAOrder(globalContext.provider, globalContext.wallet, {
-                            poolID: poolId.id,
-                            tokenTypeA: firstToken[0].value,
-                            tokenTypeB: secondToken[0].value,
-                            marketPrice: marketPrice,
-                            tradingAmount: firstTokenValue,
-                            calcAmount: Number(secondTokenValue).toFixed(0),
-                            leverageValue: leverageValue,
-                            hasRefer: hasRefer,
-                            referID: referID,
-                            isDiff: isDiff,
-                            isACS: isACS,
-                            createdTimeStamp: createdTimeStamp,
-                            tradingType: tradingType
-                        }).then(res => {
-                            toast.info("You have created position successfully!");
-                        })
-                    }
-                }            
+                }   
+                
+                createPosition(globalContext.provider, globalContext.wallet, {
+                    inPoolID: inPoolId.id,
+                    outPoolID: outPoolId.id,
+                    tokenTypeA: firstToken[0].value,
+                    tokenTypeB: secondToken[0].value,
+                    tokenTypeC: CONFIG.usdt,
+                    marketPrice: marketPrice,
+                    tradingAmount: changeBigNumber(firstTokenValue),
+                    calcAmount: Number(changeBigNumber(secondTokenValue)).toFixed(0),
+                    leverageValue: leverageValue,
+                    hasRefer: hasRefer,
+                    referID: referID,
+                    createdTimeStamp: createdTimeStamp,
+                    tradingType: tradingType
+                }).then(res => {
+                    toast.info("You have created position successfully!");
+                }) 
+
             })
         })
     }
 
-    const setMarketPrice = (firstToken, secondToken) => {
-        let price = 0;        
-        const _firstTokenType = firstToken[0].label;
-        const _secondTokenType = secondToken[0].label;
-
-        if(secondToken[0].label == "SUI") {
-            setLimitPrice(1);
-        } else {
-            lpCoin.map((item) => {
-                if(_firstTokenType == item.metadata[0].symbol && _secondTokenType == item.metadata[1].symbol) {
-                    price = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
-                } else if (_firstTokenType == item.metadata[1].symbol && _secondTokenType == item.metadata[0].symbol){
-                    price = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);
-                } 
-            })
-            setLimitPrice(price.toFixed(3));
-        }
+    const getTradeData = (lpCoinVal) => {
+        getTradeDatas(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            const traderData = getTraderMetaData(lpCoinVal, item);
+            globalContext.setTraderData(traderData);
+        })
     }
 
-    return (        
+    const setMarketPrice = (secondToken) => {
+        let price = 0;        
+        const _secondTokenType = secondToken[0].label;
+        lpCoin.map((item) => {
+            if(_secondTokenType == item.metadata[0].symbol) {
+                price = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);
+            } 
+        })
+        setLimitPrice(price.toFixed(4));        
+    }
+
+    return (
         <div>
             <div>
                 <div className='trade-form-select d-flex mt-2 p-relative'>
                     <div className='trade-token-select-1 mb-2 w-50'>
                         <h5 className='fs-12 text-gray text-left'>{orderType == 2 ? 'Limit Price':'Market Price'}</h5>
                         <div className='d-flex'>
-                            <span className={`text-gray d-flex`}>{orderType == 3 && (<span className='text-gray font-bold'>≤</span>)} $</span><input type='text' className={`token-select-input ${orderType == 1 && ('disabled')}`} placeholder='0.0' value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)} />
+                            <span className={`text-gray d-flex`}>{orderType == 3 && (<span className='text-gray font-bold'>≥ </span>)} $</span><input type='text' className={`token-select-input ${orderType == 1 && ('disabled')}`} placeholder='0.0' value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)} />
                         </div>
                     </div>
                     <div className='trade-token-select-1 mb-2 ml-2 w-50'>
@@ -409,11 +352,11 @@ const ShortPosition = () => {
                 <div className='pt-3'>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Available Liquidity</p>
-                        <p>24,23.23 ETH</p>
+                        <p>{changeDecimal5Fix(availableLiqudity)} {firstToken[0].label}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Liquidity Source</p>
-                        <div className='d-flex'><p>Tradeify</p><img src={TokenLogo} className=' img-circle-small ml-1' /></div>
+                        <div className='d-flex'><p>Tradeify</p><img src={TokenLogo} className='img-circle-small ml-1' /></div>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Profits in</p>
@@ -425,11 +368,11 @@ const ShortPosition = () => {
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Collateral</p>
-                        <p>{(secondTokenPrice * secondTokenValue).toFixed(2)}</p>
+                        <p>{changeDecimal5Fix(secondTokenPrice * secondTokenValue)}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Fees</p>
-                        <p>{(secondTokenPrice * secondTokenValue * 0.009).toFixed(2)}</p>
+                        <p>{changeDecimal5Fix(secondTokenPrice * secondTokenValue * 0.009)}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Spread</p>
@@ -457,79 +400,45 @@ const ShortPosition = () => {
                     </div>
                     <div>
                         <div className='pt-4'>
-                            {(isSelectActive == 2 && firstToken[0].label == 'SUI') ? (
-                                <>
-                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
-                                        <div className='d-flex'>
-                                            <img src={TokenIcon3} width={45} />
-                                            <div className='ml-4'>
-                                                <h5 className='text-white text-left'>ETH</h5>
-                                                <p className='text-gray'>Ethereum</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h5 className='text-white text-right'>$1234.32</h5>
-                                            <p className='text-red text-right'>-0.87</p>
-                                        </div>
+                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
+                                <div className='d-flex'>
+                                    <img src={TokenIcon1} width={45} />
+                                    <div className='ml-4'>
+                                        <h5 className='text-white text-left'>SUI</h5>
+                                        <p className='text-gray'>Sui</p>
                                     </div>
-                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
-                                        <div className='d-flex'>
-                                            <img src={TokenIcon2} width={45} />
-                                            <div className='ml-4'>
-                                                <h5 className='text-white text-left'>BTC</h5>
-                                                <p className='text-gray'>Bitcoin</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h5 className='text-white text-right'>$14034.43</h5>
-                                            <p className='text-red text-right'>-0.34</p>
-                                        </div>
+                                </div>
+                                <div>
+                                    <h5 className='text-white text-right'>$1.32</h5>
+                                    <p className='text-green text-right'>+0.87</p>
+                                </div>
+                            </div>
+                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
+                                <div className='d-flex'>
+                                    <img src={TokenIcon3} width={45} />
+                                    <div className='ml-4'>
+                                        <h5 className='text-white text-left'>ETH</h5>
+                                        <p className='text-gray'>Ethereum</p>
                                     </div>
-                                </>
-                            ): (
-                                <>
-                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
-                                        <div className='d-flex'>
-                                            <img src={TokenIcon1} width={45} />
-                                            <div className='ml-4'>
-                                                <h5 className='text-white text-left'>SUI</h5>
-                                                <p className='text-gray'>Sui</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h5 className='text-white text-right'>$1.0034</h5>
-                                            <p className='text-green text-right'>+0.02</p>
-                                        </div>
+                                </div>
+                                <div>
+                                    <h5 className='text-white text-right'>$1234.32</h5>
+                                    <p className='text-red text-right'>-0.87</p>
+                                </div>
+                            </div>
+                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
+                                <div className='d-flex'>
+                                    <img src={TokenIcon2} width={45} />
+                                    <div className='ml-4'>
+                                        <h5 className='text-white text-left'>BTC</h5>
+                                        <p className='text-gray'>Bitcoin</p>
                                     </div>
-                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
-                                        <div className='d-flex'>
-                                            <img src={TokenIcon3} width={45} />
-                                            <div className='ml-4'>
-                                                <h5 className='text-white text-left'>ETH</h5>
-                                                <p className='text-gray'>Ethereum</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h5 className='text-white text-right'>$1234.32</h5>
-                                            <p className='text-red text-right'>-0.87</p>
-                                        </div>
-                                    </div>
-                                    <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
-                                        <div className='d-flex'>
-                                            <img src={TokenIcon2} width={45} />
-                                            <div className='ml-4'>
-                                                <h5 className='text-white text-left'>BTC</h5>
-                                                <p className='text-gray'>Bitcoin</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h5 className='text-white text-right'>$14034.43</h5>
-                                            <p className='text-red text-right'>-0.34</p>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                            
+                                </div>
+                                <div>
+                                    <h5 className='text-white text-right'>$14034.43</h5>
+                                    <p className='text-red text-right'>-0.34</p>
+                                </div>
+                            </div>                                  
                         </div>
                     </div>
                 </div>
@@ -537,4 +446,4 @@ const ShortPosition = () => {
         </div>
     )
 }
-export default ShortPosition;
+export default LongPosition;

@@ -55,7 +55,7 @@ const Trade = (props) => {
                             theme={Themes.DARK}
                             locale="fr"
                             autosize
-                            symbol="BINANCE:BNBPERP"
+                            symbol={`BINANCE:${globalContext.marketToken}PERP`}
                             interval={IntervalTypes.D}
                             timezone="Etc/UTC"
                             style="1"

@@ -24,6 +24,14 @@ export class Coin {
     }
 }
 
+    
+export const getSwapPrice = (inPool, outPool, value) => {
+  let bigIntAmount = changeBigNumber(value);
+  let USDAmount = calcSwapOut(inPool, bigIntAmount, true);
+  let SecondTokenAmount = calcSwapOut(outPool, USDAmount, false);
+  return changeDecimal8Fix(SecondTokenAmount);
+}
+
 export const isLoggedIn = () => {
     const account = localStorage.getItem('walletAddress');
     if(account == undefined || account == "null" || account == "undefined") {
@@ -38,93 +46,151 @@ export const ExportAddress = (address) => {
     return value
 }
 export const getTraderMetaData = (lpCoin, value) => {
+
   let returnValue = [];
-  let iconType = undefined;
   let colletral = undefined;
   let type = undefined;
   let markPrice = 0;
-  let entryPrice = 0;
   let earnType = undefined;
   let earnAmount = undefined;
   let netValue = undefined;
+  let inPool = undefined;
+  let outPool = undefined; 
+
+
   value.map(valueItem => {
+    
     lpCoin.map(item => {
-      if(item.id == valueItem.poolID) {
-        if(valueItem.tradingType == 0) {
-          type = "LONG";
-        } else {
-          type = "SHORT";
-        }
-        if(valueItem.isDiff == 1) {
-          if(valueItem.isACS == 1) {
-            colletral = item.metadata[1].symbol;
-            iconType = item.metadata[0].symbol;
-            markPrice = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);  
-            netValue = calcSwapOut(item, (valueItem.tradingAmount), false) * valueItem.leverageValue;
-          }
-          else {
-            colletral = item.metadata[0].symbol;
-            iconType = item.metadata[1].symbol;
-            markPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);   
-          }
-        } else {
-          colletral = item.metadata[1].symbol;
-          iconType = item.metadata[1].symbol;
-          markPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);           
-        }
-        if(valueItem.isDiff == 1) {
-          entryPrice = (1 / (valueItem.marketPrice / 1000)).toFixed(4);
-        } else {
-          entryPrice = (valueItem.marketPrice / 1000).toFixed(4);
-        }
-        let MarketIcon = importImage(iconType);
-        let colletralIcon = importImage(colletral);
-        if(valueItem.tradingType == 0) {
-          if(entryPrice > markPrice) {
-            earnType = "-";            
-            earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
-            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
-          } else {
-            earnType = "+";
-            earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
-            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
-          }
-        } else {
-          if(entryPrice > markPrice) {
-            earnType = "+";            
-            earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
-            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
-          } else {
-            earnType = "-";
-            earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
-            netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
-          }
-        }
-        let value = {
-          MarketIcon: MarketIcon,
-          coinType: iconType,
-          tokenA: item.metadata[0].typeArg,
-          tokenB: item.metadata[1].typeArg,
-          calcAmount: changeDecimal5Fix(valueItem.calcAmount),
-          entryPrice: entryPrice,
-          tradingStatus: valueItem.tradingStatus,
-          colletral: colletral,
-          colletralIcon: colletralIcon,
-          tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
-          leverageValue: valueItem.leverageValue,
-          type: type,
-          isDiff: valueItem.isDiff,
-          isACS: valueItem.isACS,
-          markPrice: markPrice.toFixed(4),
-          earnType: earnType,
-          earnAmount: earnAmount,
-          netValue: Number(netValue).toFixed(4),
-          createdTimeStamp: valueItem.createdTimeStamp,
-          poolID: valueItem.poolID
-        }
-        returnValue.push(value);
+      if(item.id == valueItem.inPoolID) {
+        inPool = item;
+      } else if (item.id == valueItem.outPoolID){
+        outPool = item;
       }
     })
+    if(valueItem.inPoolID == valueItem.outPoolID) {
+      outPool = inPool;
+    }
+    if(valueItem.tradingType == 0) {
+      type = "LONG";
+    } else {
+      type = "SHORT";
+    }
+    
+    let MarketIcon = importImage(outPool.metadata[0].symbol);
+    let colletralIcon = importImage(inPool.metadata[0].symbol);
+    let entryPrice = (valueItem.marketPrice / 10000).toFixed(4);
+    let markPrice = Number(outPool.data.balanceB.value) / Number(outPool.data.balanceA.value);
+    let netValue = changeDecimal5Fix(valueItem.calcAmount) * markPrice / entryPrice;
+    let calcAmount = changeDecimal5Fix(valueItem.calcAmount);
+
+    if(valueItem.tradingType == 0) {
+      if(calcAmount > netValue) {
+        earnType = "-";            
+        earnAmount = (calcAmount - netValue).toFixed(7);
+      } else if( calcAmount < netValue) {
+        earnType = "+";
+        earnAmount = (netValue - calcAmount).toFixed(7);
+      } else {
+        earnType = "+";
+        earnAmount = 0;
+      }
+    } else {
+      if(calcAmount > netValue) {
+        earnType = "+";            
+        earnAmount = (calcAmount - netValue).toFixed(7);
+      } else {
+        earnType = "-";
+        earnAmount = (netValue - calcAmount).toFixed(7);
+      }
+    }
+
+    let value = {
+        inPool: inPool,
+        outPool: outPool,
+        MarketIcon: MarketIcon,
+        coinType: outPool.metadata[0].symbol,
+        tokenA: outPool.metadata[0].typeArg,
+        tokenB: inPool.metadata[0].typeArg,
+        calcAmount: changeDecimal5Fix(valueItem.calcAmount),
+        entryPrice: entryPrice,
+        tradingStatus: valueItem.tradingStatus,
+        colletral: inPool.metadata[0].symbol,
+        colletralIcon: colletralIcon,
+        tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
+        leverageValue: valueItem.leverageValue,
+        type: type,
+        markPrice: markPrice.toFixed(4),
+        earnType: earnType,
+        earnAmount: earnAmount,
+        netValue: netValue.toFixed(5),
+        isEarn: valueItem.isEarn,
+        createdTimeStamp: valueItem.createdTimeStamp,
+    }    
+    returnValue.push(value);
+
+    // lpCoin.map(item => {
+    //   console.log(valueItem.inPoolID);
+    //   if(item.id == valueItem.inPoolID) {
+    //     if(valueItem.tradingType == 0) {
+    //       type = "LONG";
+    //     } else {
+    //       type = "SHORT";
+    //     }
+        
+
+    //     if(valueItem.isDiff == 1) {
+    //       entryPrice = (1 / (valueItem.marketPrice / 1000)).toFixed(4);
+    //     } else {
+    //       entryPrice = (valueItem.marketPrice / 1000).toFixed(4);
+    //     }
+        // let MarketIcon = importImage(iconType);
+    //     let colletralIcon = importImage(colletral);
+    //     if(valueItem.tradingType == 0) {
+    //       if(entryPrice > markPrice) {
+    //         earnType = "-";            
+    //         earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
+    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
+    //       } else {
+    //         earnType = "+";
+    //         earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
+    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
+    //       }
+    //     } else {
+    //       if(entryPrice > markPrice) {
+    //         earnType = "+";            
+    //         earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
+    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
+    //       } else {
+    //         earnType = "-";
+    //         earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
+    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
+    //       }
+    //     }
+    //     let value = {
+    //       MarketIcon: MarketIcon,
+    //       coinType: iconType,
+    //       tokenA: item.metadata[0].typeArg,
+    //       tokenB: item.metadata[1].typeArg,
+    //       calcAmount: changeDecimal5Fix(valueItem.calcAmount),
+    //       entryPrice: entryPrice,
+    //       tradingStatus: valueItem.tradingStatus,
+    //       colletral: colletral,
+    //       colletralIcon: colletralIcon,
+    //       tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
+    //       leverageValue: valueItem.leverageValue,
+    //       type: type,
+    //       isDiff: valueItem.isDiff,
+    //       isACS: valueItem.isACS,
+    //       markPrice: markPrice.toFixed(4),
+    //       earnType: earnType,
+    //       earnAmount: earnAmount,
+    //       netValue: Number(netValue).toFixed(4),
+    //       createdTimeStamp: valueItem.createdTimeStamp,
+    //       poolID: valueItem.poolID
+    //     }
+    //     returnValue.push(value);
+    //   }
+    // })
   }) 
   return returnValue;
 }
@@ -135,13 +201,13 @@ export const LPMetaData = (totalLPValue, metaValue) => {
     metaValue.map(item => {
       const PoolId = item.id;
 
-      const LPSymbol = item.metadata[0].symbol + '-' + item.metadata[1].symbol;
+      const LPSymbol = item.metadata[0].symbol;
       let LPFirstIcon = importImage(item.metadata[0].symbol);
-      let LPSecondIcon = importImage(item.metadata[1].symbol);
+      // let LPSecondIcon = importImage(item.metadata[1].symbol);
 
       const LPTokenValue = Number(item.data.lpSupply.value);
       const LPPercentage = Number(LPTokenValue/totalLPValue * 100);
-      const LPPrice = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(2);
+      const LPPrice = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(2);
       const LPFee = Number(Number(item.data.lpFeeBps) / 1000 * 100).toFixed(2);
 
       const newItem = {
@@ -154,7 +220,7 @@ export const LPMetaData = (totalLPValue, metaValue) => {
         LPTokenValue: LPTokenValue,
         LPPercentage: LPPercentage,
         LPFirstIcon: LPFirstIcon,
-        LPSecondIcon: LPSecondIcon,
+        // LPSecondIcon: LPSecondIcon,
         LPPrice: LPPrice,
         LPFee: LPFee
       }
@@ -176,8 +242,16 @@ export function changeDecimal(value) {
   const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(3);
   return balance
 }
+export function changeBigNumber(value) {
+  const balance = (Number(value)*(10**CONFIG.MainDecimal));
+  return balance
+}
 export function changeDecimal5Fix(value) {
   const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(5);
+  return balance
+}
+export function changeDecimal8Fix(value) {
+  const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(8);
   return balance
 }
 
@@ -253,7 +327,7 @@ export function selectCoinSetWithCombinedBalanceGreaterThanOrEqual(
   const ret = []
   while (sum < total) {
     // prefer to add a coin with smallest sufficient balance
-    const target = amount - sum
+    const target = BigInt(amount) - sum
     const coinWithSmallestSufficientBalance = sortedCoins.find(c => c.balance.value >= target)
     if (coinWithSmallestSufficientBalance) {
       ret.push(coinWithSmallestSufficientBalance)

@@ -36,15 +36,12 @@ export function maybeSplitThenDeposit( typeArgs, args ) {
         data: {
             packageObjectId: PACKAGE_ID,
             module: 'pool',
-            function: 'maybe_split_then_deposit',
+            function: 'new_swap_deposit_',
             typeArguments: [typeArgs[0], typeArgs[1]],
             arguments: [
                 args.pool,
                 args.inputA,
                 args.amountA.toString(),
-                args.inputB,
-                args.amountB.toString(),
-                args.minLpOut.toString(),
             ],
             gasBudget: 40000,
         },
@@ -56,14 +53,12 @@ export function maybeSplitThenWithdraw( typeArgs, args ) {
         data: {
         packageObjectId: PACKAGE_ID,
         module: 'pool',
-        function: 'maybe_split_then_withdraw',
+        function: 'new_withdraw_swap_',
         typeArguments: [typeArgs.first, typeArgs.second],
         arguments: [
             args.pool,
             args.lpIn,
             args.amount.toString(),
-            args.minAOut.toString(),
-            args.minBOut.toString(),
         ],
         gasBudget: 10000,
         },
@@ -79,6 +74,25 @@ export function maybeSplitThenSwapA(typeArgs, args) {
             typeArguments: [typeArgs.first, typeArgs.second],
             arguments: [
                 args.pool, 
+                args.input, 
+                args.amount.toString(), 
+                args.minOut.toString()
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+export function newSwap(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: PACKAGE_ID,
+            module: 'pool',
+            function: 'new_swap',
+            typeArguments: [typeArgs.first, typeArgs.second, typeArgs.third],
+            arguments: [
+                args.inPool, 
+                args.outPool, 
                 args.input, 
                 args.amount.toString(), 
                 args.minOut.toString()
@@ -251,47 +265,54 @@ export function createLongPositionASdk(typeArgs, args) {
         },
     }
 }
-export function createLongPositionBSdk(typeArgs, args) {
+export function createPositionSdk(typeArgs, args) {
     console.log(args);
     return {
         kind: 'moveCall',
         data: {
-            packageObjectId: CONFIG.referralPackageId,
+            packageObjectId: CONFIG.tradeifyPackageId,
             module: 'pool',
-            function: 'create_position_B_',
-            typeArguments: [typeArgs[0], typeArgs[1]],
+            function: 'create_position_',
+            typeArguments: [typeArgs[0], typeArgs[1], typeArgs[2]],
             arguments: [
-                args.poolID,
+                args.inPoolID,
+                args.outPoolID,
                 CONFIG.tradingPoolID,
-                args.coinB,
+                args.coinA,
                 args.marketPrice.toString(),
-                args.tradingAmount,
+                args.tradingAmount.toString(),
                 args.calcAmount,
                 args.leverageValue.toString(),
                 args.hasRefer.toString(),
                 args.referID.toString(),
-                args.isDiff.toString(),
-                args.isACS.toString(),
                 args.createdTimeStamp,
-                args.tradingType.toString(),
+                args.tradingType.toString()
             ],
             gasBudget: 10000,
         },
     }
 }
-export function closeOrderASdk(typeArgs, args) {
+export function createPosition2Sdk(typeArgs, args) {
+    console.log(args);
     return {
         kind: 'moveCall',
         data: {
-            packageObjectId: CONFIG.referralPackageId,
+            packageObjectId: CONFIG.tradeifyPackageId,
             module: 'pool',
-            function: 'close_position_A_',
+            function: 'create_position2_',
             typeArguments: [typeArgs[0], typeArgs[1]],
             arguments: [
-                args.poolID,
+                args.inPoolID,
                 CONFIG.tradingPoolID,
+                args.coinA,
+                args.marketPrice.toString(),
+                args.tradingAmount.toString(),
+                args.calcAmount,
+                args.leverageValue.toString(),
+                args.hasRefer.toString(),
+                args.referID.toString(),
                 args.createdTimeStamp,
-                (args.updateAmount * 1000000000).toString()
+                args.tradingType.toString()
             ],
             gasBudget: 10000,
         },
@@ -303,13 +324,35 @@ export function closeOrderBSdk(typeArgs, args) {
         data: {
             packageObjectId: CONFIG.referralPackageId,
             module: 'pool',
-            function: 'close_position_B_',
-            typeArguments: [typeArgs[0], typeArgs[1]],
+            function: 'close_position_',
+            typeArguments: [typeArgs[0], typeArgs[1], typeArgs[2]],
             arguments: [
-                args.poolID,
+                args.inPoolID,
+                args.outPoolID,
                 CONFIG.tradingPoolID,
                 args.createdTimeStamp,
-                (args.updateAmount * 1000000000).toString()
+                args.updateAmount.toString(),
+                args.earnType.toString()
+            ],
+            gasBudget: 10000,
+        },
+    }
+}
+
+export function closeOrder2Sdk(typeArgs, args) {
+    return {
+        kind: 'moveCall',
+        data: {
+            packageObjectId: CONFIG.referralPackageId,
+            module: 'pool',
+            function: 'close_position2_',
+            typeArguments: [typeArgs[0], typeArgs[1]],
+            arguments: [
+                args.inPoolID,
+                CONFIG.tradingPoolID,
+                args.createdTimeStamp,
+                args.updateAmount.toString(),
+                args.earnType.toString()
             ],
             gasBudget: 10000,
         },

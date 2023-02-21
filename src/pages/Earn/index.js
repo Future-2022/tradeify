@@ -27,8 +27,9 @@ const Earn = (props) => {
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
 
     // staking parameter
-    const [tlpValue, setTLPvalue] = useState(0);
-    const [lockTime, setLockTime] = useState(0);
+    const [tlpValue, setTLPvalue] = useState(undefined);
+    const [lockTime, setLockTime] = useState(undefined);
+    const [tryPrice, setTryPrice] = useState(0);
     
     // UI parameter
     const [userLpCoin, setUserLPCoin] = useState([]);
@@ -99,7 +100,8 @@ const Earn = (props) => {
                 tlpType: CONFIG.tlp,
                 tryType: CONFIG.try
             }).then(res => {
-                toast.info(`${userStakingStatus.data.fields.staking_amount} TLP has been unstaked!`)
+                console.log(res);
+                toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
             })
         }
     }
@@ -128,24 +130,22 @@ const Earn = (props) => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
+                if(item.metadata[0].symbol == "TRY") {
+                    let TRYPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
+                    setTryPrice(TRYPrice);
+                }
                 totalLPValue += Number(item.data.lpSupply.value);
             })
-            if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
-                let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
+            let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
+            setStakingAPR(APR);
+            if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
                 let currentTimestamp = Date.now();
                 let Reward = 100 * (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
-                setStakingAPR(APR);
                 setUserReward(Reward);
             }
             setTotalLPValue(totalLPValue);
         })
-        // calculateReward()
     }, [globalContext.newCoins, totalLPValue, tlpValue])
-
-    // const calculateReward = () => {
-    //     let currentTimestamp = Date.now();
-    //     console.log(currentTimestamp); 
-    // }
 
     return (
         <div>
@@ -203,7 +203,7 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>TRY Price</p>
-                                        <p className='text-pink-sharp'>$ 0.782</p>
+                                        <p className='text-pink-sharp'>$ {tryPrice.toFixed(3)}</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total staked</p>

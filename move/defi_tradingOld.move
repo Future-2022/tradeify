@@ -282,8 +282,7 @@ module trading::pool {
 
     struct OrderRegistryItem has copy, drop, store {
         trader: ID,
-        inPoolID: ID,
-        outPoolID: ID,
+        poolID: ID,
         marketPrice: u64,
         tradingAmount: u64,
         calcAmount: u64,
@@ -291,16 +290,16 @@ module trading::pool {
         leverageValue: u64,
         referID: ID,
         hasRefer: u64,
+        isDiff: u64,
+        isACS: u64,
         createdTimeStamp: u64,
-        tradingType: u64,
         tradingStatus: u64,
-        isEarn: u64,
+        tradingType: u64
     }
 
     struct PositionCreationEvent has copy, drop {
         trader: ID,
-        inPoolID: ID,
-        outPoolID: ID,
+        poolID: ID,
     }
 
     /// Module initializer is empty - to publish a new Pool one has
@@ -341,7 +340,7 @@ module trading::pool {
         )
     }
 
-    public fun create_position2<A, B> (
+    public fun create_position_A<A, B> (
         poolID: &mut Pool<A, B>,
         tradingPoolID: &mut TradingPool,
         marketPrice: u64,
@@ -350,6 +349,8 @@ module trading::pool {
         leverageValue: u64,
         hasRefer: u64,
         referID: ID,
+        isDiff: u64,
+        isACS: u64,
         createdTimeStamp: u64,
         tradingType: u64,
         ctx: &mut TxContext
@@ -372,7 +373,6 @@ module trading::pool {
 
         let tradingStatus = 1; // open
         let _updateCalcAmount = 0;
-        let isEarn = 0;
         balance::join(&mut poolID.balance_a, balance_A);
 
         tradingPoolID.openPosition = tradingPoolID.openPosition + 1;
@@ -380,8 +380,7 @@ module trading::pool {
         
         let item = OrderRegistryItem {
             trader: _trader,
-            inPoolID: _poolID,
-            outPoolID: _poolID,
+            poolID: _poolID,
             marketPrice: marketPrice,
             tradingAmount: _tradingAmountUpdate,
             calcAmount: calcAmount,
@@ -389,16 +388,74 @@ module trading::pool {
             leverageValue: leverageValue,
             referID: referID,
             hasRefer: hasRefer,
+            isDiff: isDiff,
+            isACS: isACS,
             createdTimeStamp: createdTimeStamp,
-            tradingType: tradingType,
             tradingStatus: tradingStatus,
-            isEarn: isEarn,
+            tradingType: tradingType
         };
         vec_map::insert(&mut tradingPoolID.data, item, true);
-        event::emit(PositionCreationEvent {trader: _trader, inPoolID: _poolID, outPoolID: _poolID});
+        event::emit(PositionCreationEvent {trader: _trader, poolID: _poolID});
+    }
+    public fun create_position_B<A, B> (
+        poolID: &mut Pool<A, B>,
+        tradingPoolID: &mut TradingPool,
+        marketPrice: u64,
+        inputCoinB: Coin<B>,
+        calcAmount: u64,
+        leverageValue: u64,
+        hasRefer: u64,
+        referID: ID,
+        isDiff: u64,
+        isACS: u64,
+        createdTimeStamp: u64,
+        tradingType: u64,
+        ctx: &mut TxContext
+    ) {        
+        let _trader = object::id_from_address(tx_context::sender(ctx));
+        let _poolID = object::id(poolID);
+        let balance_B = coin::into_balance(inputCoinB);
+        let _tradingAmount = balance::value(&balance_B);
+        let _tradingAmountUpdate = 0;
+
+        if(hasRefer == 1) {
+            let refer_reward = muldiv(_tradingAmount, REFER_REWARD, BPS_IN_100_PCT);
+            let balance_reward = balance::split(&mut balance_B, refer_reward);
+            _tradingAmountUpdate = balance::value(&balance_B);
+            destroy_or_transfer_balance(balance_reward, object::id_to_address(&referID), ctx);
+        } else {
+            _tradingAmountUpdate = _tradingAmount;
+        };
+        
+        
+        let tradingStatus = 1; // open
+        let _updateCalcAmount = 0;
+        balance::join(&mut poolID.balance_b, balance_B);
+        
+        tradingPoolID.openPosition = tradingPoolID.openPosition + 1;
+        tradingPoolID.totalPosition = tradingPoolID.totalPosition + 1;
+
+        let item = OrderRegistryItem {
+            trader: _trader,
+            poolID: _poolID,
+            marketPrice: marketPrice,
+            tradingAmount: _tradingAmountUpdate,
+            calcAmount: calcAmount,
+            updateCalcAmount: _updateCalcAmount,
+            leverageValue: leverageValue,
+            referID: referID,
+            hasRefer: hasRefer,
+            isDiff: isDiff,
+            isACS: isACS,
+            createdTimeStamp: createdTimeStamp,
+            tradingStatus: tradingStatus,
+            tradingType: tradingType
+        };
+        vec_map::insert(&mut tradingPoolID.data, item, true);
+        event::emit(PositionCreationEvent {trader: _trader, poolID: _poolID});
     }
 
-    public entry fun create_position2_<A, B>(
+    public entry fun create_position_A_<A, B>(
         poolID: &mut Pool<A, B>,
         tradingPoolID: &mut TradingPool,
         coinA: Coin<A>,
@@ -408,12 +465,17 @@ module trading::pool {
         leverageValue: u64,
         hasRefer: u64,
         referID: ID,
+        isDiff: u64,
+        isACS: u64,
         createdTimeStamp: u64,
         tradingType: u64,
         ctx: &mut TxContext,
     ) {        
+        // let balance_A = coin::into_balance(coinA);
+        // let refer_Reward = balance::split(&mut balance_A, muldiv(tradingAmount, REFER_REWARD, BPS_IN_100_PCT));
+        // destroy_or_transfer_balance(refer_Reward, object::id_to_address(&referID), ctx);
         let _tradingAmount = maybe_split_and_transfer_rest(coinA, tradingAmount, tx_context::sender(ctx), ctx);
-        create_position2(
+        create_position_A(
             poolID, 
             tradingPoolID,
             marketPrice,                 
@@ -422,91 +484,37 @@ module trading::pool {
             leverageValue,
             hasRefer,
             referID,
+            isDiff,
+            isACS,
             createdTimeStamp,    
             tradingType,
             ctx,
         );
     }
 
-
-    public fun create_position<A, B, C> (
-        inPoolID: &mut Pool<A, C>,
-        outPoolID: &mut Pool<B, C>,
+    public entry fun create_position_B_<A, B>(
+        poolID: &mut Pool<A, B>,
         tradingPoolID: &mut TradingPool,
-        marketPrice: u64,
-        inputCoinA: Coin<A>,
-        calcAmount: u64,
-        leverageValue: u64,
-        hasRefer: u64,
-        referID: ID,
-        createdTimeStamp: u64,
-        tradingType: u64,
-        ctx: &mut TxContext
-    ) {        
-        let _trader = object::id_from_address(tx_context::sender(ctx));
-        let _inPoolID = object::id(inPoolID);
-        let _outPoolID = object::id(outPoolID);
-
-        let balance_A = coin::into_balance(inputCoinA);
-        let _tradingAmount = balance::value(&balance_A);        
-        let _tradingAmountUpdate = 0;
-        
-        if(hasRefer == 1) {            
-            let refer_reward = muldiv(_tradingAmount, REFER_REWARD, BPS_IN_100_PCT);
-            let balance_reward = balance::split(&mut balance_A, refer_reward);
-            _tradingAmountUpdate = balance::value(&balance_A);
-            destroy_or_transfer_balance(balance_reward, object::id_to_address(&referID), ctx);
-        } else {
-            _tradingAmountUpdate = _tradingAmount;
-        };
-
-        let tradingStatus = 1; // open
-        let _updateCalcAmount = 0;
-        let isEarn = 0;
-        balance::join(&mut inPoolID.balance_a, balance_A);
-
-        tradingPoolID.openPosition = tradingPoolID.openPosition + 1;
-        tradingPoolID.totalPosition = tradingPoolID.totalPosition + 1;
-        
-        let item = OrderRegistryItem {
-            trader: _trader,
-            inPoolID: _inPoolID,
-            outPoolID: _outPoolID,
-            marketPrice: marketPrice,
-            tradingAmount: _tradingAmountUpdate,
-            calcAmount: calcAmount,
-            updateCalcAmount: _updateCalcAmount,
-            leverageValue: leverageValue,
-            referID: referID,
-            hasRefer: hasRefer,
-            createdTimeStamp: createdTimeStamp,
-            tradingType: tradingType,
-            tradingStatus: tradingStatus,
-            isEarn: isEarn,
-        };
-        vec_map::insert(&mut tradingPoolID.data, item, true);
-        event::emit(PositionCreationEvent {trader: _trader, inPoolID: _inPoolID, outPoolID: _outPoolID});
-    }
-
-    public entry fun create_position_<A, B, C>(
-        inPoolID: &mut Pool<A, C>,
-        outPoolID: &mut Pool<B, C>,
-        tradingPoolID: &mut TradingPool,
-        coinA: Coin<A>,
+        coinB: Coin<B>,
         marketPrice: u64,
         tradingAmount: u64,
         calcAmount: u64,
         leverageValue: u64,
         hasRefer: u64,
         referID: ID,
+        isDiff: u64,
+        isACS: u64,
         createdTimeStamp: u64,
         tradingType: u64,
         ctx: &mut TxContext,
-    ) {        
-        let _tradingAmount = maybe_split_and_transfer_rest(coinA, tradingAmount, tx_context::sender(ctx), ctx);
-        create_position(
-            inPoolID, 
-            outPoolID, 
+    ) {
+        // let balance_B = coin::into_balance(coinB);
+        // let refer_Reward = balance::split(&mut balance_B, muldiv(tradingAmount, REFER_REWARD, BPS_IN_100_PCT));
+        // destroy_or_transfer_balance(refer_Reward, object::id_to_address(&referID), ctx);
+        // let referRewardAmount = muldiv(tradingAmount, (BPS_IN_100_PCT - REFER_REWARD), BPS_IN_100_PCT);
+        let _tradingAmount = maybe_split_and_transfer_rest(coinB, tradingAmount, tx_context::sender(ctx), ctx);
+        create_position_B(
+            poolID, 
             tradingPoolID,
             marketPrice,                 
             _tradingAmount, 
@@ -514,25 +522,24 @@ module trading::pool {
             leverageValue,
             hasRefer,
             referID,
-            createdTimeStamp,    
-            tradingType,
-            ctx,
+            isDiff,
+            isACS,
+            createdTimeStamp,  
+            tradingType,  
+            ctx, 
         );
     }
-
-    public fun close_position2<A, B>(
+    
+    public fun close_position_A<A, B>(
         poolID: &mut Pool<A, B>,
         tradingPoolID: &mut TradingPool,
         createdTimeStamp: u64,
         updateCalcAmountValue: u64,
-        isEarn: u64,
         ctx: &mut TxContext
     ): Balance<A> {
-        let inPool_a_value = balance::value(&poolID.balance_a);
-        let inPool_b_value = balance::value(&poolID.balance_b);
-
+        let pool_a_value = balance::value(&poolID.balance_a);
+        let pool_b_value = balance::value(&poolID.balance_b);
         let leverage = 0;
-        let tradingAmount = 0;
 
         let len = vec_map::size(&tradingPoolID.data);
         let i = 0;
@@ -541,26 +548,26 @@ module trading::pool {
             if(key.createdTimeStamp == createdTimeStamp) { 
                 assert!(key.trader == object::id_from_address(tx_context::sender(ctx)), NOTOWNER);
                 let trader = key.trader;
-                let inPoolID = key.inPoolID; 
-                let outPoolID = key.outPoolID; 
+                let poolID = key.poolID; 
                 let marketPrice = key.marketPrice; 
-                tradingAmount = key.tradingAmount; 
+                let tradingAmount = key.tradingAmount; 
                 let calcAmount = key.calcAmount; 
                 let updateCalcAmount = updateCalcAmountValue; 
                 let leverageValue = key.leverageValue; 
                 leverage = key.leverageValue;
                 let referID = key.referID; 
-                let hasRefer = key.hasRefer;
+                let hasRefer = key.hasRefer; 
+                let isDiff = key.isDiff; 
+                let isACS = key.isACS; 
                 let createdTimeStamp = key.createdTimeStamp; 
-                let tradingType = key.tradingType; 
                 let tradingStatus = 2;  // close status
+                let tradingType = key.tradingType;
 
                 vec_map::remove_entry_by_idx(&mut tradingPoolID.data, i);
 
                 let item = OrderRegistryItem {
                     trader: trader,
-                    inPoolID: inPoolID,
-                    outPoolID: outPoolID,
+                    poolID: poolID,
                     marketPrice: marketPrice,
                     tradingAmount: tradingAmount,
                     calcAmount: calcAmount,
@@ -568,80 +575,73 @@ module trading::pool {
                     leverageValue: leverageValue,
                     referID: referID,
                     hasRefer: hasRefer,
+                    isDiff: isDiff,
+                    isACS: isACS,
                     createdTimeStamp: createdTimeStamp,
-                    tradingType: tradingType,
                     tradingStatus: tradingStatus,
-                    isEarn: isEarn,
+                    tradingType: tradingType
                 };
                 vec_map::insert(&mut tradingPoolID.data, item, true);
             };
             i=i+1;
         };
-        let out_amount = 0;
-        if (isEarn == 1) {
-            out_amount = tradingAmount + updateCalcAmountValue;
-        } else if (isEarn == 2) {
-            out_amount = tradingAmount - updateCalcAmountValue;
-        };
+        
+        let out_amount = ceil_div_u64(updateCalcAmountValue, leverage) * ceil_div_u64(pool_a_value, pool_b_value);
         tradingPoolID.openPosition = tradingPoolID.openPosition - 1;
         tradingPoolID.closePosition = tradingPoolID.closePosition + 1;
         balance::split(&mut poolID.balance_a, out_amount)
     }
 
-    public entry fun close_position2_<A, B>(
+    public entry fun close_position_A_<A, B>(
         poolID: &mut Pool<A, B>,
         tradingPoolID: &mut TradingPool,
         createdTimeStamp: u64,
         updateCalcAmount: u64,
-        isEarn: u64,
         ctx: &mut TxContext
     ) {
-        let amount = close_position2(poolID, tradingPoolID, createdTimeStamp, updateCalcAmount, isEarn, ctx);   
+        let amount = close_position_A(poolID, tradingPoolID, createdTimeStamp, updateCalcAmount, ctx);   
         let sender = tx_context::sender(ctx);     
         destroy_or_transfer_balance(amount, sender, ctx);
     }
-    public fun close_position<A, B, C>(
-        inPoolID: &mut Pool<A, C>,
-        outPoolID: &mut Pool<B, C>,
+
+    public fun close_position_B<A, B>(
+        poolID: &mut Pool<A, B>,
         tradingPoolID: &mut TradingPool,
         createdTimeStamp: u64,
         updateCalcAmountValue: u64,
-        isEarn: u64,
         ctx: &mut TxContext
-    ): Balance<A> {
-        let inPool_a_value = balance::value(&inPoolID.balance_a);
-        let inPool_b_value = balance::value(&inPoolID.balance_b);
-
+    ): Balance<B> {
+        let pool_a_value = balance::value(&poolID.balance_a);
+        let pool_b_value = balance::value(&poolID.balance_b);
         let leverage = 0;
-        let tradingAmount = 0;
 
         let len = vec_map::size(&tradingPoolID.data);
         let i = 0;
         while (i < len) {
             let (key, value) = vec_map::get_entry_by_idx(&tradingPoolID.data, i);
-            if(key.createdTimeStamp == createdTimeStamp) { 
+            if(key.createdTimeStamp == createdTimeStamp) {
                 assert!(key.trader == object::id_from_address(tx_context::sender(ctx)), NOTOWNER);
                 let trader = key.trader;
-                let inPoolID = key.inPoolID; 
-                let outPoolID = key.outPoolID; 
+                let poolID = key.poolID; 
                 let marketPrice = key.marketPrice; 
-                tradingAmount = key.tradingAmount; 
+                let tradingAmount = key.tradingAmount; 
                 let calcAmount = key.calcAmount; 
                 let updateCalcAmount = updateCalcAmountValue; 
                 let leverageValue = key.leverageValue; 
                 leverage = key.leverageValue;
                 let referID = key.referID; 
-                let hasRefer = key.hasRefer;
+                let hasRefer = key.hasRefer; 
+                let isDiff = key.isDiff; 
+                let isACS = key.isACS; 
                 let createdTimeStamp = key.createdTimeStamp; 
-                let tradingType = key.tradingType; 
-                let tradingStatus = 2;  // close status
+                let tradingStatus = 2; // close status,
+                let tradingType = key.tradingType;
 
                 vec_map::remove_entry_by_idx(&mut tradingPoolID.data, i);
 
                 let item = OrderRegistryItem {
                     trader: trader,
-                    inPoolID: inPoolID,
-                    outPoolID: outPoolID,
+                    poolID: poolID,
                     marketPrice: marketPrice,
                     tradingAmount: tradingAmount,
                     calcAmount: calcAmount,
@@ -649,37 +649,32 @@ module trading::pool {
                     leverageValue: leverageValue,
                     referID: referID,
                     hasRefer: hasRefer,
+                    isDiff: isDiff,
+                    isACS: isACS,
                     createdTimeStamp: createdTimeStamp,
-                    tradingType: tradingType,
                     tradingStatus: tradingStatus,
-                    isEarn: isEarn,
+                    tradingType: tradingType
                 };
+
                 vec_map::insert(&mut tradingPoolID.data, item, true);
             };
             i=i+1;
-        };
-        let out_amount = 0;
-        if (isEarn == 1) {
-            out_amount = tradingAmount + updateCalcAmountValue;
-        } else if (isEarn == 2) {
-            out_amount = tradingAmount - updateCalcAmountValue;
-        };
+        };       
+        let out_amount = ceil_div_u64(updateCalcAmountValue, leverage) * ceil_div_u64(pool_b_value, pool_a_value);
         tradingPoolID.openPosition = tradingPoolID.openPosition - 1;
         tradingPoolID.closePosition = tradingPoolID.closePosition + 1;
-        balance::split(&mut inPoolID.balance_a, out_amount)
+        balance::split(&mut poolID.balance_b, out_amount)
     }
 
-    public entry fun close_position_<A, B, C>(
-        inPoolID: &mut Pool<A, C>,
-        outPoolID: &mut Pool<B, C>,
+    public entry fun close_position_B_<A, B>(
+        poolID: &mut Pool<A, B>,
         tradingPoolID: &mut TradingPool,
         createdTimeStamp: u64,
         updateCalcAmount: u64,
-        isEarn: u64,
         ctx: &mut TxContext
     ) {
-        let amount = close_position(inPoolID, outPoolID, tradingPoolID, createdTimeStamp, updateCalcAmount, isEarn, ctx);   
-        let sender = tx_context::sender(ctx);     
+        let amount = close_position_B(poolID, tradingPoolID, createdTimeStamp, updateCalcAmount, ctx);     
+        let sender = tx_context::sender(ctx);   
         destroy_or_transfer_balance(amount, sender, ctx);
     }
 
@@ -950,96 +945,7 @@ module trading::pool {
         // return
         (input_a, input_b, lp)
     }
-    public fun deposit2<A, B>(
-        pool: &mut Pool<A, B>,
-        input_a: Balance<A>,
-        input_b: Balance<B>,
-        // min_lp_out: u64
-    ): (Balance<A>, Balance<TLP>) {
-        // sanity checks
-        assert!(balance::value(&input_a) > 0, EZeroInput);
-        assert!(balance::value(&input_b) > 0, EZeroInput);
 
-        // calculate the deposit amounts
-        let dab: u128 = (balance::value(&input_a) as u128) * (balance::value(&pool.balance_b) as u128);
-        let dba: u128 = (balance::value(&input_b) as u128) * (balance::value(&pool.balance_a) as u128);
-
-        let deposit_a: u64;
-        let deposit_b: u64;
-        let lp_to_issue: u64;
-        if (dab > dba) {
-            deposit_b = balance::value(&input_b);
-            deposit_a = (ceil_div_u128(
-                dba,
-                (balance::value(&pool.balance_b) as u128),
-            ) as u64);
-            lp_to_issue = muldiv(
-                deposit_b,
-                balance::supply_value(&pool.lp_supply),
-                balance::value(&pool.balance_b)
-            );
-        } else if (dab < dba) {
-            deposit_a = balance::value(&input_a);
-            deposit_b = (ceil_div_u128(
-                dab,
-                (balance::value(&pool.balance_a) as u128),
-            ) as u64);
-            lp_to_issue = muldiv(
-                deposit_a,
-                balance::supply_value(&pool.lp_supply),
-                balance::value(&pool.balance_a)
-            );
-        } else {
-            deposit_a = balance::value(&input_a);
-            deposit_b = balance::value(&input_b);
-            if (balance::supply_value(&pool.lp_supply) == 0) {
-                // in this case both pool balances are 0 and lp supply is 0
-                lp_to_issue = mulsqrt(deposit_a, deposit_b);
-            } else {
-                // the ratio of input a and b matches the ratio of pool balances
-                lp_to_issue = muldiv(
-                    deposit_a,
-                    balance::supply_value(&pool.lp_supply),
-                    balance::value(&pool.balance_a)
-                );
-            }
-        };
-
-        // deposit amounts into pool 
-        balance::join(
-            &mut pool.balance_a,
-            balance::split(&mut input_a, deposit_a)
-        );
-        balance::join(
-            &mut pool.balance_b,
-            input_b
-        );
-        let lp = balance::increase_supply(&mut pool.lp_supply, lp_to_issue);
-
-        // return
-        (input_a, lp)
-    }
-
-
-    public fun new_deposit_<A, B>(
-        pool: &mut Pool<A, B>,
-        input_a: Coin<A>,
-        // min_lp_out: u64,
-        ctx: &mut TxContext
-    ) {
-        let balance_a = coin::into_balance(input_a);
-
-        let amount_a = balance::value(&balance_a);
-        let split_amount = muldiv(amount_a, balance::value(&pool.balance_a), (balance::value(&pool.balance_a) + balance::value(&pool.balance_b))); 
-        let swap_a = balance::split(&mut balance_a, split_amount);
-        
-        let balance_b = swap_a_2(pool, swap_a);
-        let (remaining_a, lp) = deposit2(pool, balance_a, balance_b);
-        let sender = tx_context::sender(ctx);
-        
-        destroy_or_transfer_balance(remaining_a, sender, ctx);
-        destroy_or_transfer_balance(lp, sender, ctx);
-    }
     /// Entry function. Deposit liquidity into pool. The deposit will use up the maximum
     /// amount of the provided coins possible depending on the current pool ratio. Usually
     /// this means that all of either `input_a` or `input_b` will be fully used, while
@@ -1093,48 +999,7 @@ module trading::pool {
             balance::split(&mut pool.balance_b, b_out)
         )
     }
-    public fun withdraw2<A, B>(
-        pool: &mut Pool<A, B>,
-        lp_in: Balance<TLP>,
-        // min_a_out: u64,
-        // min_b_out: u64,
-    ): (Balance<A>, Balance<B>) {
-        // sanity checks
-        assert!(balance::value(&lp_in) > 0, EZeroInput);
 
-        // calculate output amounts
-        let lp_in_value = balance::value(&lp_in);
-        let pool_a_value = balance::value(&pool.balance_a);
-        let pool_b_value = balance::value(&pool.balance_b);
-        let pool_lp_value = balance::supply_value(&pool.lp_supply);
-
-        let a_out = muldiv(lp_in_value, pool_a_value, pool_lp_value);
-        let b_out = muldiv(lp_in_value, pool_b_value, pool_lp_value);
-
-        // burn lp tokens
-        balance::decrease_supply(&mut pool.lp_supply, lp_in);
-
-        // return amounts
-        (
-            balance::split(&mut pool.balance_a, a_out),
-            balance::split(&mut pool.balance_b, b_out)
-        )
-    }
-
-    public fun new_withdraw<A, B>(
-        pool: &mut Pool<A, B>,
-        lp_in: Coin<TLP>,
-        // min_a_out: u64,
-        // min_b_out: u64,
-        ctx: &mut TxContext
-    ) {
-        let (a_out, b_out) = withdraw2(pool, coin::into_balance(lp_in));
-        let balance_add = swap_b_2(pool, b_out);
-        balance::join(&mut a_out, balance_add);
-        let sender = tx_context::sender(ctx);
-        destroy_or_transfer_balance(a_out, sender, ctx);
-    }
-    
     /// Entry function. Burns the provided LPCoin and withdraws corresponding
     /// pool balances. Fails if the withdrawn balances are smaller than
     /// `min_a_out` and `min_b_out` respectively. Transfers the withdrawn balances
@@ -1174,38 +1039,6 @@ module trading::pool {
         );
 
         assert!(out_value >= min_out, EExcessiveSlippage);
-
-        // deposit admin fee
-        balance::join(
-            &mut pool.admin_fee_balance,
-            balance::increase_supply(&mut pool.lp_supply, admin_fee_in_lp)
-        );
-
-        // deposit input
-        balance::join(&mut pool.balance_a, input);
-
-        // return output
-        balance::split(&mut pool.balance_b, out_value)
-    }
-    public fun swap_a_2<A, B>(
-        pool: &mut Pool<A, B>, input: Balance<A>
-    ): Balance<B> {
-        // sanity checks
-        assert!(balance::value(&input) > 0, EZeroInput);
-        assert!(
-            balance::value(&pool.balance_a) > 0 && balance::value(&pool.balance_b) > 0,
-            ENoLiquidity
-        );
-
-        // calculate swap result
-        let i_value = balance::value(&input);
-        let i_pool_value = balance::value(&pool.balance_a);
-        let o_pool_value = balance::value(&pool.balance_b);
-        let pool_lp_value = balance::supply_value(&pool.lp_supply);
-
-        let (out_value, admin_fee_in_lp) = calc_swap_result(
-            i_value, i_pool_value, o_pool_value, pool_lp_value, pool.lp_fee_bps, pool.admin_fee_pct
-        );
 
         // deposit admin fee
         balance::join(
@@ -1263,39 +1096,6 @@ module trading::pool {
         // return output
         balance::split(&mut pool.balance_a, out_value)
     }
-    public fun swap_b_2<A, B>(
-        pool: &mut Pool<A, B>, input: Balance<B>
-    ): Balance<A> {
-        // sanity checks
-        assert!(balance::value(&input) > 0, EZeroInput);
-        assert!(
-            balance::value(&pool.balance_a) > 0 && balance::value(&pool.balance_b) > 0,
-            ENoLiquidity
-        );
-
-        // calculate swap result
-        let i_value = balance::value(&input);
-        let i_pool_value = balance::value(&pool.balance_b);
-        let o_pool_value = balance::value(&pool.balance_a);
-        let pool_lp_value = balance::supply_value(&pool.lp_supply);
-
-        let (out_value, admin_fee_in_lp) = calc_swap_result(
-            i_value, i_pool_value, o_pool_value, pool_lp_value, pool.lp_fee_bps, pool.admin_fee_pct
-        );
-
-
-        // deposit admin fee
-        balance::join(
-            &mut pool.admin_fee_balance,
-            balance::increase_supply(&mut pool.lp_supply, admin_fee_in_lp)
-        );
-
-        // deposit input
-        balance::join(&mut pool.balance_b, input);
-
-        // return output
-        balance::split(&mut pool.balance_a, out_value)
-    }
 
     /// Entry function. Swaps the provided amount of B for A. Fails if the resulting
     /// amount of A is smaller than `min_out`. Transfers the resulting Coin to the sender.
@@ -1304,14 +1104,6 @@ module trading::pool {
     ) {
         let out = swap_b(pool, coin::into_balance(input), min_out);
         destroy_or_transfer_balance(out, tx_context::sender(ctx), ctx);
-    }
-
-    public fun new_swap_<A, B, C>(
-        pool1: &mut Pool<A, C>, pool2: &mut Pool<B, C>, input: Coin<A>, min_out: u64, ctx: &mut TxContext
-    ) {
-        let out = swap_a_2(pool1, coin::into_balance(input));
-        let out_2 = swap_b_2(pool2, out);
-        destroy_or_transfer_balance(out_2, tx_context::sender(ctx), ctx);
     }
 
     public fun maybe_split_and_transfer_rest<T>(
@@ -1343,7 +1135,6 @@ module trading::pool {
         let init_b = maybe_split_and_transfer_rest(input_b, amount_b, tx_context::sender(ctx), ctx);
         create_pool_(registry, init_a, init_b, lp_fee_bps, admin_fee_pct, ctx);
     }
-
     public entry fun maybe_split_then_deposit<A, B>(
         pool: &mut Pool<A, B>,
         input_a: Coin<A>,
@@ -1356,27 +1147,6 @@ module trading::pool {
         let input_a = maybe_split_and_transfer_rest(input_a, amount_a, tx_context::sender(ctx), ctx);
         let input_b = maybe_split_and_transfer_rest(input_b, amount_b, tx_context::sender(ctx), ctx);
         deposit_(pool, input_a, input_b, min_lp_out, ctx);
-    }
-
-    public entry fun new_swap_deposit_<A, B>(
-        pool: &mut Pool<A, B>,
-        input_a: Coin<A>,
-        amount_a: u64,
-        // min_lp_out:u64,
-        ctx: &mut TxContext
-    ) {
-        let input_a = maybe_split_and_transfer_rest(input_a, amount_a, tx_context::sender(ctx), ctx);
-        new_deposit_(pool, input_a, ctx);
-    }
-
-    public entry fun new_withdraw_swap_<A, B>(
-        pool: &mut Pool<A, B>,
-        input_tlp: Coin<TLP>,
-        amount: u64,
-        ctx: &mut TxContext
-    ) {
-        let input = maybe_split_and_transfer_rest(input_tlp, amount, tx_context::sender(ctx), ctx);
-        new_withdraw(pool, input, ctx);
     }
     public entry fun maybe_split_then_withdraw<A, B>(
         pool: &mut Pool<A, B>,
@@ -1395,12 +1165,6 @@ module trading::pool {
     ) {
         let input = maybe_split_and_transfer_rest(input, amount, tx_context::sender(ctx), ctx);
         swap_a_(pool, input, min_out, ctx);
-    }
-    public entry fun new_swap<A, B, C>(
-        pool1: &mut Pool<A, C>, pool2: &mut Pool<B, C>, input: Coin<A>, amount: u64, min_out: u64, ctx: &mut TxContext
-    ) {
-        let input = maybe_split_and_transfer_rest(input, amount, tx_context::sender(ctx), ctx);
-        new_swap_(pool1, pool2, input, min_out, ctx);
     }
 
     public entry fun maybe_split_then_swap_b<A, B>(

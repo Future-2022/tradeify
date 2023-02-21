@@ -35,13 +35,15 @@ const Liquidity = (props) => {
             })
             const newMetaData = LPMetaData(totalLPValue, lpCoins);
             newMetaData.meta.map(item => {
-                const newItem = {
-                    label: item.LPSymbol,
-                    value: Number(item.LPPercentage.toFixed(2))
+                if(item.LPSymbol != "TRY") {
+                    const newItem = {
+                        label: item.LPSymbol,
+                        value: Number(item.LPPercentage.toFixed(2))
+                    }
+                    
+                    if (ChartData.meta.length < 3) 
+                        ChartData = { "meta" : ChartData['meta'] ? [...ChartData['meta'], newItem] : [newItem] }
                 }
-                
-                if (ChartData.meta.length < 3) 
-                    ChartData = { "meta" : ChartData['meta'] ? [...ChartData['meta'], newItem] : [newItem] }
             });
             SetLPCoin(newMetaData);
             SetChartData(ChartData.meta);
@@ -72,7 +74,7 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Price</p>
-                                    <div className='py-2 text-grey-sharp'>$0.215</div>
+                                    <div className='py-2 text-grey-sharp'>$ 1</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Total Supply</p>
@@ -88,7 +90,7 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Protocol Owned</p>
-                                    <div className='py-2 text-grey-sharp'>$0.782</div>
+                                    <div className='py-2 text-grey-sharp'>$ 0.782</div>
                                 </div>
                                 <div className='d-flex mt-3'>
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3 mr-2' onClick={() => goLink('market')}>Buy / Sell TLP</div>
@@ -127,33 +129,35 @@ const Liquidity = (props) => {
                         <div className='pt-4'>
                             
                             <div className='d-flex pt-3 flex-wrap'>
-                                {lpCoin.meta && lpCoin.meta.map((item, index) => (
-                                    <div className={`${isMobile == true ? `w-100 mt-3`:`w-50 mt-3`}`} key={index}>
-                                        <div className='composition mx-2'>
-                                            <div className='d-flex'>
-                                                <img src={item.LPFirstIcon} className='img-circle' />
-                                                <img src={item.LPSecondIcon} className='img-circle ml-2' />
-                                                <h4 className='font-bold ml-3 text-white'>{item.LPSymbol}</h4>
-                                            </div>
-                                            <div className='d-flex justify-content-between'>
-                                                <p className='font-bold text-gray py-2'>Price</p>
-                                                <h5 className='py-2 text-white'>$ {item.LPPrice}</h5>
-                                            </div>
-                                            <div className='d-flex justify-content-between'>
-                                                <p className='font-bold text-gray py-2'>Total LPToken Supply</p>
-                                                <h5 className='py-2 text-white'>{item.LPTokenValue} <span className='text-gray fs-12'>TLP</span></h5>
-                                            </div>
-                                            <div className='d-flex justify-content-between'>
-                                                <p className='font-bold text-gray py-2'>Reverse</p>
-                                                <h5 className='py-2 text-white'>{item.LPFirstTokenValue} <span className='text-gray fs-12'>{item.LPFirstTokenSymbol}</span> / {item.LPSecondTokenValue} <span className='text-gray fs-12'>{item.LPSecondTokenSymbol}</span></h5>
-                                            </div>
-                                            <div className='d-flex justify-content-between'>
-                                                <p className='font-bold text-gray py-2'>Liquidity Pool Fee</p>
-                                                <h5 className='py-2 text-white'>{item.LPFee} %</h5>
-                                            </div>
-                                        </div>
-                                    </div>  
-                                ))}                                                          
+                                {lpCoin.meta && lpCoin.meta.map((item, index) => {
+                                        if(item.LPSymbol != "TRY") {
+                                            return <div className={`${isMobile == true ? `w-100 mt-3`:`w-50 mt-3`}`} key={index}>
+                                                <div className='composition mx-2'>
+                                                    <div className='d-flex'>
+                                                        <img src={item.LPFirstIcon} className='img-circle' />
+                                                        <h4 className='font-bold ml-3 text-white'>{item.LPSymbol}</h4>
+                                                    </div>
+                                                    <div className='d-flex justify-content-between'>
+                                                        <p className='font-bold text-gray py-2'>Price</p>
+                                                        <h5 className='py-2 text-white'>$ {item.LPPrice}</h5>
+                                                    </div>
+                                                    <div className='d-flex justify-content-between'>
+                                                        <p className='font-bold text-gray py-2'>Total LPToken Supply</p>
+                                                        <h5 className='py-2 text-white'>{item.LPTokenValue} <span className='text-gray fs-12'>TLP</span></h5>
+                                                    </div>
+                                                    <div className='d-flex justify-content-between'>
+                                                        <p className='font-bold text-gray py-2'>Weight</p>
+                                                        <h5 className='py-2 text-white'>{item.LPFirstTokenValue * 1000} % / {item.LPSecondTokenValue * 1000} %</h5>
+                                                    </div>
+                                                    {/* <div className='d-flex justify-content-between'>
+                                                        <p className='font-bold text-gray py-2'>Liquidity Pool Fee</p>
+                                                        <h5 className='py-2 text-white'>{item.LPFee} %</h5>
+                                                    </div> */}
+                                                </div>
+                                            </div>  
+                                        }
+                                    }
+                                )}                                                          
                             </div> 
                         </div>
                     </div>

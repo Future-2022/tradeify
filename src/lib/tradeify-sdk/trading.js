@@ -10,8 +10,8 @@ import { WalletAdapter } from '@mysten/wallet-adapter-base'
 import { Type } from './core/type'
 import { CoinMetadataLoader } from './core/run/MetaDataLoader';
 import { Pool as PoolObj } from './core/run/pool';
-import { getOrCreateCoinOfLargeEnoughBalance } from '../../control/main';
-import { createLongPositionBSdk, createLongPositionASdk, closeOrderASdk, closeOrderBSdk } from './core/run/sdk';
+import { changeBigNumber, getOrCreateCoinOfLargeEnoughBalance, getSwapPrice } from '../../control/main';
+import { createPositionSdk, createPosition2Sdk, closeOrderBSdk, closeOrder2Sdk } from './core/run/sdk';
 import { ceilDiv } from './core/math';
 import { CONFIG } from '../config';
 
@@ -41,80 +41,120 @@ export const createLongPositionAOrder = async (provider, wallet, args) => {
     return await wallet.signAndExecuteTransaction(tx)
 }
 
-export const createLongPositionBOrder = async (provider, wallet, args) => {
-    if(args.isDiff == 0) {       
-        console.log(args.tokenTypeB); 
-        const input = await getOrCreateCoinOfLargeEnoughBalance(
-            provider,
-            wallet,
-            args.tokenTypeB,
-            BigInt(args.tradingAmount)
-        )
-        const tx = createLongPositionBSdk([args.tokenTypeA, args.tokenTypeB], {
-            poolID: args.poolID,
-            coinB: input.id,
+export const createPosition = async (provider, wallet, args) => {  
+    let tx = undefined;
+    const input = await getOrCreateCoinOfLargeEnoughBalance(
+        provider,
+        wallet,
+        args.tokenTypeA,
+        BigInt(args.tradingAmount)
+    )
+    if(args.inPoolID != args.outPoolID) {
+        tx= createPositionSdk([args.tokenTypeA, args.tokenTypeB, args.tokenTypeC], {
+            inPoolID: args.inPoolID,
+            outPoolID: args.outPoolID,
+            coinA: input.id,
             marketPrice: args.marketPrice,
             tradingAmount: args.tradingAmount,
             calcAmount: args.calcAmount,
             leverageValue: args.leverageValue,
             hasRefer: args.hasRefer,
             referID: args.referID,
-            isDiff: args.isDiff,
-            isACS: args.isACS,
             createdTimeStamp: args.createdTimeStamp,
             tradingType: args.tradingType
         })
-        console.log(tx);
-        return await wallet.signAndExecuteTransaction(tx)
     } else {
-        const input = await getOrCreateCoinOfLargeEnoughBalance(
-            provider,
-            wallet,
-            args.tokenTypeA,    
-            BigInt(args.tradingAmount)
-        )
-        const tx = createLongPositionBSdk([args.tokenTypeB, args.tokenTypeA], {
-            poolID: args.poolID,
-            coinB: input.id,
+        tx= createPosition2Sdk([args.tokenTypeA, args.tokenTypeC], {
+            inPoolID: args.inPoolID,
+            coinA: input.id,
             marketPrice: args.marketPrice,
             tradingAmount: args.tradingAmount,
             calcAmount: args.calcAmount,
             leverageValue: args.leverageValue,
             hasRefer: args.hasRefer,
             referID: args.referID,
-            isDiff: args.isDiff,
-            isACS: args.isACS,
             createdTimeStamp: args.createdTimeStamp,
             tradingType: args.tradingType
         })
-        console.log(tx);
-        return await wallet.signAndExecuteTransaction(tx)
     }
+    console.log(tx);
+    return await wallet.signAndExecuteTransaction(tx)
+    
 }
 
-export const closeOrderFun = async (provider, wallet, index, poolID, value, tokenA, tokenB, isDiff, isACS) => {
-    let tx = undefined;
-    if(isDiff == 1) {
-        if(isACS == 1) {
-            tx = closeOrderBSdk([tokenA, tokenB], {
-                poolID: poolID,
-                createdTimeStamp: index,
-                updateAmount: value
-            })
+export const closeOrderFun = async (provider, wallet, inPool, outPool, createdTimeStamp, updateCalcAmount, isEarn, tradingAmount) => {
+    let tokenA = inPool.metadata[0].typeArg;
+    let tokenB = outPool.metadata[0].typeArg;
+    let tokenC = outPool.metadata[1].typeArg;
+    let earnType = 0;
+
+    if(inPool.id != outPool.id) {
+        let tx = undefined;    
+        if(isEarn == "+") {
+            earnType = 1;
         } else {
-            tx = closeOrderASdk([tokenA, tokenB], {
-                poolID: poolID,
-                createdTimeStamp: index,
-                updateAmount: value
+            earnType = 2;
+        }
+
+        let earnAmount = getSwapPrice(outPool, inPool, updateCalcAmount);
+        console.log(earnAmount);
+        if(earnType == 2) {
+            if(earnAmount < tradingAmount) {
+                tx = closeOrderBSdk([tokenA, tokenB, tokenC], {
+                    inPoolID: inPool.id,
+                    outPoolID: outPool.id,
+                    createdTimeStamp: createdTimeStamp,
+                    updateAmount: changeBigNumber(earnAmount).toFixed(0),
+                    earnType: earnType
+                })
+                console.log(tx);
+                return await wallet.signAndExecuteTransaction(tx)
+            } else {
+                return false;
+            }
+        } else {
+            tx = closeOrderBSdk([tokenA, tokenB, tokenC], {
+                inPoolID: inPool.id,
+                outPoolID: outPool.id,
+                createdTimeStamp: createdTimeStamp,
+                updateAmount: changeBigNumber(earnAmount).toFixed(0),
+                earnType: earnType
             })
+            return await wallet.signAndExecuteTransaction(tx)
         }
     } else {
-        tx = closeOrderBSdk([tokenA, tokenB], {
-            poolID: poolID,
-            createdTimeStamp: index,
-            updateAmount: value
-        })
+        let tx = undefined;    
+        if(isEarn == "+") {
+            earnType = 1;
+        } else {
+            earnType = 2;
+        }
+
+        let earnAmount = getSwapPrice(outPool, inPool, updateCalcAmount);
+        console.log(earnAmount);
+        if(earnType == 2) {
+            if(earnAmount < tradingAmount) {
+                tx = closeOrder2Sdk([tokenA, tokenC], {
+                    inPoolID: inPool.id,
+                    outPoolID: outPool.id,
+                    createdTimeStamp: createdTimeStamp,
+                    updateAmount: changeBigNumber(earnAmount).toFixed(0),
+                    earnType: earnType
+                })
+                console.log(tx);
+                return await wallet.signAndExecuteTransaction(tx)
+            } else {
+                return false;
+            }
+        } else {
+            tx = closeOrder2Sdk([tokenA, tokenC], {
+                inPoolID: inPool.id,
+                outPoolID: outPool.id,
+                createdTimeStamp: createdTimeStamp,
+                updateAmount: changeBigNumber(earnAmount).toFixed(0),
+                earnType: earnType
+            })
+            return await wallet.signAndExecuteTransaction(tx)
+        }
     }
-    
-    return await wallet.signAndExecuteTransaction(tx)
 }
