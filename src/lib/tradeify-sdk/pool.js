@@ -38,11 +38,40 @@ export class Pool {
 }
   
 export const mint_test_token_fun = async (provider, wallet, args) => {
+  // const token = args.tokenType;
+  // const currentTimestamp = Date.now();
+  // console.log(currentTimestamp);
+  // if(!localStorage.getItem(`${token}-stamp`)) {
+  //   await mint(wallet, token, args);
+  // } else {
+  //   if(Number(currentTimestamp) - Number(localStorage.getItem(`${token}-stamp`)) > CONFIG.faucetDurationTime) {
+  //     await mint(wallet, token, args);
+  //   } else {
+  //     const remainTime = ((CONFIG.faucetDurationTime - (Number(currentTimestamp) - Number(localStorage.getItem(`${token}-stamp`)))) / 1000 / 60).toFixed(0);
+  //     return [false, remainTime];
+  //   }
+  // }
   const tx = mint_test_token_eth({
-      tokenType: args.tokenType,
-      testTokenSupplyId: args.testTokenSupplyId,
-      amount: args.amount,
-      receiveAddress: args.receiveAddress
+    tokenType: args.tokenType,
+    testTokenSupplyId: args.testTokenSupplyId,
+    amount: args.amount,
+    receiveAddress: args.receiveAddress
+  })
+  console.log(tx);
+  return await wallet.signAndExecuteTransaction(tx)
+  
+}
+
+const mint = async (wallet, token, args) => {
+  console.log(args);
+  const currentTimestamp = Date.now();
+  localStorage.setItem(`${token}-stamp`, currentTimestamp);
+  
+  const tx = mint_test_token_eth({
+    tokenType: args.tokenType,
+    testTokenSupplyId: args.testTokenSupplyId,
+    amount: args.amount,
+    receiveAddress: args.receiveAddress
   })
   return await wallet.signAndExecuteTransaction(tx)
 }

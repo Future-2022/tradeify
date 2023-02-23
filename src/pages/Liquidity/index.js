@@ -159,6 +159,9 @@ const Liquidity = (props) => {
                                         if(item.LPSymbol != "TRY") {
                                             return <div className={`${isMobile == true ? `w-100 mt-3`:`w-50 mt-3`}`} key={index}>
                                                 <div className='composition mx-2'>
+                                                    <div className='blur-bg'>
+                                                        <img src={item.LPFirstIcon} width={120} height={120} />
+                                                    </div>
                                                     <div className='d-flex'>
                                                         <img src={item.LPFirstIcon} className='img-circle' />
                                                         <h4 className='font-bold ml-3 text-white'>{item.LPSymbol}</h4>

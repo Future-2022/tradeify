@@ -233,7 +233,7 @@ const Home = (props) => {
                                 </div>
                                 <div>
                                     <div className='w-100 py-2'>
-                                        {lpCoin != undefined && lpCoin.meta.map((item, index) => {
+                                        {!isMobile && lpCoin != undefined && lpCoin.meta.map((item, index) => {
                                             return <div>
                                                 <div className='d-flex py-1'>
                                                     <div className='w-20 d-flex'>
@@ -251,41 +251,41 @@ const Home = (props) => {
                                                 <hr className='text-gray my-1'/>
                                             </div>
                                         })}
-                                        {isMobile && (
+                                        {isMobile && lpCoin != undefined && lpCoin.meta.map((item, index) =>(
                                         <div>
                                             <div className='py-0'>
                                                 <div className='w-100 d-flex pl-3 pb-2'>
-                                                    <img src={TokenIcon1} width={40} height={20} />
+                                                    <img src={item.LPFirstIcon} width={40} height={20} />
                                                     <div className='pl-4'>
-                                                        <h6 className='mb-0'>Sui</h6>
-                                                        <p className='text-gray text-left'>SUI</p>
+                                                        <h6 className='mb-0'>{item.TokenName}</h6>
+                                                        <p className='text-gray text-left'>{item.LPSymbol}</p>
                                                     </div>
                                                     <FaAngleDown className='text-white mt-1 ml-3 cursor-pointer'/>
                                                 </div>
-                                                <div className='d-flex justify-content-between'>
+                                                {/* <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Token</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                </div>
+                                                    <div className='w-50'><h6 className='text-gray'>${item.LPPrice}</h6></div>
+                                                </div> */}
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Price</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
+                                                    <div className='w-50'><h6 className='text-gray'>${item.LPPrice}</h6></div>
                                                 </div>
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Pool</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
+                                                    <div className='w-50'><h6 className='text-gray'>${item.totalPooledValue}</h6></div>
                                                 </div>
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Weight</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>34.5% / 45%</h6></div>
+                                                    <div className='w-50'><h6 className='text-gray'>{item.currentWeight} % / {(item.LPSecondTokenValue * 1000).toFixed(2)} %</h6></div>
                                                 </div>
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Utilization</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>46.20%</h6></div>
+                                                    <div className='w-50'><h6 className='text-gray'>{item.LPFee} %</h6></div>
                                                 </div>                                                
                                                 <hr className='text-gray my-1'/>
                                             </div>
-                                        </div>)}
-                                        {isMobile && (
+                                        </div>))}
+                                        {/* {isMobile && (
                                         <div>
                                             <div className='py-0'>
                                                 <div className='w-100 d-flex pl-3 pb-2'>
@@ -351,7 +351,7 @@ const Home = (props) => {
                                                     <div className='w-50'><h6 className='text-gray'>46.20%</h6></div>
                                                 </div>                            
                                             </div>
-                                        </div>)}
+                                        </div>)} */}
                                     </div>                                    
                                 </div>
                             </div>

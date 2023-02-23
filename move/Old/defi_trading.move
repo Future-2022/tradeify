@@ -950,6 +950,7 @@ module trading::pool {
         // return
         (input_a, input_b, lp)
     }
+    
     public fun deposit2<A, B>(
         pool: &mut Pool<A, B>,
         input_a: Balance<A>,

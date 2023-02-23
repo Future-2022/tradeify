@@ -154,7 +154,9 @@ const Earn = (props) => {
                 <div className='w-65 pb-3'>
                     <div className='mt-5'><h3 className='text-white font-bold'>TLP Staking</h3></div>
                     <div className='d-flex mt-3 flex-wrap'>
-                        <div className={`market-form window ${isMobile == true ? `p-3`:`w-50 p-5`}`}>
+                        <div className={`market-form window your-stats ${isMobile == true ? `p-3`:`w-50 p-5`}`}>
+                            <div className='right-top-bg'></div>
+                            <div className='left-bottom-bg'></div>
                             <h4 className='mt-4'>Stake TLP</h4>  
                     
                             <div className='trade-token-select only-border-warning mb-2 p-4 mt-5'>

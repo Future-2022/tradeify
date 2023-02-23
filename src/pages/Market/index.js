@@ -152,9 +152,8 @@ const Market = (props) => {
             let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
             if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
                 let currentTimestamp = Date.now();
-                let Reward = 100 * (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
-                console.log('rew', Reward);
-                setStakingAPR(APR);
+                let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+                setStakingAPR(APR.toFixed(2));
                 setUserReward(Reward);
             }
             setTotalLPValue(totalLPValue);
@@ -224,17 +223,11 @@ const Market = (props) => {
     }
 
     const getTLPValue = (item, value) => {
-        console.log('invalue', value);
         let balance_a = Number(item.data.balanceA.value);
         let balance_b = Number(item.data.balanceB.value);
-        console.log(balance_a);
-        console.log(balance_b);
         let split_amount = (value * balance_a / (balance_a + balance_b)).toFixed(0);
-        console.log('split_amount', split_amount);
         let amount_a = split_amount; 
-        console.log('swap_amount')
         let amount_b = calcSwapOut(item, (value - split_amount), true);
-        console.log('amount_b', amount_b);
 
         let dab = amount_a * balance_b;
         let dba = amount_b * balance_a;
@@ -247,7 +240,6 @@ const Market = (props) => {
         } else {
             LPAmount = Number(amount_a) * Number(item.data.lpSupply.value) / balance_a * 0.98;
         }
-        console.log(LPAmount);
         return LPAmount.toFixed(0);
     }
 
@@ -276,7 +268,6 @@ const Market = (props) => {
     }
 
     const sellTLP = async () => {
-        console.log(lpToken);
         await userLpCoin.map(variable => {
             if (variable.balance.value > lpToken) {
                 lpCoin.map((item) => {
@@ -311,8 +302,6 @@ const Market = (props) => {
 
                 let a_out = (value * pool_a_value / pool_lp_value).toFixed(0);
                 let b_out = (value * pool_b_value / pool_lp_value).toFixed(0);
-                console.log(a_out);
-                console.log(b_out);
                 let out_value = calcSwapOut(item, b_out, false);
                 getValue = Number(a_out) + Number(out_value);
                 console.log(getValue);
@@ -337,12 +326,10 @@ const Market = (props) => {
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
-            console.log(lpCoins)
             let totalLPValue = 0;
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply.value);
             })
-            console.log(totalLPValue);
             setTotalLPValue(totalLPValue);
             const newMetaData = LPMetaData(totalLPValue, lpCoins);
             SetLPMetaData(newMetaData.meta);
@@ -359,8 +346,14 @@ const Market = (props) => {
             <div className='w-65 pb-3'>
                 <div className='mt-5'><h3 className='text-white font-bold'>BUY/SELL TLP</h3></div>
                 <div className='d-flex mt-3 flex-wrap'>
-                    <div className={`market-form window ${isMobile == true ? `p-3`:`px-5 py-4 w-50`}`}>
-                        
+                    <div className={`market-form window your-stats ${isMobile == true ? `p-3`:`px-5 py-4 w-50`}`}>
+                        {switchMarket == 1 && (
+                            <div className='right-top-bg'></div>
+                        )}
+                        {switchMarket == 2 && (
+                            <div className='right-top-bg2'></div>
+                        )}
+                        <div className='left-bottom-bg'></div>
                         <div className={`market-form-input d-flex justify-content-center mt-5 ${switchMarket != 1 ? 'border-red': 'border-green'}`}>
                             <div className={`py-3 w-50 ${switchMarket == 1 && 'active-green'}`}><p className={`text-center ${switchMarket != 1 ? 'text-grey':'text-white'}`} onClick={() => setSwitchMarket(1)}>Buy TLP</p></div>
                             <div className={`py-3 w-50 ${switchMarket == 2 && 'active-red'}`}><p className={`text-center ${switchMarket != 2 ? 'text-grey ':'text-white'}`} onClick={() => setSwitchMarket(2)}>Sell TLP</p></div>
@@ -483,7 +476,7 @@ const Market = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between pt-3'>
                                     <p className='text-gray py-2 pt-3'>Stake APR</p>
-                                    <h4 className='py-2'>36.79%</h4>
+                                    <h4 className='py-2'>{stakingAPR}%</h4>
                                 </div>
                                 <div className='d-flex justify-content-between py-2'>
                                     <p className='text-gray py-2'>Total Staked TLP</p>

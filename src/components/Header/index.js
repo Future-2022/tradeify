@@ -124,10 +124,14 @@ const Header = () => {
                 await mint_test_token_fun(globalContext.provider, wallet, { 
                     tokenType: tokenType,
                     testTokenSupplyId: CONFIG.testTokenSupplyId,
-                    amount: 5000000000n,
+                    amount: 100000000n,
                     receiveAddress: localStorage.getItem("walletAddress"),
                 }).then((args) => {
-                    toast.info("Token has been minted successfully!");
+                    if(args[0] == false) {
+                        toast.error(`You can faucet ${args[1]} minutes later!`);
+                    } else {
+                        toast.info("Token has been minted successfully!");
+                    }
                 })
             } catch (e) {
                 console.error(e)

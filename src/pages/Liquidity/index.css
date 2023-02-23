@@ -36,6 +36,24 @@
     padding: 30px;
     border-radius: 25px;
     position: relative;
+    overflow: hidden;
+}
+.blur-bg {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    left: 0;
+    top: -60px;
+    filter: blur(85px);
+    -webkit-filter: blur(69px);
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    z-index: 0;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
 }
 .img-badge {
     background-color: #443C69;
