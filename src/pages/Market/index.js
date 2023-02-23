@@ -15,7 +15,7 @@ import {
 import "@fontsource/space-grotesk";
 import './index.css';
 
-import { changeDecimal, fetchLPCoins, getStakingPoolStatus,
+import { changeDecimal, fetchLPCoins, getStakingPoolStatus, getTokenPrice,
      LPMetaData, isLoggedIn, fetchUserLpCoins, getUniqueCoinTypes, 
      getCoinBalances, getCoins, findStakingMeta, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 import { StoreContext } from '../../store';
@@ -61,12 +61,7 @@ const Market = (props) => {
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
     const [firstTokenValue, setFirstTokenValue] = useState(undefined);
-    const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
-
-    const [secondToken, setSecondToken] = useState([{label: "Select"}]);
-    const [secondTokenValue, setSecondTokenValue] = useState(0);
-    const [secondTokenMaxValue, setSecondTokenMaxValue] = useState(0);
-    
+    const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);    
     // 
     const [hasStakingMeta, setHasStakingMeta] = useState(false);
 
@@ -83,6 +78,9 @@ const Market = (props) => {
 
     const [coins, setCoins] = useState(undefined);
     const [coinBalance, setCoinBalance] = useState([]);
+
+    const [tokenPrice, setTokenPrice] = useState([]);   
+    const [selectTokenPrice, setSelectTokenPrice] = useState(undefined);   
 
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);
@@ -107,7 +105,29 @@ const Market = (props) => {
             })
         }
     }
+    useEffect(() => {        
+        getTokenPrice().then(item => {
+            setTokenPrice(item);
+        })       
+    }, []);
+    
 
+    useEffect(() => {
+        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+            let totalLPValue = 0;
+            lpCoins.map(item => {
+                totalLPValue += Number(item.data.lpSupply.value);
+            })
+            setTotalLPValue(totalLPValue);
+            const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
+            SetLPMetaData(newMetaData.meta);
+            SetLPCoin(lpCoins);
+        })
+        fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
+            setUserLPCoin(item);
+        })
+    }, [globalContext.newCoins, tokenPrice])
+    
     useEffect(() => {
         let totalSupplyTLP = 0;
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -216,31 +236,21 @@ const Market = (props) => {
         lpCoin.map((item) => {
             if(_firstTokenType == item.metadata[0].symbol) {
                 setPoolId(item);
-                _getLpValue = getTLPValue(item, changeBigNumber(value));
+                _getLpValue = getTLPValue(_firstTokenType, value);
                 setLPToken(_getLpValue);
             } 
         })        
     }
 
-    const getTLPValue = (item, value) => {
-        let balance_a = Number(item.data.balanceA.value);
-        let balance_b = Number(item.data.balanceB.value);
-        let split_amount = (value * balance_a / (balance_a + balance_b)).toFixed(0);
-        let amount_a = split_amount; 
-        let amount_b = calcSwapOut(item, (value - split_amount), true);
-
-        let dab = amount_a * balance_b;
-        let dba = amount_b * balance_a;
-        let LPAmount = 0 
-    
-        if(dab > dba) {
-            LPAmount = Number(amount_b) * Number(item.data.lpSupply.value) / balance_b * 0.98;
-        } else if(dab < dba) {
-            LPAmount = Number(amount_a) * Number(item.data.lpSupply.value) / balance_a * 0.98;
-        } else {
-            LPAmount = Number(amount_a) * Number(item.data.lpSupply.value) / balance_a * 0.98;
-        }
-        return LPAmount.toFixed(0);
+    const getTLPValue = (tokenType, value) => {
+        let price = 0;
+        tokenPrice.map(item => {
+            if(item.symbol == tokenType) {
+                price = item.value;
+                setSelectTokenPrice(price);
+            }
+        })
+        return (value * price / CONFIG.TLPPrice).toFixed(0);
     }
 
     const buyTLP = async () => {
@@ -256,7 +266,8 @@ const Market = (props) => {
                 await buyTLPSdk(globalContext.provider, wallet, { 
                     amountA: inputAmountA,
                     pool: poolId,
-                    maxSlippagePct : CONFIG.defaultSlippagePct
+                    maxSlippagePct : CONFIG.defaultSlippagePct,
+                    price: selectTokenPrice
                 }).then((args) => {
                     toast.info("Token TLP has been bought successfully!");
                     console.log("mint successfully");
@@ -272,12 +283,11 @@ const Market = (props) => {
             if (variable.balance.value > lpToken) {
                 lpCoin.map((item) => {
                     if(item.id == activeLP) {
-                        console.log(item);
-                        console.log(userLpCoin);
                         sellTLPSdk(wallet, {
                             pool: item,
                             lpIn: variable.id,
                             amount: lpToken,
+                            price: selectTokenPrice,
                             maxSlippagePct: CONFIG.defaultSlippagePct
                         }).then(item => {
                             toast.info("Your TLP token has been successfully sold!");
@@ -295,17 +305,12 @@ const Market = (props) => {
     const getTokenValue = (value) => {
         lpCoin.map((item) => {
             if(item.id == activeLP) {
-                let getValue = 0;
-                let pool_a_value = Number(item.data.balanceA.value);
-                let pool_b_value = Number(item.data.balanceB.value);
-                let pool_lp_value = Number(item.data.lpSupply.value);
-
-                let a_out = (value * pool_a_value / pool_lp_value).toFixed(0);
-                let b_out = (value * pool_b_value / pool_lp_value).toFixed(0);
-                let out_value = calcSwapOut(item, b_out, false);
-                getValue = Number(a_out) + Number(out_value);
-                console.log(getValue);
-                setSellFirstTokenGetValue(getValue);
+                tokenPrice.map(itemValue => {
+                    if(itemValue.symbol == item.metadata[0].symbol) {
+                        setSelectTokenPrice(itemValue.value);
+                        setSellFirstTokenGetValue(changeBigNumber(value * CONFIG.TLPPrice / itemValue.value))
+                    }
+                })
             }
         })
     }
@@ -323,22 +328,6 @@ const Market = (props) => {
             }
         })}
     }
-
-    useEffect(() => {
-        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
-            let totalLPValue = 0;
-            lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply.value);
-            })
-            setTotalLPValue(totalLPValue);
-            const newMetaData = LPMetaData(totalLPValue, lpCoins);
-            SetLPMetaData(newMetaData.meta);
-            SetLPCoin(lpCoins);
-        })
-        fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
-            setUserLPCoin(item);
-        })
-    }, [globalContext.newCoins])
     return (
         <div className={`d-flex ${isMobile == true ? `px-3`:`px-5`}`}>
             <div className='w-15'>

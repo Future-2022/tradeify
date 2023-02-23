@@ -47,7 +47,6 @@ export class Pool {
       if (moveObj === undefined) {
         throw new Error(`'${id}' is not a valid Pool object`)
       }
-      // console.log(moveObj.type);
       return this.fromMoveObjectField(moveObj)
     }
   
@@ -55,19 +54,14 @@ export class Pool {
         if (!Pool.isPool(field.type)) {
             throw new Error(`not a Pool type`)
         }
-        
         const struct = (typeToTag(field.type)).struct
-        const [typeA, typeB] = (struct.typeParams).map(tagToType);
-        // console.log(field);
+        const [typeA] = (struct.typeParams).map(tagToType);
         return {
-            typeArgs: [typeA, typeB],
+            typeArgs: [typeA],
             id: field.fields.id.id,
             balanceA: Balance.fromMoveObjectField(typeA, field.fields.balance_a),
-            balanceB: Balance.fromMoveObjectField(typeB, field.fields.balance_b),
             lpSupply: Supply.fromMoveObjectField(field.fields.lp_supply),
             lpFeeBps: BigInt(field.fields.lp_fee_bps),
-            adminFeePct: BigInt(field.fields.admin_fee_pct),
-            adminFeeBalance: Balance.fromMoveObjectField(typeB, field.fields.admin_fee_balance),
         }
     }
   }

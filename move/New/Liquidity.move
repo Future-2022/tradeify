@@ -17,7 +17,9 @@ module trading::pool {
 
     /// The number of basis points in 100%.
     const DEFAULT_DECIMAL: u64 = 1000000000;
-    const BPS_IN_100_PCT: u64 = 100 * 100;
+    const BPS_IN_100_PCT: u64 = 100 * 100;    
+    const SWAP_FEE: u64 = 1 * 100;    
+    const REFER_REWARD: u64 = 1 * 100;
     const TLP_PRICE: u64 = 1;
 
     const EZeroInput: u64 = 0;
@@ -31,6 +33,7 @@ module trading::pool {
     const EReferAlreadyExistsTrader: u64 = 8;
     const INVALID_USER: u64 = 9;
     const NotReferralCode: u64 = 10;
+    const NOTOWNER: u64 = 11;
     
 
     fun muldiv(a: u64, b: u64, c: u64): u64 {
@@ -294,6 +297,42 @@ module trading::pool {
         total_trader: u64
     }
 
+    struct TradingPool has key, store {
+        id: UID,
+        tradingPoolFee: u64,
+        openPosition: u64,
+        closePosition: u64,
+        totalPosition: u64,
+        data: VecMap<OrderRegistryItem, bool>
+    }
+
+    // Trading type is 1, 2, 3.  1 = Market      2 = Limit       3 = Stop Market
+    // Trading status is 1, 2, 3.   1 = pending     2 = fund        3 = closed
+
+    struct OrderRegistryItem has copy, drop, store {
+        trader: ID,
+        inPoolID: ID,
+        outPoolID: ID,
+        marketPrice: u64,
+        tradingAmount: u64,
+        calcAmount: u64,
+        updateCalcAmount: u64,
+        leverageValue: u64,
+        referID: ID,
+        hasRefer: u64,
+        createdTimeStamp: u64,
+        tradingType: u64,
+        tradingStatus: u64,
+        isEarn: u64,
+    }
+
+    struct PositionCreationEvent has copy, drop {
+        trader: ID,
+        inPoolID: ID,
+        outPoolID: ID,
+    }
+
+
     struct TLP has drop {}
 
     /// Pool struct for tradeify
@@ -314,6 +353,18 @@ module trading::pool {
                 total_trader: 0
             }
         );
+        transfer::share_object(new_refer_registry(ctx));
+        transfer::share_object(new_refTrader_registry(ctx));
+        transfer::share_object(
+            TradingPool {
+                id: object::new(ctx),
+                tradingPoolFee: 100,
+                openPosition: 0,
+                closePosition: 0,
+                totalPosition: 0,
+                data: vec_map::empty(),
+            }
+        );        
     }    
 
     // mint_token
@@ -400,7 +451,7 @@ module trading::pool {
         let deposit_a = balance::value(&input_a);
         let amt_lp = muldiv(deposit_a, price_a, TLP_PRICE);
         let balance_lp_before_fee = ceil_div_u64(amt_lp, DEFAULT_DECIMAL);
-        let balance_lp = muldiv(balance_lp_before_fee, pool.lp_fee_bps, BPS_IN_100_PCT);
+        let balance_lp = muldiv(balance_lp_before_fee, (BPS_IN_100_PCT - pool.lp_fee_bps), BPS_IN_100_PCT);
         let lp_balance = balance::increase_supply(&mut pool.lp_supply, balance_lp);
 
         balance::join(
@@ -432,11 +483,10 @@ module trading::pool {
     ):Balance<A> {
 
         let input_tlp = balance::value(&input);
-        let amt_out = muldiv(input_tlp, TLP_PRICE, price_a);
-        let balance_out = amt_out * DEFAULT_DECIMAL;
+        let amt_out = muldiv((input_tlp * DEFAULT_DECIMAL), TLP_PRICE, price_a);
         
         balance::decrease_supply(&mut pool.lp_supply, input);
-        balance::split(&mut pool.balance_a, balance_out)
+        balance::split(&mut pool.balance_a, amt_out)
     }
 
     public entry fun sell_tlp_<A>(
@@ -467,8 +517,9 @@ module trading::pool {
         );
         let out_pool_value = balance::value(&poolB.balance_a);
         let i_value = balance::value(&input_a);
-        let out_value = muldiv(i_value, price_b, price_a); 
-
+        let value = muldiv(i_value, price_a, price_b); 
+        let out_value = muldiv(value, (BPS_IN_100_PCT - SWAP_FEE), BPS_IN_100_PCT);
+        
         assert!(out_value < out_pool_value, ENOUGHPOOL);
 
         balance::join(&mut poolA.balance_a, input_a);
@@ -641,7 +692,7 @@ module trading::pool {
         user_stake: &mut StakingMeta<A>,
         ctx: &mut TxContext,
     ):Balance<A> {        
-        let out_amount = balance::split(&mut staking_pool.balance_tlp, (user_stake.staking_amount - user_stake.staking_amount * staking_pool.stake_fee / 100));
+        let out_amount = balance::split(&mut staking_pool.balance_tlp, (user_stake.staking_amount - user_stake.staking_amount * staking_pool.stake_fee / BPS_IN_100_PCT));
         user_stake.staking_amount = 0;
         out_amount
     }
@@ -712,4 +763,392 @@ module trading::pool {
     ) {
         submit_referral_code(ctx, referalStaus, referralCode, refTrader_registry, refer_registry);
     }    
+
+    public fun create_position<A, B> (
+        inPoolID: &mut Pool<A>,
+        outPoolID: &mut Pool<B>,
+        tradingPoolID: &mut TradingPool,
+        marketPrice: u64,
+        inputCoinA: Coin<A>,
+        calcAmount: u64,
+        leverageValue: u64,
+        hasRefer: u64,
+        referID: ID,
+        createdTimeStamp: u64,
+        tradingType: u64,
+        ctx: &mut TxContext
+    ) {        
+        let _trader = object::id_from_address(tx_context::sender(ctx));
+        let _inPoolID = object::id(inPoolID);
+        let _outPoolID = object::id(outPoolID);
+
+        let balance_A = coin::into_balance(inputCoinA);
+        let _tradingAmount = balance::value(&balance_A);        
+        let _tradingAmountUpdate = 0;
+        
+        if(hasRefer == 1) {            
+            let refer_reward = muldiv(_tradingAmount, REFER_REWARD, BPS_IN_100_PCT);
+            let balance_reward = balance::split(&mut balance_A, refer_reward);
+            _tradingAmountUpdate = balance::value(&balance_A);
+            destroy_or_transfer_balance(balance_reward, object::id_to_address(&referID), ctx);
+        } else {
+            _tradingAmountUpdate = _tradingAmount;
+        };
+
+        let tradingStatus = 1; // open
+        let _updateCalcAmount = 0;
+        let isEarn = 0;
+        balance::join(&mut inPoolID.balance_a, balance_A);
+
+        tradingPoolID.openPosition = tradingPoolID.openPosition + 1;
+        tradingPoolID.totalPosition = tradingPoolID.totalPosition + 1;
+        
+        let item = OrderRegistryItem {
+            trader: _trader,
+            inPoolID: _inPoolID,
+            outPoolID: _outPoolID,
+            marketPrice: marketPrice,
+            tradingAmount: _tradingAmountUpdate,
+            calcAmount: calcAmount,
+            updateCalcAmount: _updateCalcAmount,
+            leverageValue: leverageValue,
+            referID: referID,
+            hasRefer: hasRefer,
+            createdTimeStamp: createdTimeStamp,
+            tradingType: tradingType,
+            tradingStatus: tradingStatus,
+            isEarn: isEarn,
+        };
+        vec_map::insert(&mut tradingPoolID.data, item, true);
+        event::emit(PositionCreationEvent {trader: _trader, inPoolID: _inPoolID, outPoolID: _outPoolID});
+    }
+
+    public entry fun create_position_<A, B>(
+        inPoolID: &mut Pool<A>,
+        outPoolID: &mut Pool<B>,
+        tradingPoolID: &mut TradingPool,
+        coinA: Coin<A>,
+        marketPrice: u64,
+        tradingAmount: u64,
+        calcAmount: u64,
+        leverageValue: u64,
+        hasRefer: u64,
+        referID: ID,
+        createdTimeStamp: u64,
+        tradingType: u64,
+        ctx: &mut TxContext,
+    ) {        
+        let _tradingAmount = maybe_split_and_transfer_rest(coinA, tradingAmount, tx_context::sender(ctx), ctx);
+        create_position(
+            inPoolID, 
+            outPoolID, 
+            tradingPoolID,
+            marketPrice,                 
+            _tradingAmount, 
+            calcAmount,
+            leverageValue,
+            hasRefer,
+            referID,
+            createdTimeStamp,    
+            tradingType,
+            ctx,
+        );
+    }
+
+    public fun create_position2<A> (
+        inPoolID: &mut Pool<A>,
+        tradingPoolID: &mut TradingPool,
+        marketPrice: u64,
+        inputCoinA: Coin<A>,
+        calcAmount: u64,
+        leverageValue: u64,
+        hasRefer: u64,
+        referID: ID,
+        createdTimeStamp: u64,
+        tradingType: u64,
+        ctx: &mut TxContext
+    ) {        
+        let _trader = object::id_from_address(tx_context::sender(ctx));
+        let _inPoolID = object::id(inPoolID);
+
+        let balance_A = coin::into_balance(inputCoinA);
+        let _tradingAmount = balance::value(&balance_A);        
+        let _tradingAmountUpdate = 0;
+        
+        if(hasRefer == 1) {            
+            let refer_reward = muldiv(_tradingAmount, REFER_REWARD, BPS_IN_100_PCT);
+            let balance_reward = balance::split(&mut balance_A, refer_reward);
+            _tradingAmountUpdate = balance::value(&balance_A);
+            destroy_or_transfer_balance(balance_reward, object::id_to_address(&referID), ctx);
+        } else {
+            _tradingAmountUpdate = _tradingAmount;
+        };
+
+        let tradingStatus = 1; // open
+        let _updateCalcAmount = 0;
+        let isEarn = 0;
+        balance::join(&mut inPoolID.balance_a, balance_A);
+
+        tradingPoolID.openPosition = tradingPoolID.openPosition + 1;
+        tradingPoolID.totalPosition = tradingPoolID.totalPosition + 1;
+        
+        let item = OrderRegistryItem {
+            trader: _trader,
+            inPoolID: _inPoolID,
+            outPoolID: _inPoolID,
+            marketPrice: marketPrice,
+            tradingAmount: _tradingAmountUpdate,
+            calcAmount: calcAmount,
+            updateCalcAmount: _updateCalcAmount,
+            leverageValue: leverageValue,
+            referID: referID,
+            hasRefer: hasRefer,
+            createdTimeStamp: createdTimeStamp,
+            tradingType: tradingType,
+            tradingStatus: tradingStatus,
+            isEarn: isEarn,
+        };
+        vec_map::insert(&mut tradingPoolID.data, item, true);
+        event::emit(PositionCreationEvent {trader: _trader, inPoolID: _inPoolID, outPoolID: _inPoolID});
+    }
+
+    public entry fun create_position2_<A>(
+        inPoolID: &mut Pool<A>,
+        tradingPoolID: &mut TradingPool,
+        coinA: Coin<A>,
+        marketPrice: u64,
+        tradingAmount: u64,
+        calcAmount: u64,
+        leverageValue: u64,
+        hasRefer: u64,
+        referID: ID,
+        createdTimeStamp: u64,
+        tradingType: u64,
+        ctx: &mut TxContext,
+    ) {        
+        let _tradingAmount = maybe_split_and_transfer_rest(coinA, tradingAmount, tx_context::sender(ctx), ctx);
+        create_position2(
+            inPoolID, 
+            tradingPoolID,
+            marketPrice,                 
+            _tradingAmount, 
+            calcAmount,
+            leverageValue,
+            hasRefer,
+            referID,
+            createdTimeStamp,    
+            tradingType,
+            ctx,
+        );
+    } 
+
+    public fun close_position<A, B>(
+        inPoolID: &mut Pool<A>,
+        outPoolID: &mut Pool<B>,
+        tradingPoolID: &mut TradingPool,
+        createdTimeStamp: u64,
+        current_priceA: u64,
+        current_priceB: u64,
+        ctx: &mut TxContext
+    ): Balance<A> {
+
+        let leverage = 0;
+        let tradingAmount = 0;
+        let updateCalcAmountValue = 0;
+        let isEarn = 0;
+
+        let len = vec_map::size(&tradingPoolID.data);
+        let i = 0;
+        while (i < len) {
+
+            let (key, value) = vec_map::get_entry_by_idx(&tradingPoolID.data, i);
+            
+            if(key.createdTimeStamp == createdTimeStamp) { 
+                assert!(key.trader == object::id_from_address(tx_context::sender(ctx)), NOTOWNER);
+                let trader = key.trader;
+                let inPoolID = key.inPoolID; 
+                let outPoolID = key.outPoolID; 
+                let marketPrice = key.marketPrice; 
+                let calcAmount = key.calcAmount; 
+                let tradingType = key.tradingType;
+                
+                if(tradingType == 0) { 
+                    if(current_priceB > marketPrice) {
+                        isEarn = 1;
+                        updateCalcAmountValue = muldiv(calcAmount, (current_priceB - marketPrice), current_priceA);
+                    } else {
+                        isEarn = 2;
+                        updateCalcAmountValue = muldiv(calcAmount, (marketPrice - current_priceB), current_priceA);
+                    };
+                } else {
+                    if(current_priceB < marketPrice) {
+                        isEarn = 1;
+                        updateCalcAmountValue = muldiv(calcAmount, (marketPrice- current_priceB), current_priceA);
+                    } else {
+                        isEarn = 2;
+                        updateCalcAmountValue = muldiv(calcAmount, (current_priceB - marketPrice), current_priceA);
+                    };
+                };
+
+                tradingAmount = key.tradingAmount; 
+                let updateCalcAmount = updateCalcAmountValue; 
+                let leverageValue = key.leverageValue; 
+                leverage = key.leverageValue;
+                let referID = key.referID; 
+                let hasRefer = key.hasRefer;
+                let createdTimeStamp = key.createdTimeStamp; 
+                let tradingStatus = 2;  // close status
+
+                vec_map::remove_entry_by_idx(&mut tradingPoolID.data, i);
+
+                let item = OrderRegistryItem {
+                    trader: trader,
+                    inPoolID: inPoolID,
+                    outPoolID: outPoolID,
+                    marketPrice: marketPrice,
+                    tradingAmount: tradingAmount,
+                    calcAmount: calcAmount,
+                    updateCalcAmount: updateCalcAmount,
+                    leverageValue: leverageValue,
+                    referID: referID,
+                    hasRefer: hasRefer,
+                    createdTimeStamp: createdTimeStamp,
+                    tradingType: tradingType,
+                    tradingStatus: tradingStatus,
+                    isEarn: isEarn,
+                };
+                vec_map::insert(&mut tradingPoolID.data, item, true);
+            };
+            i = i + 1;
+        };
+
+        let out_amount = 0;
+
+        if (isEarn == 1) {
+            out_amount = tradingAmount + updateCalcAmountValue;
+        } else if (isEarn == 2) {
+            out_amount = tradingAmount - updateCalcAmountValue;
+        };
+
+        tradingPoolID.openPosition = tradingPoolID.openPosition - 1;
+        tradingPoolID.closePosition = tradingPoolID.closePosition + 1;
+
+        balance::split(&mut inPoolID.balance_a, out_amount)
+    }
+
+    public entry fun close_position_<A, B>(
+        inPoolID: &mut Pool<A>,
+        outPoolID: &mut Pool<B>,
+        tradingPoolID: &mut TradingPool,
+        createdTimeStamp: u64,
+        current_priceA: u64,
+        current_priceB: u64,
+        ctx: &mut TxContext
+    ) {
+        let amount = close_position(inPoolID, outPoolID, tradingPoolID, createdTimeStamp, current_priceA, current_priceB, ctx);   
+        let sender = tx_context::sender(ctx);     
+        destroy_or_transfer_balance(amount, sender, ctx);
+    }
+    public fun close_position2<A>(
+        inPoolID: &mut Pool<A>,
+        tradingPoolID: &mut TradingPool,
+        createdTimeStamp: u64,
+        current_priceA: u64,
+        ctx: &mut TxContext
+    ): Balance<A> {
+
+        let leverage = 0;
+        let tradingAmount = 0;
+        let updateCalcAmountValue = 0;
+        let isEarn = 0;
+
+        let len = vec_map::size(&tradingPoolID.data);
+        let i = 0;
+        while (i < len) {
+
+            let (key, value) = vec_map::get_entry_by_idx(&tradingPoolID.data, i);
+            
+            if(key.createdTimeStamp == createdTimeStamp) { 
+                assert!(key.trader == object::id_from_address(tx_context::sender(ctx)), NOTOWNER);
+                let trader = key.trader;
+                let inPoolID = key.inPoolID; 
+                let outPoolID = key.outPoolID; 
+                let marketPrice = key.marketPrice; 
+                let calcAmount = key.calcAmount; 
+                let tradingType = key.tradingType; 
+                if(tradingType == 0) {
+                    if(current_priceA > marketPrice) {
+                        isEarn = 1;
+                        updateCalcAmountValue = muldiv(calcAmount, (current_priceA - marketPrice), current_priceA);
+                    } else {
+                        isEarn = 2;
+                        updateCalcAmountValue = muldiv(calcAmount, (marketPrice - current_priceA), current_priceA);
+                    };
+                } else {
+                    if(current_priceA < marketPrice) {
+                        isEarn = 1;
+                        updateCalcAmountValue = muldiv(calcAmount, (marketPrice - current_priceA), current_priceA);
+                    } else {
+                        isEarn = 2;
+                        updateCalcAmountValue = muldiv(calcAmount, (current_priceA - marketPrice), current_priceA);
+                    };
+                };
+
+                tradingAmount = key.tradingAmount; 
+                let updateCalcAmount = updateCalcAmountValue; 
+                let leverageValue = key.leverageValue; 
+                leverage = key.leverageValue;
+                let referID = key.referID; 
+                let hasRefer = key.hasRefer;
+                let createdTimeStamp = key.createdTimeStamp; 
+                let tradingStatus = 2;  // close status
+
+                vec_map::remove_entry_by_idx(&mut tradingPoolID.data, i);
+
+                let item = OrderRegistryItem {
+                    trader: trader,
+                    inPoolID: inPoolID,
+                    outPoolID: outPoolID,
+                    marketPrice: marketPrice,
+                    tradingAmount: tradingAmount,
+                    calcAmount: calcAmount,
+                    updateCalcAmount: updateCalcAmount,
+                    leverageValue: leverageValue,
+                    referID: referID,
+                    hasRefer: hasRefer,
+                    createdTimeStamp: createdTimeStamp,
+                    tradingType: tradingType,
+                    tradingStatus: tradingStatus,
+                    isEarn: isEarn,
+                };
+                vec_map::insert(&mut tradingPoolID.data, item, true);
+            };
+            i = i + 1;
+        };
+
+        let out_amount = 0;
+
+        if (isEarn == 1) {
+            out_amount = tradingAmount + updateCalcAmountValue;
+        } else if (isEarn == 2) {
+            out_amount = tradingAmount - updateCalcAmountValue;
+        };
+
+        tradingPoolID.openPosition = tradingPoolID.openPosition - 1;
+        tradingPoolID.closePosition = tradingPoolID.closePosition + 1;
+
+        balance::split(&mut inPoolID.balance_a, out_amount)
+    }
+
+    public entry fun close_position2_<A>(
+        inPoolID: &mut Pool<A>,
+        tradingPoolID: &mut TradingPool,
+        createdTimeStamp: u64,
+        current_priceA: u64,
+        ctx: &mut TxContext
+    ) {
+        let amount = close_position2(inPoolID, tradingPoolID, createdTimeStamp, current_priceA, ctx);   
+        let sender = tx_context::sender(ctx);     
+        destroy_or_transfer_balance(amount, sender, ctx);
+    }
 }

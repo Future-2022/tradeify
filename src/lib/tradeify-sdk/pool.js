@@ -30,7 +30,6 @@ export class Pool {
     const state = PoolObj.fromSuiObject(obj)
     const metadata = await Promise.all([
       CoinMetadataLoader.loadMetadata(state.typeArgs[0]),
-      CoinMetadataLoader.loadMetadata(state.typeArgs[1]),
     ])
     return new Pool(state, metadata)
   }
@@ -38,22 +37,8 @@ export class Pool {
 }
   
 export const mint_test_token_fun = async (provider, wallet, args) => {
-  // const token = args.tokenType;
-  // const currentTimestamp = Date.now();
-  // console.log(currentTimestamp);
-  // if(!localStorage.getItem(`${token}-stamp`)) {
-  //   await mint(wallet, token, args);
-  // } else {
-  //   if(Number(currentTimestamp) - Number(localStorage.getItem(`${token}-stamp`)) > CONFIG.faucetDurationTime) {
-  //     await mint(wallet, token, args);
-  //   } else {
-  //     const remainTime = ((CONFIG.faucetDurationTime - (Number(currentTimestamp) - Number(localStorage.getItem(`${token}-stamp`)))) / 1000 / 60).toFixed(0);
-  //     return [false, remainTime];
-  //   }
-  // }
   const tx = mint_test_token_eth({
     tokenType: args.tokenType,
-    testTokenSupplyId: args.testTokenSupplyId,
     amount: args.amount,
     receiveAddress: args.receiveAddress
   })
@@ -62,19 +47,7 @@ export const mint_test_token_fun = async (provider, wallet, args) => {
   
 }
 
-const mint = async (wallet, token, args) => {
-  console.log(args);
-  const currentTimestamp = Date.now();
-  localStorage.setItem(`${token}-stamp`, currentTimestamp);
-  
-  const tx = mint_test_token_eth({
-    tokenType: args.tokenType,
-    testTokenSupplyId: args.testTokenSupplyId,
-    amount: args.amount,
-    receiveAddress: args.receiveAddress
-  })
-  return await wallet.signAndExecuteTransaction(tx)
-}
+
 
 const calcLpValue = (lpAmount, pool) => {
   const [balanceA, balanceB, poolLpAmount] = [
@@ -118,9 +91,10 @@ export const calcSwapOut = (pool, inValue, isACS) => {
 
 const withdrawTx = (args) => {
 
-  return maybeSplitThenWithdraw({first: args.pool.data.typeArgs[0], second: args.pool.data.typeArgs[1]}, {
+  return maybeSplitThenWithdraw({first: args.pool.data.typeArgs[0]}, {
     pool: args.pool.id,
     lpIn: args.lpIn,
+    price: Number(args.price).toFixed(0),
     amount: args.amount,
   })
 }
@@ -141,11 +115,11 @@ export const buyTLPSdk = async (provider, wallet, args) => {
       args.pool.data.balanceA.type,
       args.amountA
     )])
-
-  const tx = maybeSplitThenDeposit([args.pool.data.balanceA.type, args.pool.data.balanceB.type], {
+  const tx = maybeSplitThenDeposit([args.pool.data.balanceA.type], {
     pool: args.pool.id,
     inputA: inputA.id,
     amountA: args.amountA,
+    price: Number(args.price).toFixed(0),
   })
   console.log(tx);
   return await wallet.signAndExecuteTransaction(tx)
@@ -159,15 +133,14 @@ export const swap = async (provider, wallet, args) => {
     args.inputType1,
     args.amount
   )
-  const expOut = calcSwapOut(args.inPoolId, args.amount)
-  const minOut = (BigInt(expOut) * (100n - BigInt(args.maxSlippagePct))) / 10000n
 
-  const tx = newSwap({first: args.inputType1, second: args.inputType2, third: CONFIG.usdt}, {
+  const tx = newSwap({first: args.inputType1, second: args.inputType2}, {
     inPool: args.inPoolId.id,
     outPool: args.outPoolId.id,
     input: input.id,
     amount: args.amount,
-    minOut: minOut,
+    tokenPrice1: Number(args.tokenPrice1).toFixed(0),
+    tokenPrice2: Number(args.tokenPrice2).toFixed(0),
   })
   console.log(tx);
   return await wallet.signAndExecuteTransaction(tx)

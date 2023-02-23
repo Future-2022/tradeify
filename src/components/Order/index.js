@@ -7,16 +7,22 @@ import { StoreContext } from '../../store';
 import { closeOrderFun } from '../../lib/tradeify-sdk/trading';
 import { ToastContainer, toast } from 'react-toastify';
 import { is } from '@mysten/sui.js';
+import { getTokenPrice } from '../../control/main';
+
 const Order = () => {
     const [orderIndex, setOrderIndex] = useState(1);
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);  
-    useEffect(() => {
-        console.log(globalContext.traderData);
-    }, [])
+    const [tokenPrice, setTokenPrice] = useState([]);     
+
+    useEffect(() => {        
+        getTokenPrice().then(item => {
+            setTokenPrice(item);
+        })       
+    }, []);
+    
     const closeOrder = (inPool, outPool, createdTimeStamp, earnAmount, isEarn, tradingAmount) => {
-        console.log(isEarn);
-        closeOrderFun(globalContext.provider, globalContext.wallet, inPool, outPool, createdTimeStamp, earnAmount, isEarn, tradingAmount).then(item => {
+        closeOrderFun(tokenPrice, globalContext.provider, globalContext.wallet, inPool, outPool, createdTimeStamp, earnAmount, isEarn, tradingAmount).then(item => {
             if(item == false) {
                 toast.error("You have lost order!");
             } else {                

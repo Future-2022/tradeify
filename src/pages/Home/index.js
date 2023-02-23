@@ -7,8 +7,10 @@ import TokenIcon3 from '../../img/svg/BTC.svg';
 
 import TLP from '../../img/png/token-logo.png';
 import { getTotalTRYValue, getStakingPoolStatus, 
-    fetchLPCoins, LPMetaData } from '../../control/main';
+    fetchLPCoins, LPMetaData, getTokenPrice } from '../../control/main';
 import { StoreContext } from '../../store';
+
+import { CONFIG } from '../../lib/config';
 
 import { FaAngleDown } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
@@ -16,6 +18,7 @@ import { useMediaQuery } from 'react-responsive';
 const Home = (props) => {
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });  
     const globalContext = useContext(StoreContext); 
+    const [tokenPrice, setTokenPrice] = useState([]); 
     // TRY part
     const [totalTRYValue, setTotalTRYValue] = useState(false);
 
@@ -29,6 +32,18 @@ const Home = (props) => {
     
     const [tryPrice, setTryPrice] = useState(0);   
     const [lpCoin, SetLPCoin] = useState(undefined);
+
+    const getPrice = () => {       
+        getTokenPrice().then(item => {
+            setTokenPrice(item);
+        })  
+    }
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getPrice();
+        }, CONFIG.timeIntervalOfPrice);
+        return () => clearInterval(interval);
+    }, []);
     
     useEffect(() => {
         let totalSupplyTLP = 0;
@@ -42,7 +57,7 @@ const Home = (props) => {
                 }
             })
 
-            const newMetaData = LPMetaData(totalLPValue, lpCoins);
+            const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
             SetLPCoin(newMetaData);
 
             if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
@@ -59,7 +74,7 @@ const Home = (props) => {
         getTotalTRYValue(globalContext.provider).then(res => {
             setTotalTRYValue(res);
         })
-    }, [])
+    }, [tokenPrice])
 
     return (
         <div className='pb-5'>
@@ -245,7 +260,7 @@ const Home = (props) => {
                                                     </div>
                                                     <div className='w-20'><h6 className='text-gray'>$ {item.LPPrice}</h6></div>
                                                     <div className='w-20'><h6 className='text-gray'>$ {item.totalPooledValue}</h6></div>
-                                                    <div className='w-20'><h6 className='text-gray'>{item.currentWeight} % / {(item.LPSecondTokenValue * 1000).toFixed(2)} %</h6></div>
+                                                    <div className='w-20'><h6 className='text-gray'>{item.LPWeight} % / {item.LPTargetWeight} %</h6></div>
                                                     <div className='w-20'><h6 className='text-gray'>{item.LPFee} %</h6></div>
                                                 </div>
                                                 <hr className='text-gray my-1'/>
@@ -262,10 +277,6 @@ const Home = (props) => {
                                                     </div>
                                                     <FaAngleDown className='text-white mt-1 ml-3 cursor-pointer'/>
                                                 </div>
-                                                {/* <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Token</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>${item.LPPrice}</h6></div>
-                                                </div> */}
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Price</p></div>
                                                     <div className='w-50'><h6 className='text-gray'>${item.LPPrice}</h6></div>
@@ -276,7 +287,7 @@ const Home = (props) => {
                                                 </div>
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Weight</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>{item.currentWeight} % / {(item.LPSecondTokenValue * 1000).toFixed(2)} %</h6></div>
+                                                    <div className='w-50'><h6 className='text-gray'>{item.LPWeight} % / {item.LPTargetWeight} %</h6></div>
                                                 </div>
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Utilization</p></div>
@@ -284,74 +295,7 @@ const Home = (props) => {
                                                 </div>                                                
                                                 <hr className='text-gray my-1'/>
                                             </div>
-                                        </div>))}
-                                        {/* {isMobile && (
-                                        <div>
-                                            <div className='py-0'>
-                                                <div className='w-100 d-flex pl-3 pb-2'>
-                                                    <img src={TokenIcon2} width={40} height={20}  className='token-logo'/>
-                                                    <div className='pl-4'>
-                                                        <h6 className='mb-0'>Ethereum</h6>
-                                                        <p className='text-gray text-left'>ETH</p>
-                                                    </div>
-                                                    <FaAngleDown className='text-white mt-1 ml-3 cursor-pointer'/>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Token</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Price</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Pool</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Weight</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>34.5% / 45%</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Utilization</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>46.20%</h6></div>
-                                                </div>                                                
-                                                <hr className='text-gray my-1'/>
-                                            </div>
-                                        </div>)}
-                                        {isMobile && (
-                                        <div>
-                                            <div className='py-0'>
-                                                <div className='w-100 d-flex pl-3 pb-2'>
-                                                    <img src={TokenIcon3} width={40} height={20} />
-                                                    <div className='pl-4'>
-                                                        <h6 className='mb-0'>Bitcoin</h6>
-                                                        <p className='text-gray text-left'>BTC</p>
-                                                    </div>
-                                                    <FaAngleDown className='text-white mt-1 ml-3 cursor-pointer'/>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Token</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Price</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Pool</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>$801,953,731</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Weight</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>34.5% / 45%</h6></div>
-                                                </div>
-                                                <div className='d-flex justify-content-between'>
-                                                    <div className='w-50'><p className='text-gray pl-3'>Utilization</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>46.20%</h6></div>
-                                                </div>                            
-                                            </div>
-                                        </div>)} */}
+                                        </div>))}                                       
                                     </div>                                    
                                 </div>
                             </div>

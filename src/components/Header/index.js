@@ -123,9 +123,7 @@ const Header = () => {
             try {  
                 await mint_test_token_fun(globalContext.provider, wallet, { 
                     tokenType: tokenType,
-                    testTokenSupplyId: CONFIG.testTokenSupplyId,
                     amount: 100000000n,
-                    receiveAddress: localStorage.getItem("walletAddress"),
                 }).then((args) => {
                     if(args[0] == false) {
                         toast.error(`You can faucet ${args[1]} minutes later!`);

@@ -31,7 +31,7 @@ import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 
 import { getTradeDatas, getSwapPrice, getCoins, getReferralIDByCode, changeDecimal8Fix, 
-    getTraderStatus, getUniqueCoinTypes, getCoinBalances, getMainCoins, 
+    getTraderStatus, getUniqueCoinTypes, getCoinBalances, getMainCoins, getTokenPrice,
     changeDecimal, fetchLPCoins, getTraderMetaData, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 
 import { createPosition } from '../../lib/tradeify-sdk/trading';
@@ -103,14 +103,27 @@ const LongPosition = () => {
     const [secondTokenValue, setSecondTokenValue] = useState(undefined);
     const [secondTokenPrice, setSecondTokenPrice] = useState(0);
 
-    
+    const [tokenPrice, setTokenPrice] = useState([]);       
+
+    const getPrice = () => {       
+        getTokenPrice().then(item => {
+            setTokenPrice(item);
+        })  
+    }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getPrice();
+        }, CONFIG.timeIntervalOfPrice);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(lpCoins => {
             SetLPCoin(lpCoins);            
             getTradeData(lpCoins);
         });
-    }, [])
+    }, [tokenPrice])
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -118,12 +131,12 @@ const LongPosition = () => {
                 return { value: arg, label: Coin.getCoinSymbol(arg) }
             });
             const balance = getCoinBalances(item);
-            const mainCoins = getMainCoins(lpCoin);
+            const mainCoins = getMainCoins(tokenPrice, lpCoin);
             setCoinBalance(balance);
             setCoins(newCoins);
             setMainCoins(mainCoins);
         })
-    }, [lpCoin])
+    }, [lpCoin, tokenPrice])
     
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);
@@ -159,7 +172,12 @@ const LongPosition = () => {
                     if(type == item.metadata[0].symbol) {
                         setInPoolId(item);                
                         setAvailableLiqudity(Number(item.data.balanceA.value));
-                        let price = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                        let price = 0;
+                        tokenPrice.map(itemValue => {
+                            if(itemValue.symbol == item.metadata[0].symbol) {
+                                price = itemValue.value;
+                            }
+                        })
                         setFirstTokenPrice(price);
                     }
                 })
@@ -170,8 +188,14 @@ const LongPosition = () => {
                 lpCoin.map(item => {
                     if(type == item.metadata[0].symbol) {
                         setOutPoolId(item);       
-                        let price = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
+                        let price = 0;
+                        tokenPrice.map(itemValue => {
+                            if(itemValue.symbol == item.metadata[0].symbol) {
+                                price = itemValue.value;
+                            }
+                        })
                         setSecondTokenPrice(price);
+                        globalContext.setMarketTokenPrice(price);
                     }
                 });
             }
@@ -194,8 +218,6 @@ const LongPosition = () => {
         if(_firstTokenType != _secondTokenType) { 
             lpCoin.map((item) => {
                 if(_firstTokenType == item.metadata[0].symbol) {
-                    console.log(firstTokenPrice);
-                    console.log(secondTokenPrice);
                     _secondTokenValue = firstTokenPrice * Invalue / secondTokenPrice;
                 }
             }) 
@@ -212,22 +234,20 @@ const LongPosition = () => {
     const createOrder = () => {
         console.log(outPoolId);
         let createdTimeStamp = (Date.now() / 1000).toFixed(0);
-        let marketPrice = (limitPrice * 10000).toFixed(0);
+        let marketPrice = Number(limitPrice).toFixed(0);
         let referID= undefined;
         let hasRefer = undefined;
-        let tradingType = 1; // trading type = 1 : short position
+        let tradingType = 1; // trading type = 0 : long position
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             let referralCode = item.referralCode;
-            getReferralIDByCode(globalContext.provider, localStorage.getItem('walletAddress'), referralCode).then(item => {
-                
+            getReferralIDByCode(globalContext.provider, localStorage.getItem('walletAddress'), referralCode).then(item => {                
                 if(item == undefined) {
                     hasRefer = 0;                 
                     referID = CONFIG.nullAddress;
                 } else {
                     hasRefer = 1;                 
                     referID = item;
-                }   
-                
+                }                   
                 createPosition(globalContext.provider, globalContext.wallet, {
                     inPoolID: inPoolId.id,
                     outPoolID: outPoolId.id,
@@ -252,7 +272,7 @@ const LongPosition = () => {
 
     const getTradeData = (lpCoinVal) => {
         getTradeDatas(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const traderData = getTraderMetaData(lpCoinVal, item);
+            const traderData = getTraderMetaData(lpCoinVal, item, tokenPrice);
             globalContext.setTraderData(traderData);
         })
     }
@@ -262,7 +282,11 @@ const LongPosition = () => {
         const _secondTokenType = secondToken[0].label;
         lpCoin.map((item) => {
             if(_secondTokenType == item.metadata[0].symbol) {
-                price = Number(item.data.balanceB.value) / Number(item.data.balanceA.value);
+                tokenPrice.map(itemValue => {
+                    if(itemValue.symbol == item.metadata[0].symbol) {
+                        price = Number(itemValue.value);
+                    }
+                })
             } 
         })
         setLimitPrice(price.toFixed(4));        
@@ -417,7 +441,7 @@ const LongPosition = () => {
                                         <p className='text-green text-right'>+0.17</p>
                                     </div>
                                 </div>
-                            })}                                  
+                            })}
                         </div>
                     </div>
                 </div>

@@ -26,7 +26,7 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 import { calcSwapOut, swap } from '../../lib/tradeify-sdk/pool';
-import { getCoins, getSwapPrice, changeDecimal8Fix, getUniqueCoinTypes, getCoinBalances, changeDecimal, fetchLPCoins, changeBigNumber, changeDecimal5Fix } from '../../control/main';
+import { getCoins, getSwapPrice, getTokenPrice, getMainCoins, changeDecimal8Fix, getUniqueCoinTypes, getCoinBalances, changeDecimal, fetchLPCoins, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 
 const customStyles = {
     content: {
@@ -51,7 +51,7 @@ const Swap = (props) => {
 
     const globalContext = useContext(StoreContext);     
     const { wallets, wallet, select, connected, disconnect } = useWallet();
-
+    const [tokenPrice, setTokenPrice] = useState([]);   
     const [isOpenModal, setIsOpenModal] = useState(false);
     const [isSelectActive, setIsSelectActive] = useState(1);
     
@@ -74,6 +74,28 @@ const Swap = (props) => {
     const [secondToken, setSecondToken] = useState([{label: "Select"}]);
     const [secondTokenValue, setSecondTokenValue] = useState(undefined);
     const [secondTokenPrice, setSecondTokenPrice] = useState(0);
+    
+    const [mainCoins, setMainCoins] = useState([]);
+    
+    const getPrice = () => {       
+        getTokenPrice().then(item => {
+            setTokenPrice(item);
+        })  
+    }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getPrice();
+        }, CONFIG.timeIntervalOfPrice);
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            const mainCoins = getMainCoins(tokenPrice, lpCoin);
+            setMainCoins(mainCoins);
+        })
+    }, [lpCoin, tokenPrice])
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -101,11 +123,15 @@ const Swap = (props) => {
             if(isSelectActive == 1) {
                 lpCoin.map(item => {
                     if(item.metadata[0].typeArg == token[0].value) {
-                        setInPoolId(item);
-                        let price1 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
-                        setFirstTokenPrice(price1);
-                        setAvailableLiquidity(changeDecimal5Fix(Number(item.data.balanceA.value)));
+                        setInPoolId(item);                        
+                        tokenPrice.map(itemValue => {
+                            if(itemValue.symbol == item.metadata[0].symbol) {
+                                setFirstTokenPrice(itemValue.value);
+                                setAvailableLiquidity(changeDecimal(item.data.balanceA.value))
+                            }
+                        })
                     }
+                    
                 })
                 await setFirstToken(token);
                 setFirstTokenMaxValue(value);
@@ -113,8 +139,11 @@ const Swap = (props) => {
                 lpCoin.map(item => {
                     if(item.metadata[0].typeArg == token[0].value) {
                         setOutPoolId(item);
-                        let price2 = (Number(item.data.balanceB.value) / Number(item.data.balanceA.value)).toFixed(3);
-                        setSecondTokenPrice(price2);
+                        tokenPrice.map(itemValue => {
+                            if(itemValue.symbol == item.metadata[0].symbol) {
+                                setSecondTokenPrice(itemValue.value);
+                            }
+                        })  
                     }
                 })                
                 globalContext.setMarketToken(token[0].label);
@@ -136,7 +165,7 @@ const Swap = (props) => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             SetLPCoin(lpCoins);
         })
-    })
+    }, [tokenPrice])
 
     const runSwap = async () => {
         try {
@@ -144,9 +173,10 @@ const Swap = (props) => {
                 inputType1: firstToken[0].value,
                 inputType2: secondToken[0].value,
                 amount: BigInt(changeBigNumber(firstTokenValue)),
-                maxSlippagePct: CONFIG.defaultSlippagePct,
                 inPoolId: inPoolId,
                 outPoolId: outPoolId,
+                tokenPrice1: firstTokenPrice,
+                tokenPrice2: secondTokenPrice,
             }).then((item) => {
                 setFirstTokenValue(0);
                 setSecondTokenValue(0);
@@ -158,10 +188,9 @@ const Swap = (props) => {
     }
 
     const handleFirstTokenChange = (value) => {
-        console.log(value);
         setFirstTokenValue(value);
         let _secondTokenValue = 0;
-        _secondTokenValue = getSwapPrice(inPoolId, outPoolId, value);
+        _secondTokenValue = (value * firstTokenPrice / secondTokenPrice).toFixed(3)
         console.log(_secondTokenValue);
         setSecondTokenValue(_secondTokenValue);
     }
@@ -240,45 +269,21 @@ const Swap = (props) => {
                     </div>
                     <div>
                         <div className='pt-4'>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon1} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>SUI</h5>
-                                        <p className='text-gray'>Sui</p>
+                            {mainCoins.map(item => {
+                                return <div className='d-flex token-item justify-content-between' onClick={() => selectToken(item.symbol)}>
+                                    <div className='d-flex'>
+                                        <img src={item.tokenIcon} width={45} />
+                                        <div className='ml-4'>
+                                            <h5 className='text-white text-left'>{item.symbol}</h5>
+                                            <p className='text-gray'>{item.tokenName}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5 className='text-white text-right'>$ {item.price}</h5>
+                                        <p className='text-green text-right'>+0.17</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1.0034</h5>
-                                    <p className='text-green text-right'>+0.02</p>
-                                </div>
-                            </div>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon3} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>ETH</h5>
-                                        <p className='text-gray'>Ethereum</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1234.32</h5>
-                                    <p className='text-red text-right'>-0.87</p>
-                                </div>
-                            </div>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon2} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>BTC</h5>
-                                        <p className='text-gray'>Bitcoin</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$14034.43</h5>
-                                    <p className='text-red text-right'>-0.34</p>
-                                </div>
-                            </div>
+                            })}
                         </div>
                     </div>
                 </div>

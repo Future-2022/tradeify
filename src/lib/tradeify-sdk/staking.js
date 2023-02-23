@@ -56,6 +56,7 @@ export const getStakingReward = async (provider, wallet, args) => {
         ownerAddress: localStorage.getItem('walletAddress'),
         currentTime: args.currentTimestamp,
     })
+    console.log(tx);
     return await wallet.signAndExecuteTransaction(tx)
 }
 export const UnStakeTLP = async (provider, wallet, args) => {

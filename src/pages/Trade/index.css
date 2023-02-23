@@ -36,6 +36,24 @@
     padding: 12px;
     background-color: #342D55;
     color: white;
+    position: relative;
+    overflow: hidden;
+}
+.trade-form > .left-bottom-bg {
+    position: absolute;
+    width: 400px;
+    height: 200px;
+    border-radius: 50%;
+    background: linear-gradient(90deg,#7a05ff,#ff5795);
+    filter: blur(75px);
+    -webkit-filter: blur(75px);
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    bottom: -60px;
+    left: -10px;
+    opacity: .5;
 }
 .trade-form-input {
     background-color: #241F3E;

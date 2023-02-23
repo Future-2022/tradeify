@@ -11,6 +11,7 @@ import { PoolCreateEvent } from '../hooks/struct';
 import { calcSwapOut, Pool } from '../lib/tradeify-sdk/pool';
 import { importImage } from './importModule';
 import { LP } from '../hooks/struct';
+import axios from 'axios';
 
 export class Coin {
     typeArg
@@ -24,21 +25,28 @@ export class Coin {
     }
 }
 
-export const getMainCoins = (lpPool) => {
+export const getMainCoins = (tokenPrice, lpPool) => {
   const mainCoinList = ['SUI', 'ETH', 'BTC'];
   let mainCoin = [];
   mainCoinList.map(item => {
+
     let price = 0;
     let tokenName = getTokenName(item);
     let tokenIcon = importImage(item);
+
     lpPool.map(itemValue => {
       if(itemValue.metadata[0].symbol == item) {
-        price = Number(itemValue.data.balanceB.value) / Number(itemValue.data.balanceA.value);
+        tokenPrice.map(item => {
+          if(item.symbol == itemValue.metadata[0].symbol) {
+            price = item.value;
+          }
+        })
+        // price = Number(itemValue.data.balanceB.value) / Number(itemValue.data.balanceA.value);
       }
     })
     let value = {
       symbol: item,
-      price: price.toFixed(3),
+      price: Number(price).toFixed(3),
       tokenName: tokenName,
       tokenIcon: tokenIcon,
     }
@@ -67,7 +75,7 @@ export const ExportAddress = (address) => {
     const value = address.slice(0, 5) + '...' + address.slice(address.length - 5, address.length);
     return value
 }
-export const getTraderMetaData = (lpCoin, value) => {
+export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
 
   let returnValue = [];
   let colletral = undefined;
@@ -78,10 +86,7 @@ export const getTraderMetaData = (lpCoin, value) => {
   let netValue = undefined;
   let inPool = undefined;
   let outPool = undefined; 
-
-
-  value.map(valueItem => {
-    
+  value.map(valueItem => {    
     lpCoin.map(item => {
       if(item.id == valueItem.inPoolID) {
         inPool = item;
@@ -100,18 +105,24 @@ export const getTraderMetaData = (lpCoin, value) => {
     
     let MarketIcon = importImage(outPool.metadata[0].symbol);
     let colletralIcon = importImage(inPool.metadata[0].symbol);
-    let entryPrice = (valueItem.marketPrice / 10000).toFixed(4);
-    let markPrice = Number(outPool.data.balanceB.value) / Number(outPool.data.balanceA.value);
-    let netValue = changeDecimal5Fix(valueItem.calcAmount) * markPrice / entryPrice;
+    let entryPrice = Number(valueItem.marketPrice).toFixed(4);
+
+    let markPrice = 0;
+    tokenPrice.map(itemValue => {
+      if(itemValue.symbol == outPool.metadata[0].symbol) {
+        markPrice = Number(itemValue.value);
+      }
+    })
+    let netValue = changeDecimal5Fix(valueItem.calcAmount) * Number(markPrice) / Number(entryPrice);
     let calcAmount = changeDecimal5Fix(valueItem.calcAmount);
 
     if(valueItem.tradingType == 0) {
       if(calcAmount > netValue) {
         earnType = "-";            
-        earnAmount = (calcAmount - netValue).toFixed(7);
+        earnAmount = ((calcAmount - netValue) * markPrice).toFixed(5);
       } else if( calcAmount < netValue) {
         earnType = "+";
-        earnAmount = (netValue - calcAmount).toFixed(7);
+        earnAmount = ((netValue - calcAmount) * markPrice).toFixed(5);
       } else {
         earnType = "+";
         earnAmount = 0;
@@ -119,10 +130,10 @@ export const getTraderMetaData = (lpCoin, value) => {
     } else {
       if(calcAmount > netValue) {
         earnType = "+";            
-        earnAmount = (calcAmount - netValue).toFixed(7);
+        earnAmount = ((calcAmount - netValue) * markPrice).toFixed(5);
       } else {
         earnType = "-";
-        earnAmount = (netValue - calcAmount).toFixed(7);
+        earnAmount = ((netValue - calcAmount) * markPrice).toFixed(5);
       }
     }
 
@@ -149,70 +160,6 @@ export const getTraderMetaData = (lpCoin, value) => {
         createdTimeStamp: valueItem.createdTimeStamp,
     }    
     returnValue.push(value);
-
-    // lpCoin.map(item => {
-    //   console.log(valueItem.inPoolID);
-    //   if(item.id == valueItem.inPoolID) {
-    //     if(valueItem.tradingType == 0) {
-    //       type = "LONG";
-    //     } else {
-    //       type = "SHORT";
-    //     }
-        
-
-    //     if(valueItem.isDiff == 1) {
-    //       entryPrice = (1 / (valueItem.marketPrice / 1000)).toFixed(4);
-    //     } else {
-    //       entryPrice = (valueItem.marketPrice / 1000).toFixed(4);
-    //     }
-        // let MarketIcon = importImage(iconType);
-    //     let colletralIcon = importImage(colletral);
-    //     if(valueItem.tradingType == 0) {
-    //       if(entryPrice > markPrice) {
-    //         earnType = "-";            
-    //         earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
-    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
-    //       } else {
-    //         earnType = "+";
-    //         earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
-    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
-    //       }
-    //     } else {
-    //       if(entryPrice > markPrice) {
-    //         earnType = "+";            
-    //         earnAmount = changeDecimal5Fix((entryPrice - markPrice) * valueItem.calcAmount);
-    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) + Number(earnAmount);
-    //       } else {
-    //         earnType = "-";
-    //         earnAmount = changeDecimal5Fix((markPrice - entryPrice) * valueItem.calcAmount);
-    //         netValue = Number(changeDecimal5Fix(valueItem.calcAmount)) - Number(earnAmount);
-    //       }
-    //     }
-    //     let value = {
-    //       MarketIcon: MarketIcon,
-    //       coinType: iconType,
-    //       tokenA: item.metadata[0].typeArg,
-    //       tokenB: item.metadata[1].typeArg,
-    //       calcAmount: changeDecimal5Fix(valueItem.calcAmount),
-    //       entryPrice: entryPrice,
-    //       tradingStatus: valueItem.tradingStatus,
-    //       colletral: colletral,
-    //       colletralIcon: colletralIcon,
-    //       tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
-    //       leverageValue: valueItem.leverageValue,
-    //       type: type,
-    //       isDiff: valueItem.isDiff,
-    //       isACS: valueItem.isACS,
-    //       markPrice: markPrice.toFixed(4),
-    //       earnType: earnType,
-    //       earnAmount: earnAmount,
-    //       netValue: Number(netValue).toFixed(4),
-    //       createdTimeStamp: valueItem.createdTimeStamp,
-    //       poolID: valueItem.poolID
-    //     }
-    //     returnValue.push(value);
-    //   }
-    // })
   }) 
   return returnValue;
 }
@@ -229,42 +176,45 @@ export const getTokenName = (LPSymbol) => {
   } 
   return tokenName;
 }
-export const LPMetaData = (totalLPValue, metaValue) => {
+export const LPMetaData = (tokenPrice, totalLPValue, metaValue) => {
     let MetaValue = {
         "meta": []
     }; 
     metaValue.map(item => {
-      const PoolId = item.id;
-
+      const PoolId = item.id;      
       const LPSymbol = item.metadata[0].symbol;
+      let LPPrice = 0;
+      tokenPrice.map(itemValue => {
+        if(LPSymbol == itemValue.symbol) {
+          LPPrice = itemValue.value;
+        }
+      })
       const tokenName = getTokenName(LPSymbol);
       let LPFirstIcon = importImage(item.metadata[0].symbol);
       const lpValue = Number(item.data.lpSupply.value);
       const balanceA = Number(item.data.balanceA.value);
-      const balanceB = Number(item.data.balanceB.value);
       const LPTokenValue = Number(item.data.lpSupply.value);
       const LPPercentage = Number(LPTokenValue/totalLPValue * 100);
-
-      const LPPrice = (balanceB / balanceA).toFixed(3);
       const LPFee = (Number(item.data.lpFeeBps) / 10).toFixed(2);
-      const currentWeight = balanceA / (balanceA + balanceB) * 100;
-      const totalPooledValue = balanceA * LPPrice;
+      const LPWeight = (LPTokenValue / totalLPValue * 100).toFixed(2);
+      const totalPooledValue = Number(LPPrice * changeDecimal(balanceA)).toFixed(2);
+
       const newItem = {
         PoolId: PoolId,
         TokenName: tokenName,
         LPFirstTokenSymbol: item.metadata[0].symbol,
-        LPSecondTokenSymbol: item.metadata[1].symbol,
         LPFirstTokenValue: balanceA / (10 ** Number(item.metadata[0].decimals)).toFixed(4),
-        LPSecondTokenValue: balanceB / (10 ** Number(item.metadata[1].decimals)).toFixed(4),
         LPSymbol: LPSymbol,
+        LPPrice: LPPrice,
         LPTokenValue: LPTokenValue,
         LPPercentage: LPPercentage,
         LPFirstIcon: LPFirstIcon,
-        LPPrice: LPPrice,
-        currentWeight: currentWeight.toFixed(2),
-        totalPooledValue: changeDecimal(totalPooledValue),
-        LPFee: LPFee
+        totalPooledValue: totalPooledValue,
+        LPFee: LPFee,
+        LPWeight: LPWeight,
+        LPTargetWeight: 32.16,
       }
+
       MetaValue = { "meta" : MetaValue['meta'] ? [...MetaValue['meta'], newItem] : [newItem] }
     })
     return MetaValue;
@@ -391,6 +341,20 @@ export async function fetchUserLpCoins(provider, addr) {
     suiCoinToCoin
   )
 }
+export const getTokenPrice = async () => {
+    let suiPrice = 100;
+    let ethPrice = 0;
+    let ethAPIUrl = 'https://api.binance.com/api/v3/avgPrice?symbol=ETHUSDT'
+    let btcPrice = 0;
+    let btcAPIUrl = 'https://api.binance.com/api/v3/avgPrice?symbol=BTCUSDT';
+    await axios.get(ethAPIUrl).then((response) => {
+      ethPrice = Number(response.data.price).toFixed(2);
+    });
+    await axios.get(btcAPIUrl).then((response) => {
+      btcPrice = Number(response.data.price).toFixed(2);
+    });
+    return [{symbol:"SUI", value:suiPrice}, {symbol:"ETH", value: ethPrice}, {symbol:"BTC", value: btcPrice}]
+}
 export async function fetchLPCoins(provider, wallet) {
     const poolIDs = [];
     const events = await provider.getEvents(
@@ -488,6 +452,7 @@ export const getStakingPoolStatus = async (provider) => {
         null,
         'descending'
     )
+    console.log(events);
     events.data.forEach(envelope => {
       const event = envelope.event
       if (!('moveEvent' in event)) {

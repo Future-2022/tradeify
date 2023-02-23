@@ -71,6 +71,7 @@ const TradeForm = () => {
     return (
         <div>
             <div className='trade-form'>
+                <div className='left-bottom-bg'></div>
                 <div className='trade-form-input d-flex justify-content-center'>
                     <div className={`${formIndex == 1 ? 'active' : ''}`}><p onClick={() => setFormIndex(1)}>Long</p></div>
                     <div className={`${formIndex == 2 ? 'active' : ''}`}><p onClick={() => setFormIndex(2)}>Short</p></div>

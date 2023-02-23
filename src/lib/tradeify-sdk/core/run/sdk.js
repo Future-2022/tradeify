@@ -11,7 +11,7 @@ export const mint_test_token_eth = (args) => {
         tokenId = CONFIG.btc_id;
         objectId = CONFIG.btc;
     }
-    const funName = "mint_test_token_" + args.tokenType;
+    const funName = "mint_test_token";
     return {
       kind: 'moveCall',
       data: {
@@ -20,9 +20,7 @@ export const mint_test_token_eth = (args) => {
             function: funName,
             arguments: [
                 tokenId,
-                args.testTokenSupplyId,
                 args.amount.toString(),
-                args.receiveAddress.toString(),
             ],
             gasBudget: 40000,
             typeArguments: [objectId]
@@ -36,12 +34,13 @@ export function maybeSplitThenDeposit( typeArgs, args ) {
         data: {
             packageObjectId: PACKAGE_ID,
             module: 'pool',
-            function: 'new_swap_deposit_',
-            typeArguments: [typeArgs[0], typeArgs[1]],
+            function: 'buy_tlp_',
+            typeArguments: [typeArgs[0]],
             arguments: [
                 args.pool,
                 args.inputA,
                 args.amountA.toString(),
+                args.price.toString()
             ],
             gasBudget: 40000,
         },
@@ -53,12 +52,13 @@ export function maybeSplitThenWithdraw( typeArgs, args ) {
         data: {
         packageObjectId: PACKAGE_ID,
         module: 'pool',
-        function: 'new_withdraw_swap_',
-        typeArguments: [typeArgs.first, typeArgs.second],
+        function: 'sell_tlp_',
+        typeArguments: [typeArgs.first],
         arguments: [
             args.pool,
             args.lpIn,
             args.amount.toString(),
+            args.price,
         ],
         gasBudget: 10000,
         },
@@ -88,14 +88,15 @@ export function newSwap(typeArgs, args) {
         data: {
             packageObjectId: PACKAGE_ID,
             module: 'pool',
-            function: 'new_swap',
-            typeArguments: [typeArgs.first, typeArgs.second, typeArgs.third],
+            function: 'swap_',
+            typeArguments: [typeArgs.first, typeArgs.second],
             arguments: [
                 args.inPool, 
                 args.outPool, 
+                args.tokenPrice1.toString(),
+                args.tokenPrice2.toString(),
                 args.input, 
-                args.amount.toString(), 
-                args.minOut.toString()
+                args.amount.toString()
             ],
             gasBudget: 10000,
         },
@@ -273,7 +274,7 @@ export function createPositionSdk(typeArgs, args) {
             packageObjectId: CONFIG.tradeifyPackageId,
             module: 'pool',
             function: 'create_position_',
-            typeArguments: [typeArgs[0], typeArgs[1], typeArgs[2]],
+            typeArguments: [typeArgs[0], typeArgs[1]],
             arguments: [
                 args.inPoolID,
                 args.outPoolID,
@@ -300,7 +301,7 @@ export function createPosition2Sdk(typeArgs, args) {
             packageObjectId: CONFIG.tradeifyPackageId,
             module: 'pool',
             function: 'create_position2_',
-            typeArguments: [typeArgs[0], typeArgs[1]],
+            typeArguments: [typeArgs[0]],
             arguments: [
                 args.inPoolID,
                 CONFIG.tradingPoolID,
@@ -325,14 +326,14 @@ export function closeOrderBSdk(typeArgs, args) {
             packageObjectId: CONFIG.referralPackageId,
             module: 'pool',
             function: 'close_position_',
-            typeArguments: [typeArgs[0], typeArgs[1], typeArgs[2]],
+            typeArguments: [typeArgs[0], typeArgs[1]],
             arguments: [
                 args.inPoolID,
                 args.outPoolID,
                 CONFIG.tradingPoolID,
                 args.createdTimeStamp,
-                args.updateAmount.toString(),
-                args.earnType.toString()
+                args.tokenPriceA,
+                args.tokenPriceB,
             ],
             gasBudget: 10000,
         },
@@ -346,13 +347,12 @@ export function closeOrder2Sdk(typeArgs, args) {
             packageObjectId: CONFIG.referralPackageId,
             module: 'pool',
             function: 'close_position2_',
-            typeArguments: [typeArgs[0], typeArgs[1]],
+            typeArguments: [typeArgs[0]],
             arguments: [
                 args.inPoolID,
                 CONFIG.tradingPoolID,
-                args.createdTimeStamp,
-                args.updateAmount.toString(),
-                args.earnType.toString()
+                args.createdTimeStamp,                
+                args.tokenPriceA,
             ],
             gasBudget: 10000,
         },
