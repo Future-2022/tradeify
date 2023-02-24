@@ -3,6 +3,7 @@ import './index.css';
 import './style.css';
 
 import {useNavigate} from 'react-router-dom';
+import { useMediaQuery } from 'react-responsive';
 import DonutChart from 'react-donut-chart';
 
 import TokenIcon1 from '../../img/png/SUI.png';
@@ -11,7 +12,7 @@ import TokenIcon3 from '../../img/svg/BTC.svg';
 
 import { fetchLPCoins, LPMetaData, getStakingPoolStatus, getTokenPrice } from '../../control/main';
 import { StoreContext } from '../../store';
-import { useMediaQuery } from 'react-responsive';
+import { CONFIG } from '../../lib/config';
 
 const Liquidity = (props) => {
 
@@ -35,10 +36,17 @@ const Liquidity = (props) => {
     const goLink = (text) => {
         navigate("/" + text);
     }
-    useEffect(() => {        
+    
+    const getPrice = () => {       
         getTokenPrice().then(item => {
-            setTokenPrice(item);
-        })       
+            setTokenPrice(item);           
+        })  
+    }
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getPrice();
+        }, CONFIG.timeIntervalOfPrice);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -50,7 +58,7 @@ const Liquidity = (props) => {
                     tlpPoolValue += Number(item.totalPooledValue);
                 })
                 
-                setTLPPoolValue(tlpPoolValue.toFixed(2));
+                setTLPPoolValue(tlpPoolValue.toFixed(0));
                 setStakingPoolStatus(res);
                 const stakingAPR = ((res.details.data.fields.balance_tlp / totalLPValue) * 100).toFixed(2);
                 const totalOwned = 100 - stakingAPR;
@@ -121,7 +129,7 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>TLP pool Value</p>
-                                    <div className='py-2 text-grey-sharp'>$ {tlpPoolValue}</div>
+                                    <div className='py-2 text-grey-sharp'>${tlpPoolValue}</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Protocol Owned</p>

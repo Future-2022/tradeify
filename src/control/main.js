@@ -31,6 +31,8 @@ export const getMainCoins = (tokenPrice, lpPool) => {
   mainCoinList.map(item => {
 
     let price = 0;
+    let changeValue = 0;
+    let isEarn = 0;
     let tokenName = getTokenName(item);
     let tokenIcon = importImage(item);
 
@@ -39,6 +41,8 @@ export const getMainCoins = (tokenPrice, lpPool) => {
         tokenPrice.map(item => {
           if(item.symbol == itemValue.metadata[0].symbol) {
             price = item.value;
+            changeValue = item.changeValue;
+            isEarn = item.isEarn;
           }
         })
         // price = Number(itemValue.data.balanceB.value) / Number(itemValue.data.balanceA.value);
@@ -48,7 +52,9 @@ export const getMainCoins = (tokenPrice, lpPool) => {
       symbol: item,
       price: Number(price).toFixed(3),
       tokenName: tokenName,
-      tokenIcon: tokenIcon,
+      tokenIcon: tokenIcon,      
+      changeValue: changeValue,
+      isEarn: isEarn,
     }
     mainCoin.push(value);
   })
@@ -344,16 +350,52 @@ export async function fetchUserLpCoins(provider, addr) {
 export const getTokenPrice = async () => {
     let suiPrice = 100;
     let ethPrice = 0;
-    let ethAPIUrl = 'https://api.binance.com/api/v3/avgPrice?symbol=ETHUSDT'
+    let ethLowPrice = 0;
+    let ethHighPrice = 0;
+    let ethAvgPrice = 0;
+    let ethChangePrice = 0;
+    let ethIsEarn = 0;
+    let ethAPIUrl = 'https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'
+    
     let btcPrice = 0;
-    let btcAPIUrl = 'https://api.binance.com/api/v3/avgPrice?symbol=BTCUSDT';
+    let btcLowPrice = 0;
+    let btcHighPrice = 0;
+    let btcAvgPrice = 0;
+    let btcChangePrice = 0;
+    let btcIsEarn = 0;
+    let btcAPIUrl = 'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT';
+
     await axios.get(ethAPIUrl).then((response) => {
-      ethPrice = Number(response.data.price).toFixed(2);
+      ethPrice = Number(response.data.openPrice).toFixed(2);
+      ethLowPrice = Number(response.data.lowPrice).toFixed(2);
+      ethHighPrice = Number(response.data.highPrice).toFixed(2);
+      ethAvgPrice = Number(response.data.weightedAvgPrice).toFixed(2);
+      if(ethAvgPrice <= ethPrice) {
+        ethIsEarn = 1;
+        ethChangePrice = ((ethPrice - ethAvgPrice) / ethAvgPrice * 100).toFixed(2);
+      } else {
+        ethIsEarn = 0;
+        ethChangePrice = ((ethAvgPrice - ethPrice) / ethAvgPrice * 100).toFixed(2);
+      }
     });
+
     await axios.get(btcAPIUrl).then((response) => {
-      btcPrice = Number(response.data.price).toFixed(2);
+      btcPrice = Number(response.data.openPrice).toFixed(2);
+      btcLowPrice = Number(response.data.lowPrice).toFixed(2);
+      btcHighPrice = Number(response.data.highPrice).toFixed(2);
+      btcAvgPrice = Number(response.data.weightedAvgPrice).toFixed(2);
+      if(btcAvgPrice <= btcPrice) {
+        btcIsEarn = 1;
+        btcChangePrice = ((btcPrice - btcAvgPrice) / btcAvgPrice * 100).toFixed(2);
+      } else {
+        btcIsEarn = 0;
+        btcChangePrice = ((btcAvgPrice - btcPrice) / btcAvgPrice * 100).toFixed(2);
+      }
     });
-    return [{symbol:"SUI", value:suiPrice}, {symbol:"ETH", value: ethPrice}, {symbol:"BTC", value: btcPrice}]
+    return [
+      {symbol:"SUI", value:suiPrice, highValue: suiPrice, lowValue: suiPrice, isEarn: 1, changeValue: 0}, 
+      {symbol:"ETH", value: ethPrice, highValue: ethHighPrice, lowValue: ethLowPrice, isEarn: ethIsEarn, changeValue: ethChangePrice},
+      {symbol:"BTC", value: btcPrice, highValue: btcHighPrice, lowValue: btcLowPrice, isEarn: btcIsEarn, changeValue: btcChangePrice}]
 }
 export async function fetchLPCoins(provider, wallet) {
     const poolIDs = [];
@@ -563,7 +605,7 @@ export const getTraderStatus = async (provider, wallet) => {
   })
   return {referralCode};
 }
-export const getReferralResult = async (provider, wallet) => {
+export const getReferralResult = async (provider, wallet, lpCoin, tokenPrice) => {
   const referralStatusAddress = [];
   referralStatusAddress.push(CONFIG.tradingPoolID);
   const batch = await provider.getObjectBatch(referralStatusAddress);
@@ -572,14 +614,29 @@ export const getReferralResult = async (provider, wallet) => {
   let rebate = 0;
   tradingData.map(item => {
     const result = item.fields.key.fields;
+    
     if(result.referID == wallet) {
-      tradingAmount += Number(result.tradingAmount);
-      rebate += Number(result.tradingAmount * CONFIG.tradingFee / 100)
+      let token = undefined;
+      let tokenPriceValue = 0;
+      lpCoin.map(itemValue => {
+        if(result.inPoolID == itemValue.id) {
+          token = itemValue.metadata[0].symbol;
+        }
+      })
+      tokenPrice.map(itemValue => {
+        if(itemValue.symbol == token) {
+          tokenPriceValue = itemValue.value; 
+        }
+      })
+      console.log(tokenPriceValue);
+      tradingAmount += Number(result.tradingAmount * tokenPriceValue);
+      rebate += Number(result.tradingAmount * CONFIG.tradingFee * tokenPriceValue / 100)
     }
   }) 
   return {tradingAmount: changeDecimal5Fix(tradingAmount), rebate: changeDecimal5Fix(rebate)};
 }
-export const getTradingResult = async (provider, wallet) => {
+
+export const getTradingResult = async (provider, wallet, lpCoin, tokenPrice) => {
   const referralStatusAddress = [];
   referralStatusAddress.push(CONFIG.tradingPoolID);
   const batch = await provider.getObjectBatch(referralStatusAddress);
@@ -590,8 +647,20 @@ export const getTradingResult = async (provider, wallet) => {
     const result = item.fields.key.fields;
     if(result.hasRefer == "1") {
       if(result.trader == wallet) {
-        tradingAmount += Number(result.tradingAmount);
-        rebate += Number(result.tradingAmount * CONFIG.tradingFee / 100)
+        let token = undefined;
+        let tokenPriceValue = 0;
+        lpCoin.map(itemValue => {
+          if(result.inPoolID == itemValue.id) {
+            token = itemValue.metadata[0].symbol;
+          }
+        })
+        tokenPrice.map(itemValue => {
+          if(itemValue.symbol == token) {
+            tokenPriceValue = itemValue.value; 
+          }
+        })
+        tradingAmount += Number(result.tradingAmount * tokenPriceValue);
+        rebate += Number(result.tradingAmount * CONFIG.tradingFee * tokenPriceValue / 100)
       }
     }
   }) 

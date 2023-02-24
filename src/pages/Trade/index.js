@@ -12,16 +12,24 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 import { StoreContext } from '../../store';
+import { getTokenPrice } from '../../control/main';
+import { CONFIG } from '../../lib/config';
 
 const Trade = (props) => {
     const globalContext = useContext(StoreContext);     
     const [market, setMarket] = useState('SUI');
-    
+    const [tokenPrice, setTokenPrice] = useState([]);  
+
     const selectMarket = (market) => {
         setMarket(market);
         console.log(market);
         globalContext.setIsAlterSecondToken(market);
     }
+
+    useEffect(() => {
+        console.log(globalContext.marketTokenPrice);
+    }, [globalContext.marketTokenPrice])
+
     return (
         <div className='container pt-5 text-center'>
             <div className='d-flex justify-content-between flex-wrap pb-2'>
@@ -31,24 +39,26 @@ const Trade = (props) => {
                             <h4 className='text-white m-auto cursor-pointer token-title'>{globalContext.marketToken}/USD</h4>
                             {/* <FaAngleDown className='m-auto fs-28 text-white' /> */}
                         </div>
-                        <div className='d-flex trade-result flex-wrap justify-content-between'>
-                            <div>
-                                <p className='text-gray'>{globalContext.marketTokenPrice}</p>
-                                <h6 className='text-white'>${globalContext.marketTokenPrice}</h6>
+                        {globalContext.marketTokenPrice != undefined && (
+                            <div className='trade-result d-flex flex-wrap justify-content-between'>
+                                <div>
+                                    <p className='text-gray'>{globalContext.marketTokenPrice.value}</p>
+                                    <h6 className='text-white'>${globalContext.marketTokenPrice.value}</h6>
+                                </div>
+                                <div>
+                                    <p className='text-gray'>24h Change</p>
+                                    <h6 className={globalContext.marketTokenPrice.isEarn == 1 ? 'text-green': 'text-red-value'}>{globalContext.marketTokenPrice.isEarn == 1 ? '+': '-'} {globalContext.marketTokenPrice.changeValue}%</h6>
+                                </div>
+                                <div>
+                                    <p className='text-gray'>24h High</p>
+                                    <h6 className='text-white'>${globalContext.marketTokenPrice.highValue}</h6>
+                                </div>
+                                <div>
+                                    <p className='text-gray'>24h Low</p>
+                                    <h6 className='text-white'>${globalContext.marketTokenPrice.lowValue}</h6>
+                                </div>
                             </div>
-                            <div>
-                                <p className='text-gray'>24h Change</p>
-                                <h6 className='text-green'>+4.19%</h6>
-                            </div>
-                            <div>
-                                <p className='text-gray'>24h High</p>
-                                <h6 className='text-white'>${(globalContext.marketTokenPrice * 1.2).toFixed(3)}</h6>
-                            </div>
-                            <div>
-                                <p className='text-gray'>24h Low</p>
-                                <h6 className='text-white'>${(globalContext.marketTokenPrice * 0.8).toFixed(3)}</h6>
-                            </div>
-                        </div>
+                        )}
                     </div>                    
                     <div className="chartview">
                         <TradingViewWidget

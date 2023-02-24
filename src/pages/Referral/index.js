@@ -10,8 +10,11 @@ import { FaClipboard } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import LoadingSpin from "react-loading-spin";
 
+import { fetchLPCoins, getTokenPrice } from '../../control/main';
+import { CONFIG } from '../../lib/config';
+
 const Referral = (props) => {
-    const { wallets, wallet, select, connected, disconnect } = useWallet();
+
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const inputArea = useRef(undefined);
     const [formIndex, setFormIndex] = useState(1);
@@ -30,6 +33,26 @@ const Referral = (props) => {
 
     // trader part parameter
     const [traderReferralCode, setTraderReferralCode] = useState(undefined);
+    const [lpCoin, SetLPCoin] = useState([]);
+    const [tokenPrice, setTokenPrice] = useState([]);   
+
+    useEffect(() => {
+        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+            SetLPCoin(lpCoins);
+        })
+    }, [])
+
+    const getPrice = () => {       
+        getTokenPrice().then(item => {
+            setTokenPrice(item);           
+        })  
+    }
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getPrice();
+        }, CONFIG.timeIntervalOfPrice);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const code = new URLSearchParams(location.search).get('ref')
@@ -42,15 +65,15 @@ const Referral = (props) => {
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setTraderReferralCode(item.referralCode);
         })
-        getReferralResult(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+        getReferralResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin, tokenPrice).then(item => {
             setReferTradingVolume(item.tradingAmount);
             setReferTradingRebate(item.rebate);
         })
-        getTradingResult(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+        getTradingResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin, tokenPrice).then(item => {
             setTraderTradingVolume(item.tradingAmount);
             setTraderTradingRebate(item.rebate);
         })
-    }, [])
+    }, [lpCoin, tokenPrice])
     
     const selectFormIndex = (value) => {
         setFormIndex(value);
@@ -99,7 +122,7 @@ const Referral = (props) => {
         <div className={`d-flex ${isMobile == true ? `py-2 px-3`:`py-5 px-5`}`}>
             <div className='text-center container'>
                 <div className='mt-0'><h3 className='text-white font-bold'>Referrals</h3></div>
-                <div className='referral-form'>                                       
+                <div className='referral-form'>                                     
                     <div>
                         <p className='text-gray'>Get fee discounts and earn rebates through the Tradeify referral program{!isMobile && (<br />)}For more information, please read the 
                             <span className='text-decoration-underline'> referral program details.</span>
@@ -112,23 +135,9 @@ const Referral = (props) => {
 
                     {formIndex == 1 && (
                         <>
-                        {/* {referralCodeValue == undefined && (
-                            <div className='pt-5'>
-                                <LoadingSpin
-                                    duration="1s"
-                                    width="5px"
-                                    timingFunction="ease-in-out"
-                                    direction="alternate"
-                                    size="200px"
-                                    primaryColor="#666"
-                                    secondaryColor="#333"
-                                    numberOfRotationsInAnimation={2}
-                                />
-                                <p className='text-gray'>Loading data...</p>
-                            </div>
-                        )} */}
                         {traderReferralCode == undefined && (
                             <div className='input-referral'>
+                                <div className='left-bottom-bg'></div>  
                                 <h4 className='text-white pt-1'>Enter Referral Code</h4>
                                 <p className='text-gray'>Please input a referral code to benefit from fee discounts.<br /> You can input valid code on this tradefiy platform.</p>
                                 <input className='referral text-white mt-5' type='text' placeholder='Enter referral code' value={referralCodeValue} onChange={(e) => setReferralCodeValue(e.target.value)} />
@@ -138,6 +147,8 @@ const Referral = (props) => {
                         {traderReferralCode != undefined && (
                             <div className='w-100'>
                                 <div className='mt-5 trader-referral-part referral-part flex-wrap d-flex justify-content-center mt-3 p-5'>
+                                    
+                                     
                                     <div>
                                         <p>Total trading volume</p>
                                         <h5>${traderTradingVolume}</h5>
@@ -160,6 +171,7 @@ const Referral = (props) => {
                         <>
                             {referralCode == undefined && (
                                 <div className='input-referral'>
+                                    <div className='left-bottom-bg'></div> 
                                     <h4 className='text-white pt-1'>Generate Referral Code</h4>
                                     <p className='text-gray'>Looks like you don't have a referral code to share.<br/>Create one now and start earning rebates!</p>
                                     <input className='referral text-white mt-5' type='text' placeholder='Enter code'  value={referralCodeValue} onChange={(e) => setReferralCodeValue(e.target.value)} />

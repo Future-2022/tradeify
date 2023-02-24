@@ -4,6 +4,7 @@
 }
 .trader-referral-part {
     border: 1px solid #9a91be10;
+    position: relative;
 }
 .referral-part > div {
     border: 1px solid #9a91be52;
@@ -19,6 +20,22 @@
     border: 1px solid #9a91be52;
     padding: 12px 24px;
     border-radius: 24px;
+}
+.input-referral > .left-bottom-bg {
+    position: absolute;
+    width: 150px;
+    height: 140px;
+    border-radius: 50%;
+    background: linear-gradient(90deg,#ff8c8c3c,#ffa6024d);
+    filter: blur(75px);
+    -webkit-filter: blur(75px);
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    top: -60px;
+    left: 10px;
+    opacity: .5;
 }
 .referral-part > div > p {
     color: #9a91be;
@@ -57,6 +74,8 @@
     border-radius: 5px;
     padding: 41px 46px;
     height: 320px;
+    position: relative;
+    overflow: hidden;
 }
 .referral {
     background-color: rgba(250, 235, 215, 0);

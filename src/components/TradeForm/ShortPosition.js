@@ -107,7 +107,18 @@ const LongPosition = () => {
 
     const getPrice = () => {       
         getTokenPrice().then(item => {
-            setTokenPrice(item);
+            setTokenPrice(item);      
+            console.log('here');  
+            console.log(secondToken[0].label);  
+
+            if(secondToken[0].label != 'Select') {
+                console.log('ok');
+                item.map(itemValue => {
+                    if(itemValue.symbol == secondToken[0].label) {
+                        globalContext.setMarketTokenPrice(itemValue);
+                    }
+                })
+            }    
         })  
     }
 
@@ -116,7 +127,7 @@ const LongPosition = () => {
             getPrice();
         }, CONFIG.timeIntervalOfPrice);
         return () => clearInterval(interval);
-    }, []);
+    }, [secondToken]);
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(lpCoins => {
@@ -189,13 +200,15 @@ const LongPosition = () => {
                     if(type == item.metadata[0].symbol) {
                         setOutPoolId(item);       
                         let price = 0;
+                        let priceItem = undefined;
                         tokenPrice.map(itemValue => {
                             if(itemValue.symbol == item.metadata[0].symbol) {
                                 price = itemValue.value;
+                                priceItem = itemValue;
                             }
                         })
                         setSecondTokenPrice(price);
-                        globalContext.setMarketTokenPrice(price);
+                        globalContext.setMarketTokenPrice(priceItem);
                     }
                 });
             }

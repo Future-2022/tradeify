@@ -11,12 +11,13 @@ import {
     GetObjectDataResponse,
     JsonRpcProvider,
 } from '@mysten/sui.js'
+import Modal from 'react-modal';
 
 import "@fontsource/space-grotesk";
 import './index.css';
 
 import { changeDecimal, fetchLPCoins, getStakingPoolStatus, getTokenPrice,
-     LPMetaData, isLoggedIn, fetchUserLpCoins, getUniqueCoinTypes, 
+     LPMetaData, isLoggedIn, fetchUserLpCoins, getUniqueCoinTypes, getMainCoins,
      getCoinBalances, getCoins, findStakingMeta, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
@@ -31,6 +32,25 @@ import TokenIcon3 from '../../img/png/eth-bg.png';
 import TokenIcon from '../../img/png/token-logo.png';
 import { sqrt } from '../../lib/tradeify-sdk/core/math';
 import BigNumber from 'big-number/big-number';
+
+const customStyles = {
+    content: {
+        top: '50%',
+        left: '50%',
+        right: 'auto',
+        bottom: 'auto',
+        marginRight: '-50%',
+        width: '300px',
+        transform: 'translate(-50%, -50%)',
+        backgroundColor: 'rgb(30 27 49)',
+        padding: '10px 20px',
+        borderRadius: '9px',
+        border: 'none'
+    },
+    overlay: {
+      backgroundColor: 'rgb(0 0 0 / 86%)'
+    }
+};
 
 const Market = (props) => {
     const { wallets, wallet, select, connected, disconnect } = useWallet();
@@ -80,7 +100,16 @@ const Market = (props) => {
     const [coinBalance, setCoinBalance] = useState([]);
 
     const [tokenPrice, setTokenPrice] = useState([]);   
-    const [selectTokenPrice, setSelectTokenPrice] = useState(undefined);   
+    const [selectTokenPrice, setSelectTokenPrice] = useState(undefined);     
+    const [mainCoins, setMainCoins] = useState([]);  
+    
+
+    useEffect(() => {
+        getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            const mainCoins = getMainCoins(tokenPrice, lpCoin);
+            setMainCoins(mainCoins);
+        })
+    }, [lpCoin, tokenPrice])
 
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);
@@ -89,7 +118,9 @@ const Market = (props) => {
         setIsSelectActive(part);
         setIsTokenMenu(true);
     }
-
+    const closeModal = () => {
+        setIsTokenMenu(false);
+    }
     const getReward = () => {
         if(hasStakingMeta == true) {
             const currentTimestamp = Date.now();      
@@ -105,10 +136,18 @@ const Market = (props) => {
             })
         }
     }
-    useEffect(() => {        
+
+     const getPrice = () => {       
         getTokenPrice().then(item => {
-            setTokenPrice(item);
-        })       
+            setTokenPrice(item);    
+        })  
+    }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getPrice();
+        }, CONFIG.timeIntervalOfPrice);
+        return () => clearInterval(interval);
     }, []);
     
 
@@ -126,7 +165,7 @@ const Market = (props) => {
         fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
             setUserLPCoin(item);
         })
-    }, [globalContext.newCoins, tokenPrice])
+    }, [tokenPrice])
     
     useEffect(() => {
         let totalSupplyTLP = 0;
@@ -173,12 +212,13 @@ const Market = (props) => {
             if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
                 let currentTimestamp = Date.now();
                 let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+                console.log(Reward);
                 setStakingAPR(APR.toFixed(2));
-                setUserReward(Reward);
+                setUserReward(Reward.toFixed(2));
             }
             setTotalLPValue(totalLPValue);
         })
-    }, [totalLPValue])
+    }, [totalLPValue, lpCoin])
     
     const unStake = () => {
         if(hasStakingMeta == true) {   
@@ -193,11 +233,13 @@ const Market = (props) => {
             })
         }
     }
-    const selectToken = (type) => {        
+    const selectToken = (type) => {  
+        console.log(type);      
         if(coins == undefined) {
             toast.info("please wait for a few sec. now loading data");
             setIsTokenMenu(false);
         } else {
+            console.log(coins);
             const token = coins.filter(item => item.label == type);
             if(token.length == 0) {
                 toast.error("You don't have this token, please mint token!");
@@ -492,7 +534,7 @@ const Market = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between py-1'>
                                     <p className='text-gray py-2'>Claimable rewards</p>
-                                    <p>{changeDecimal(userReward)} TRY</p>
+                                    <p>{changeDecimal5Fix(userReward)} TRY</p>
                                 </div>
                                 <div className='d-flex mt-3'>
                                     <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2' onClick={() => getReward()}>Claim rewards</div>
@@ -530,59 +572,44 @@ const Market = (props) => {
                     </div>
                 </div>
             )}
-            {isTokenMenu && (
-                <div>
-                    <div className='token-menu p-4'>
+                <Modal
+                    isOpen={isTokenMenu}
+                    onRequestClose={closeModal}
+                    style={customStyles}
+                    ariaHideApp={false}
+                    contentLabel="Example Modal"
+                >
+                    <div>
                         <div className='d-flex justify-content-between'>
-                            <div className='d-flex py-2'><h5 className='text-white'>Select Collateral</h5></div>
-                            <div className='text-white cursor-pointer' onClick={() => setIsTokenMenu(false)}><h3 className='text-white'>x</h3></div>
+                            <h5 className='text-white my-auto'>Select token</h5>
+                            <h4 className='text-white cursor-pointer' onClick={() =>setIsTokenMenu(false)}>x</h4>
                         </div>
-                        <hr className='text-white my-1' />
-                        <input className='referral text-gray mt-2 w-100 border-radius-0' type='text' placeholder='Search Token'/>
-                        <div className='pt-4'>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('SUI')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon1} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>SUI</h5>
-                                        <p className='text-gray'>Sui</p>
+                        <div className='py-3'>
+                            <p className='text-white'>
+                                To continue working with the site, you need to connect a wallet and allow the site access to your account.
+                            </p>
+                        </div>
+                        <div>
+                            <div className='pt-4'>
+                                {mainCoins.map(item => {
+                                    return <div className='d-flex token-item justify-content-between' onClick={() => selectToken(item.symbol)}>
+                                        <div className='d-flex'>
+                                            <img src={item.tokenIcon} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>{item.symbol}</h5>
+                                                <p className='text-gray'>{item.tokenName}</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5 className='text-white text-right'>$ {item.price}</h5>
+                                            <p className={`${item.isEarn == 1 ? 'text-green':'text-red-value'} text-right`}>{item.isEarn == 1 ? '+':'-'} {item.changeValue} %</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1.0034</h5>
-                                    <p className='text-green text-right'>+0.02</p>
-                                </div>
-                            </div>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('ETH')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon3} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>ETH</h5>
-                                        <p className='text-gray'>Ethereum</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$1234.32</h5>
-                                    <p className='text-red text-right'>-0.87</p>
-                                </div>
-                            </div>
-                            <div className='d-flex token-item justify-content-between' onClick={() => selectToken('BTC')}>
-                                <div className='d-flex'>
-                                    <img src={TokenIcon2} width={45} />
-                                    <div className='ml-4'>
-                                        <h5 className='text-white text-left'>BTC</h5>
-                                        <p className='text-gray'>Bitcoin</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 className='text-white text-right'>$14034.43</h5>
-                                    <p className='text-red text-right'>-0.34</p>
-                                </div>
+                                })}
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                </Modal> 
         </div>
     )
 }

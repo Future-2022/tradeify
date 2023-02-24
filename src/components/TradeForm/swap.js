@@ -79,7 +79,15 @@ const Swap = (props) => {
     
     const getPrice = () => {       
         getTokenPrice().then(item => {
-            setTokenPrice(item);
+            setTokenPrice(item);      
+
+            if(secondToken[0].label != 'Select') {
+                item.map(itemValue => {
+                    if(itemValue.symbol == secondToken[0].label) {
+                        globalContext.setMarketTokenPrice(itemValue);
+                    }
+                })
+            }    
         })  
     }
 
@@ -88,7 +96,7 @@ const Swap = (props) => {
             getPrice();
         }, CONFIG.timeIntervalOfPrice);
         return () => clearInterval(interval);
-    }, []);
+    }, [secondToken]);
 
     useEffect(() => {
         getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
@@ -138,16 +146,19 @@ const Swap = (props) => {
             } else {
                 lpCoin.map(item => {
                     if(item.metadata[0].typeArg == token[0].value) {
-                        setOutPoolId(item);
+                        setOutPoolId(item);                        
+                        let priceItem = undefined;
                         tokenPrice.map(itemValue => {
                             if(itemValue.symbol == item.metadata[0].symbol) {
-                                setSecondTokenPrice(itemValue.value);
+                                setSecondTokenPrice(itemValue.value);                                
+                                priceItem = itemValue;
                             }
                         })  
+                        globalContext.setMarketTokenPrice(priceItem);
                     }
                 })                
-                globalContext.setMarketToken(token[0].label);
                 await setSecondToken(token);
+                globalContext.setMarketToken(token[0].label);
             }
             setIsOpenModal(false);
         }
