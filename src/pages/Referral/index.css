@@ -26,7 +26,7 @@
     width: 150px;
     height: 140px;
     border-radius: 50%;
-    background: linear-gradient(90deg,#ff8c8c3c,#ffa6024d);
+    background: linear-gradient(90deg,#ff8c8cb3,#ff5202bd);
     filter: blur(75px);
     -webkit-filter: blur(75px);
     -webkit-backface-visibility: hidden;

@@ -84,12 +84,9 @@ export const ExportAddress = (address) => {
 export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
 
   let returnValue = [];
-  let colletral = undefined;
   let type = undefined;
-  let markPrice = 0;
   let earnType = undefined;
   let earnAmount = undefined;
-  let netValue = undefined;
   let inPool = undefined;
   let outPool = undefined; 
   value.map(valueItem => {    
@@ -121,14 +118,16 @@ export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
     })
     let netValue = changeDecimal5Fix(valueItem.calcAmount) * Number(markPrice) / Number(entryPrice);
     let calcAmount = changeDecimal5Fix(valueItem.calcAmount);
-
+    console.log(valueItem);
+    let resultEarnAmount = changeDecimal(Number(valueItem.updateCalcAmount));
+    let netResultValue = changeDecimal5Fix(Number(valueItem.calcAmount) + Number(valueItem.updateCalcAmount))
     if(valueItem.tradingType == 0) {
       if(calcAmount > netValue) {
         earnType = "-";            
-        earnAmount = ((calcAmount - netValue) * markPrice).toFixed(5);
+        earnAmount = ((calcAmount - netValue) * markPrice).toFixed(3);
       } else if( calcAmount < netValue) {
         earnType = "+";
-        earnAmount = ((netValue - calcAmount) * markPrice).toFixed(5);
+        earnAmount = ((netValue - calcAmount) * markPrice).toFixed(3);
       } else {
         earnType = "+";
         earnAmount = 0;
@@ -136,10 +135,10 @@ export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
     } else {
       if(calcAmount > netValue) {
         earnType = "+";            
-        earnAmount = ((calcAmount - netValue) * markPrice).toFixed(5);
+        earnAmount = ((calcAmount - netValue) * markPrice).toFixed(3);
       } else {
         earnType = "-";
-        earnAmount = ((netValue - calcAmount) * markPrice).toFixed(5);
+        earnAmount = ((netValue - calcAmount) * markPrice).toFixed(3);
       }
     }
 
@@ -152,12 +151,14 @@ export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
         tokenB: inPool.metadata[0].typeArg,
         calcAmount: changeDecimal5Fix(valueItem.calcAmount),
         entryPrice: entryPrice,
+        resultEarnAmount: resultEarnAmount,
         tradingStatus: valueItem.tradingStatus,
         colletral: inPool.metadata[0].symbol,
         colletralIcon: colletralIcon,
         tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
         leverageValue: valueItem.leverageValue,
         type: type,
+        netResultValue: netResultValue,
         markPrice: markPrice.toFixed(4),
         earnType: earnType,
         earnAmount: earnAmount,
@@ -628,12 +629,29 @@ export const getReferralResult = async (provider, wallet, lpCoin, tokenPrice) =>
           tokenPriceValue = itemValue.value; 
         }
       })
-      console.log(tokenPriceValue);
-      tradingAmount += Number(result.tradingAmount * tokenPriceValue);
-      rebate += Number(result.tradingAmount * CONFIG.tradingFee * tokenPriceValue / 100)
+      tradingAmount += Number(result.tradingAmount * Number(result.marketPrice));
+      rebate += Number(result.tradingAmount * CONFIG.tradingFee * Number(result.marketPrice) / 100)
     }
   }) 
   return {tradingAmount: changeDecimal5Fix(tradingAmount), rebate: changeDecimal5Fix(rebate)};
+}
+
+export const isAvailaleReferralCode = async (provider, value) => {
+  const referralStatusAddress = [];
+  referralStatusAddress.push(CONFIG.referRegistryId);
+  let returnValue = false;
+  const batch = await provider.getObjectBatch(referralStatusAddress);
+  const referData = batch[0].details.data.fields.data.fields.contents;
+  referData.map(item => {
+    const result = item.fields.key.fields;
+    console.log(result)
+    console.log(value)
+    if(Number(result.referralCode) == value) {
+      console.log('ok')
+      returnValue = true;
+    }
+  })
+  return returnValue;
 }
 
 export const getTradingResult = async (provider, wallet, lpCoin, tokenPrice) => {
@@ -645,6 +663,7 @@ export const getTradingResult = async (provider, wallet, lpCoin, tokenPrice) => 
   let rebate = 0;
   tradingData.map(item => {
     const result = item.fields.key.fields;
+    console.log(result)
     if(result.hasRefer == "1") {
       if(result.trader == wallet) {
         let token = undefined;
@@ -659,8 +678,8 @@ export const getTradingResult = async (provider, wallet, lpCoin, tokenPrice) => 
             tokenPriceValue = itemValue.value; 
           }
         })
-        tradingAmount += Number(result.tradingAmount * tokenPriceValue);
-        rebate += Number(result.tradingAmount * CONFIG.tradingFee * tokenPriceValue / 100)
+        tradingAmount += Number(result.tradingAmount * Number(result.marketPrice));
+        rebate += Number(result.tradingAmount * CONFIG.tradingFee * Number(result.marketPrice) / 100)
       }
     }
   }) 

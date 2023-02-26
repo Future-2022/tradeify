@@ -22,13 +22,12 @@ import Header from './components/Header';
 import { StoreContext } from './store';
 
 import { CONFIG } from './lib/config';
-
 const supportedWallets = [new WalletStandardAdapterProvider()]
 const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 
 function App() {
   const [modalIsOpen, setModalIsOpen] = React.useState(false);
-  const [account, setAccount] = React.useState('');
+  const [account, setAccount] = React.useState(null);
   const [wallet, setWallet] = React.useState('');
   const [marketToken, setMarketToken] = React.useState("S");
   const [marketTokenPrice, setMarketTokenPrice] = React.useState(undefined);
@@ -64,6 +63,7 @@ function App() {
               <Route path="/market" element={<Market />} />
               <Route path="/liquidity" element={<Liquidity />} />
               <Route path="/earn/lockStake" element={<LockStake />} />
+              
               </Routes>
               <ToastContainer
                   className='custom-toast'
@@ -72,7 +72,7 @@ function App() {
                   closeOnClick
                   theme='light'
                   position='bottom-right'
-              />              
+              />             
           </React.Fragment>  
         {/* </UseSuiWalletProvider> */}
       </StoreContext.Provider>

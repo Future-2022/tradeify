@@ -4,7 +4,7 @@ import TLP from '../../img/png/token-logo.png';
 import { FaAngleDown } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
-import { fetchUserLpCoins, findStakingMeta, getStakingPoolStatus, fetchLPCoins, changeDecimal } from '../../control/main';
+import { fetchUserLpCoins, findStakingMeta, isLoggedIn, getStakingPoolStatus, fetchLPCoins, changeDecimal, changeDecimal5Fix } from '../../control/main';
 import { CONFIG } from '../../lib/config';
 import { StoreContext } from '../../store';
 import { stakeTLP, depositTLPStake, getStakingReward, UnStakeTLP } from '../../lib/tradeify-sdk/staking';
@@ -25,15 +25,18 @@ const Earn = (props) => {
     const [hasStakingMeta, setHasStakingMeta] = useState(false);
     const [userStakingStatus, setUserStakingStatus] = useState(undefined);
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
+    const [totalSupplyTLP, setTotalSupplyTLP] = useState(undefined);
 
     // staking parameter
-    const [tlpValue, setTLPvalue] = useState(undefined);
-    const [lockTime, setLockTime] = useState(undefined);
-    const [tryPrice, setTryPrice] = useState(0);
+    const [tlpValue, setTLPvalue] = useState("");
+    const [lockTime, setLockTime] = useState("");
+    const [tryPrice, setTryPrice] = useState(1);
     
     // UI parameter
     const [userLpCoin, setUserLPCoin] = useState([]);
     const [totalUserLP, setTotalUserLP] = useState(0);
+
+    const [statusIndex, setStatusIndex] = useState(undefined);
     
     const handleChangeTLP = (value) => {
         setTLPvalue(value);
@@ -58,7 +61,8 @@ const Earn = (props) => {
                 tryType: CONFIG.try
             }).then(res => {
                 toast.info(`${tlpValue} TLP has been staked!`)
-                setTLPvalue(0)
+                setTLPvalue(0);
+                setLockTime(0);
             })
         } else {
             const metaPoolId = userStakingStatus.data.fields.id.id;
@@ -71,62 +75,87 @@ const Earn = (props) => {
                 tryType: CONFIG.try
             }).then(res => {
                 toast.info(`${tlpValue} TLP has been staked!`)
-                setTLPvalue(0)
+                setTLPvalue(0);
+                setLockTime(0);
             })
         }
     }
 
     const getReward = () => {
-        if(hasStakingMeta == true) {
-            const currentTimestamp = Date.now();      
-            const metaPoolId = userStakingStatus.data.fields.id.id;
-            getStakingReward(globalContext.provider, globalContext.wallet, {
-                stakingMetaId: metaPoolId,
-                currentTimestamp: currentTimestamp,
-                tlpType: CONFIG.tlp,
-                tryType: CONFIG.try
-            }).then(res => {
-                toast.info(`TLP has been rewarded!`)
-                setUserReward(0);
-            })
+        if(isLoggedIn() == false) {
+            toast.error("Please connect wallet");
+        } else if (userReward == "0") {
+            toast.error("No claimabled amount. Please stake TLP");
+        } else {
+            if(hasStakingMeta == true) {
+                const currentTimestamp = Date.now();      
+                const metaPoolId = userStakingStatus.data.fields.id.id;
+                getStakingReward(globalContext.provider, globalContext.wallet, {
+                    stakingMetaId: metaPoolId,
+                    currentTimestamp: currentTimestamp,
+                    tlpType: CONFIG.tlp,
+                    tryType: CONFIG.try
+                }).then(res => {
+                    toast.info(`TLP has been rewarded!`)
+                    setUserReward(0);
+                })
+            }
         }
     }
 
     const unStake = () => {
-        if(hasStakingMeta == true) {   
-            const metaPoolId = userStakingStatus.data.fields.id.id;
-            UnStakeTLP(globalContext.provider, globalContext.wallet, {
-                stakingMetaId: metaPoolId,
-                tlpType: CONFIG.tlp,
-                tryType: CONFIG.try
-            }).then(res => {
-                console.log(res);
-                toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
-            })
+        if(isLoggedIn() == false) {
+            toast.error("Please connect wallet");
+        } else if (userStakingStatus == null) {
+            toast.error("No staked TLP. Please stake TLP");
+        } else if (userStakingStatus.data.fields.staking_amount == "0") {
+            toast.error("No staked TLP. Please stake TLP");
+        } else {
+            if(hasStakingMeta == true) {   
+                const metaPoolId = userStakingStatus.data.fields.id.id;
+                UnStakeTLP(globalContext.provider, globalContext.wallet, {
+                    stakingMetaId: metaPoolId,
+                    tlpType: CONFIG.tlp,
+                    tryType: CONFIG.try
+                }).then(res => {
+                    console.log(res);
+                    setUserStakingStatus(undefined);                
+                    setUserReward(0);
+                    toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
+                })
+            }
         }
     }
 
     useEffect(() => {
-        let totalSupplyTLP = 0;
-        fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(async (items) => {          
-            let totalUserLPValue = 0;            
-            items.map(args => {
-                totalUserLPValue += Number(args.balance.value);
-                setTotalUserLP(totalUserLPValue);
-            })
-            setUserLPCoin(items);
-        });
+        let totalSupplyTLPValue = 0;
+        if(isLoggedIn() == true) { 
+            fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(async (items) => {          
+                let totalUserLPValue = 0;            
+                items.map(args => {
+                    totalUserLPValue += Number(args.balance.value);
+                    setTotalUserLP(totalUserLPValue);
+                })
+                setUserLPCoin(items);
+            });
+        }
+        getStakingPoolStatus(globalContext.provider).then(res => {
+            setStakingPoolStatus(res);
+            totalSupplyTLPValue = res.details.data.fields.balance_tlp;
+            setTotalSupplyTLP(totalSupplyTLPValue);
+        })                
+    }, [totalLPValue, tlpValue, globalContext.account, userStakingStatus])
+
+    useEffect(() => {
         findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
             res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
                 setHasStakingMeta(true);
                 setUserStakingStatus(item);
             })
         });
-        getStakingPoolStatus(globalContext.provider).then(res => {
-            setStakingPoolStatus(res);
-            totalSupplyTLP = res.details.data.fields.balance_tlp;
-        })
-        
+    }, [totalLPValue, tlpValue, globalContext.account])
+    
+    useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
@@ -138,14 +167,34 @@ const Earn = (props) => {
             })
             let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
             setStakingAPR(APR);
-            if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
-                let currentTimestamp = Date.now();
-                let Reward = 100 * (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
-                setUserReward(Reward);
-            }
             setTotalLPValue(totalLPValue);
         })
-    }, [totalLPValue, tlpValue])
+    }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP])
+    
+    useEffect(() => {
+        if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
+            let currentTimestamp = Date.now();
+            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+            setUserReward(Reward);
+        }
+    }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus])
+
+    useEffect(() => {
+        checkSwapStatus();
+    }, [globalContext.account, tlpValue, lockTime])
+
+    const checkSwapStatus = () => {
+        if(globalContext.account == null && connected == false) {
+            setStatusIndex(0);
+        } else if (tlpValue == "" || lockTime == "") {
+            setStatusIndex(1);
+        } else if (Number(tlpValue) > Number(totalUserLP)) {
+            setStatusIndex(2);
+        } else if (Number(tlpValue) > 0 && Number(lockTime) > 0) {
+            setStatusIndex(3);
+        } 
+    }
+
     return (
         <div>
             <div className={`d-flex ${isMobile == true ? `px-3`:`px-5`}`}>
@@ -185,11 +234,17 @@ const Earn = (props) => {
                                     <div className='d-flex cursor-pointer token-select'><h5>Second</h5></div>
                                 </div>
                             </div>
-                            {globalContext.account == null && connected == false && (
+                            {statusIndex == 0 && (
                                 <div className='earn-button-grey w-100 text-center py-2 border-radius mb-3 mt-15' onClick={() => globalContext.setModalIsOpen(true)}>Connect Wallet</div>
                             )}
-                            {globalContext.account != '' && connected != false && (
-                                <div className='earn-button-grey w-100 text-center py-2 border-radius mb-3 mt-15' onClick={() => stakeTLPEvent()}>Stack TLP</div>
+                            {statusIndex == 1 && (
+                                <div className='earn-button-grey w-100 text-center py-2 border-radius mb-3 mt-15 btn-disabled'>Enter Amount</div>
+                            )}
+                            {statusIndex == 2 && (
+                                <div className='earn-button-grey w-100 text-center py-2 border-radius mb-3 mt-15 btn-disabled'>Insufficient Amount</div>
+                            )}
+                            {statusIndex == 3 && (
+                                <div className='earn-button-grey w-100 text-center py-2 border-radius mb-3 mt-15' onClick={() => stakeTLPEvent()}>Stake TLP</div>
                             )}
                         </div>
                         <div className={`${isMobile == true ? `w-100`:`w-50`}`}>
@@ -204,7 +259,7 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>TRY Price</p>
-                                        <p className='text-pink-sharp'>$ {tryPrice.toFixed(3)}</p>
+                                        <p className='text-pink-sharp'>$ {tryPrice}</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total staked</p>
@@ -231,7 +286,7 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Claimable rewards</p>
-                                        <p>{changeDecimal(userReward)} TRY</p>
+                                        <p>{changeDecimal5Fix(userReward)} TRY</p>
                                     </div>
                                     <div className='d-flex mt-3'>
                                         <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2' onClick={() => getReward()}>Claim rewards</div>

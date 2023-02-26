@@ -26,7 +26,7 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 import { calcSwapOut, swap } from '../../lib/tradeify-sdk/pool';
-import { getCoins, getSwapPrice, getTokenPrice, getMainCoins, changeDecimal8Fix, getUniqueCoinTypes, getCoinBalances, changeDecimal, fetchLPCoins, changeBigNumber, changeDecimal5Fix } from '../../control/main';
+import { getCoins, isLoggedIn, getTokenPrice, getMainCoins, getUniqueCoinTypes, getCoinBalances, changeDecimal, fetchLPCoins, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 
 const customStyles = {
     content: {
@@ -66,7 +66,7 @@ const Swap = (props) => {
 
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
-    const [firstTokenValue, setFirstTokenValue] = useState(undefined);
+    const [firstTokenValue, setFirstTokenValue] = useState("");
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
     const [firstTokenPrice, setFirstTokenPrice] = useState(0);
     const [availableLiquidity, setAvailableLiquidity] = useState(0);
@@ -76,6 +76,7 @@ const Swap = (props) => {
     const [secondTokenPrice, setSecondTokenPrice] = useState(0);
     
     const [mainCoins, setMainCoins] = useState([]);
+    const [statusIndex, setStatusIndex] = useState([]);
     
     const getPrice = () => {       
         getTokenPrice().then(item => {
@@ -99,24 +100,22 @@ const Swap = (props) => {
     }, [secondToken]);
 
     useEffect(() => {
-        getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const mainCoins = getMainCoins(tokenPrice, lpCoin);
-            setMainCoins(mainCoins);
-        })
+        if(isLoggedIn() == true) {
+            getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+                const newCoins = getUniqueCoinTypes(item).map(arg => {
+                    return { value: arg, label: Coin.getCoinSymbol(arg) }
+                });
+                const mainCoins = getMainCoins(tokenPrice, lpCoin);
+                setMainCoins(mainCoins);
+                const balance = getCoinBalances(item);
+                setCoinBalance(balance);
+                setCoins(newCoins)
+            })
+        }
     }, [lpCoin, tokenPrice])
 
-    useEffect(() => {
-        getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const newCoins = getUniqueCoinTypes(item).map(arg => {
-                return { value: arg, label: Coin.getCoinSymbol(arg) }
-            });
-            const balance = getCoinBalances(item);
-            setCoinBalance(balance);
-            setCoins(newCoins)
-        })
-    }, [])
-
     const selectToken = async (type) => {
+        // checkSwapStatus();
         if(coins == undefined) {
             toast.info("please wait for a few sec. now loading data");
             setIsOpenModal(false);
@@ -135,7 +134,6 @@ const Swap = (props) => {
                         tokenPrice.map(itemValue => {
                             if(itemValue.symbol == item.metadata[0].symbol) {
                                 setFirstTokenPrice(itemValue.value);
-                                setAvailableLiquidity(changeDecimal(item.data.balanceA.value))
                             }
                         })
                     }
@@ -150,7 +148,8 @@ const Swap = (props) => {
                         let priceItem = undefined;
                         tokenPrice.map(itemValue => {
                             if(itemValue.symbol == item.metadata[0].symbol) {
-                                setSecondTokenPrice(itemValue.value);                                
+                                setSecondTokenPrice(itemValue.value); 
+                                setAvailableLiquidity(changeDecimal(item.data.balanceA.value))                               
                                 priceItem = itemValue;
                             }
                         })  
@@ -163,7 +162,9 @@ const Swap = (props) => {
             setIsOpenModal(false);
         }
     }
-
+    const connectWallet = () => {
+        globalContext.setModalIsOpen(true);
+    }
     const closeModal = () => {
         setIsOpenModal(false);
     }
@@ -191,6 +192,11 @@ const Swap = (props) => {
             }).then((item) => {
                 setFirstTokenValue(0);
                 setSecondTokenValue(0);
+                setFirstTokenPrice(0);
+                setSecondTokenPrice(0);
+                setAvailableLiquidity(0);
+                setFirstToken([{label: "Select"}]);
+                setSecondToken([{label: "Select"}]);
                 toast.info("Token swap has been completed successfully!");
             })
         } catch (e) {
@@ -205,7 +211,25 @@ const Swap = (props) => {
         console.log(_secondTokenValue);
         setSecondTokenValue(_secondTokenValue);
     }
+    useEffect(() => {
+        checkSwapStatus();
+    }, [firstTokenValue, globalContext.account, firstToken, secondToken])
 
+    const checkSwapStatus = () => {
+        if(globalContext.account == null && connected == false) {
+            setStatusIndex(0);
+        } else if (firstToken[0].label == "Select" || secondToken[0].label == "Select") {
+            setStatusIndex(1);
+        } else if (firstToken[0].label == secondToken[0].label) {
+            setStatusIndex(2);
+        } else if (globalContext.account != null && connected != false && firstTokenValue == "") {
+            setStatusIndex(3);
+        } else if (Number(secondTokenValue) > availableLiquidity || Number(firstTokenValue) > changeDecimal(firstTokenMaxValue)) {
+            setStatusIndex(4);
+        } else if(Number(firstTokenValue) > 0){
+            setStatusIndex(5);
+        }
+    }
     return (
         <div> 
             <div className='trade-token-select mb-2 mt-2'>
@@ -236,12 +260,25 @@ const Swap = (props) => {
                 </div>
             )}
             
-            {globalContext.account == null && connected == false && (
-                <div className='earn-button w-100 text-center'>Connect Wallet</div>
+            {statusIndex == 0 && (
+                <div className='earn-button w-100 text-center' onClick={connectWallet}>Connect Wallet</div>
             )} 
-            {globalContext.account != '' && connected != false && (
+            {statusIndex == 1 && (
+                <div className='earn-button w-100 text-center btn-disabled'>Select token</div>
+            )}            
+            {statusIndex == 2 && (
+                <div className='earn-button w-100 text-center btn-disabled'>Select different token</div>
+            )}            
+            {statusIndex == 3 && (
+                <div className='earn-button w-100 text-center btn-disabled'>Enter Amount</div>
+            )}
+            {statusIndex == 4 && (
+                <div className='earn-button w-100 text-center btn-disabled'>Insufficient Amount</div>
+            )}
+            {statusIndex == 5 && (
                 <div className='earn-button w-100 text-center' onClick={runSwap}>Swap</div>
             )}
+
             <div className='d-flex justify-content-between'>
                 <p className='text-left text-gray pt-2'>Fees</p>
                 <p className='pt-2'>3%</p>
@@ -257,7 +294,7 @@ const Swap = (props) => {
                 </div>
                 <div className='d-flex justify-content-between'>
                     <p className='text-gray'>Avaiable Liquidity</p>
-                    <p>{availableLiquidity} {firstToken[0].label}</p>
+                    <p>{availableLiquidity} {secondToken[0].label}</p>
                 </div>
             </div> 
             

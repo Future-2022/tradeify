@@ -59,16 +59,17 @@ const Order = () => {
                             if(item.tradingStatus == 1) {
                                 return <div className='order-content-value d-flex' key={key}>
                                     <div className='d-flex'>
-                                        <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span>
-                                        <img src={item.MarketIcon} className='img-circle' width={35} height={35} />
+                                        {/* <h5 className='mx-2'>{item.coinType}</h5> */}
+                                        {/* <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span> */}
+                                        <img src={item.MarketIcon} className='img-circle mr-2' width={35} height={35} />
                                         <p><span className={item.type == "SHORT" ? 'PNL-red' : 'PNL-green'}>{item.type}</span><br/> <span className='fs-15'>{item.leverageValue}</span>X</p>
                                     </div>
                                     <p>{item.calcAmount} {item.coinType}</p>
                                     <p>{item.netValue} {item.coinType}</p>
-                                    <div className='d-flex'>
+                                    {/* <div className='d-flex'> */}
                                         <p>{item.tradingAmount} {item.colletral}</p>
-                                        <img src={item.colletralIcon} className='img-circle-small mt-1' width={25} height={25} />
-                                    </div>
+                                        {/* <img src={item.colletralIcon} className='img-circle-small mt-1' width={25} height={25} /> */}
+                                    {/* </div> */}
                                     <p>${item.entryPrice}</p>
                                     <p>${item.markPrice}</p>
                                     <p>${item.markPrice}</p>                                    
@@ -87,7 +88,7 @@ const Order = () => {
                             if(item.tradingStatus == 1) {
                                 return <div className='order-content-value-m' key={key}>
                                     <div className='d-flex'>
-                                        <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span>
+                                        {/* <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span> */}
                                         <img src={item.MarketIcon} className='img-circle' width={35} height={35} />
                                         <p className='ml-4'><span className={item.type == "SHORT" ? 'PNL-red' : 'PNL-green'}>{item.type}</span><br/> <span className='fs-15'>{item.leverageValue}</span>X</p>
                                     </div>
@@ -164,20 +165,15 @@ const Order = () => {
                             if(item.tradingStatus == 2) {
                                 return <div className='order-content-value d-flex' key={key}>
                                     <div className='d-flex'>
-                                        <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span>
-                                        <img src={item.MarketIcon} className='img-circle' width={35} height={35} />
+                                        {/* <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span> */}
+                                        <img src={item.MarketIcon} className='img-circle mx-2' width={35} height={35} />
                                         <p><span className={item.type == "SHORT" ? 'PNL-red' : 'PNL-green'}>{item.type}</span><br/> <span className='fs-15'>{item.leverageValue}</span>X</p>
                                     </div>
                                     <p>{item.calcAmount} {item.coinType}</p>
-                                    <p>{item.netValue}</p>
-                                    <div className='d-flex'>
-                                        <p>{item.tradingAmount} {item.colletral}</p>
-                                        <img src={item.colletralIcon} className='img-circle-small mt-1' width={25} height={25} />
-                                    </div>
+                                    <p>{item.netResultValue}</p>
+                                    <p>{item.tradingAmount} {item.colletral}</p>
                                     <p>${item.entryPrice}</p>
-                                    <p>${item.markPrice}</p>
-                                    <p>${item.markPrice}</p>                                    
-                                    <p className={item.isEarn == "2" ? 'PNL-red' : 'PNL-green'}>{item.earnType} ${item.earnAmount}</p>                                    
+                                    <p className={item.isEarn == "2" ? 'PNL-red' : 'PNL-green'}>{item.earnType} {item.resultEarnAmount} {item.colletral}</p>                                    
                                     <div><div className='mt-1 mr-2 text-gray'>Closed</div></div>
                                 </div>
                             }
@@ -188,7 +184,7 @@ const Order = () => {
                             if(item.tradingStatus == 2) {
                                 return <div className='order-content-value-m' key={key}>
                                 <div className='d-flex'>
-                                    <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span>
+                                    {/* <span className='text-white fs-12 rs-badge-green'>{item.coinType}</span> */}
                                     <img src={item.MarketIcon} className='img-circle' width={35} height={35} />
                                     <p className='ml-4'><span className={item.type == "SHORT" ? 'PNL-red' : 'PNL-green'}>{item.type}</span><br/> <span className='fs-15'>{item.leverageValue}</span>X</p>
                                 </div>
@@ -200,7 +196,7 @@ const Order = () => {
                                     </div>
                                     <div className='text-left'>
                                         <p className='text-gray'>Net value </p>
-                                        <p>{item.netValue}</p>
+                                        <p>{item.netResultValue}</p>
                                     </div>
                                 </div>
                                 <div className='d-flex'>
@@ -208,22 +204,14 @@ const Order = () => {
                                     <img src={item.colletralIcon} className='img-circle-small ml-3' width={25} height={25} />
                                 </div>
                                 <div className='d-flex justify-content-between'>
-                                    <div>
-                                        <p className='text-gray'>Entry Price</p>
-                                        <p>${item.entryPrice}</p>
-                                    </div>
-                                    <div>
-                                        <p className='text-gray'>Mark Price</p>
-                                        <p>${item.markPrice}</p>
-                                    </div>
-                                    <div>
-                                        <p className='text-gray'>Liq. Price</p>
-                                        <p>${item.markPrice}</p>
+                                    <div className='d-flex'>
+                                        <p className='text-gray text-left'>Entry Price</p>
+                                        <span className='ml-2'>${item.entryPrice}</span>
                                     </div>
                                 </div>
                                 <div className='d-flex'>
-                                    <p className='text-gray mr-3'>PNL & ROE</p>
-                                    <p className={item.earnType == "-" ? 'PNL-red' : 'PNL-green'}>{item.earnType} ${item.earnAmount}</p>                                    
+                                    <p className='text-gray mr-2'>PNL & ROE</p>
+                                    <div className={item.earnType == "-" ? 'PNL-red' : 'PNL-green'}>{item.earnType} {item.resultEarnAmount} {item.colletral}</div>                                    
                                 </div>                                    
                                 {item.netValue < 0 ? (<div className='text-gray-closed mt-2'>Position lost!</div>):(
                                     <div>Closed</div>

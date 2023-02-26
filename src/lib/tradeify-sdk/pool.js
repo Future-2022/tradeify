@@ -37,14 +37,28 @@ export class Pool {
 }
   
 export const mint_test_token_fun = async (provider, wallet, args) => {
-  const tx = mint_test_token_eth({
-    tokenType: args.tokenType,
-    amount: args.amount,
-    receiveAddress: args.receiveAddress
-  })
-  console.log(tx);
-  return await wallet.signAndExecuteTransaction(tx)
-  
+  const currentTimestamp = Date.now();
+  let isAvaiable = false;
+  if(localStorage.getItem(`${args.tokenType}_faucet`) == null) {
+    localStorage.setItem(`${args.tokenType}_faucet`, currentTimestamp);  
+    isAvaiable = true;
+  } else {
+    if(currentTimestamp - Number(localStorage.getItem(`${args.tokenType}_faucet`)) >= CONFIG.faucetDurationTime) {
+      isAvaiable = true;
+    }
+  }
+  if(isAvaiable == true) {
+    const tx = mint_test_token_eth({
+      tokenType: args.tokenType,
+      amount: args.amount,
+      receiveAddress: args.receiveAddress
+    })
+    localStorage.setItem(`${args.tokenType}_faucet`, currentTimestamp); 
+    return await wallet.signAndExecuteTransaction(tx)
+  } else {
+    const remainTime = ((CONFIG.faucetDurationTime - currentTimestamp + Number(localStorage.getItem(`${args.tokenType}_faucet`))) / (60 * 1000)).toFixed(0);
+    return [false, remainTime];
+  }
 }
 
 

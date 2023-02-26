@@ -23,15 +23,12 @@ import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
 import { buyTLPSdk, calcSwapOut, sellTLPSdk } from '../../lib/tradeify-sdk/pool';
 import { UnStakeTLP, getStakingReward } from '../../lib/tradeify-sdk/staking';
-import ExchangeLogo from '../../img/png/exchange.png';
 import Exchange1Logo from '../../img/png/exchange1.png';
 import Exchange2Logo from '../../img/png/exchange2.png';
-import TokenIcon1 from '../../img/png/SUI.png';
-import TokenIcon2 from '../../img/svg/BTC.svg';
-import TokenIcon3 from '../../img/png/eth-bg.png';
 import TokenIcon from '../../img/png/token-logo.png';
-import { sqrt } from '../../lib/tradeify-sdk/core/math';
-import BigNumber from 'big-number/big-number';
+
+
+
 
 const customStyles = {
     content: {
@@ -51,8 +48,8 @@ const customStyles = {
       backgroundColor: 'rgb(0 0 0 / 86%)'
     }
 };
-
 const Market = (props) => {
+
     const { wallets, wallet, select, connected, disconnect } = useWallet();
     const globalContext = useContext(StoreContext); 
     const [switchMarket, setSwitchMarket] = useState(1);
@@ -67,6 +64,7 @@ const Market = (props) => {
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
     const [totalUserLP, setTotalUserLP] = useState(0);    
     const [userStakingStatus, setUserStakingStatus] = useState(undefined);
+    const [totalSupplyTLP, setTotalSupplyTLP] = useState(undefined);
 
     // sell constant
     const [sellFirstTokenSymbol, setSellFirstTokenSymbol] = useState(null);
@@ -75,12 +73,11 @@ const Market = (props) => {
 
     const [sellSecondTokenSymbol, setSellSecondTokenSymbol] = useState(null);
     const [sellSecondTokenValue, setSellSecondTokenValue] = useState(0);
-    const [sellSecondTokenGetValue, setSellSecondTokenGetValue] = useState(0);
 
 
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
-    const [firstTokenValue, setFirstTokenValue] = useState(undefined);
+    const [firstTokenValue, setFirstTokenValue] = useState("");
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);    
     // 
     const [hasStakingMeta, setHasStakingMeta] = useState(false);
@@ -93,7 +90,8 @@ const Market = (props) => {
     const [userLpCoin, setUserLPCoin] = useState(undefined);
     const [lpCoin, SetLPCoin] = useState([]);
     const [lpMetaData, SetLPMetaData] = useState([]);
-    const [lpToken, setLPToken] = useState(undefined);  
+    const [lpToken, setLPToken] = useState("");  
+    const [lpTokenFee, setLPTokenFee] = useState(0);  
     const [poolId, setPoolId] = useState(null);  
 
     const [coins, setCoins] = useState(undefined);
@@ -102,13 +100,17 @@ const Market = (props) => {
     const [tokenPrice, setTokenPrice] = useState([]);   
     const [selectTokenPrice, setSelectTokenPrice] = useState(undefined);     
     const [mainCoins, setMainCoins] = useState([]);  
-    
+
+    const [statusIndex1, setStatusIndex1] = useState([]);  
+    const [statusIndex2, setStatusIndex2] = useState([]);      
 
     useEffect(() => {
-        getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const mainCoins = getMainCoins(tokenPrice, lpCoin);
-            setMainCoins(mainCoins);
-        })
+        if(isLoggedIn() == true) {
+            getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+                const mainCoins = getMainCoins(tokenPrice, lpCoin);
+                setMainCoins(mainCoins);
+            })
+        }
     }, [lpCoin, tokenPrice])
 
     const connectWallet = () => {
@@ -122,18 +124,24 @@ const Market = (props) => {
         setIsTokenMenu(false);
     }
     const getReward = () => {
-        if(hasStakingMeta == true) {
-            const currentTimestamp = Date.now();      
-            const metaPoolId = userStakingStatus.data.fields.id.id;
-            getStakingReward(globalContext.provider, globalContext.wallet, {
-                stakingMetaId: metaPoolId,
-                currentTimestamp: currentTimestamp,
-                tlpType: CONFIG.tlp,
-                tryType: CONFIG.try
-            }).then(res => {
-                toast.info(`TLP has been rewarded!`)
-                setUserReward(0);
-            })
+        if(isLoggedIn() == false) {
+            toast.error("Please connect wallet");
+        } else if (userReward == "0") {
+            toast.error("No claimabled amount. Please stake TLP");
+        } else {
+            if(hasStakingMeta == true) {
+                const currentTimestamp = Date.now();      
+                const metaPoolId = userStakingStatus.data.fields.id.id;
+                getStakingReward(globalContext.provider, globalContext.wallet, {
+                    stakingMetaId: metaPoolId,
+                    currentTimestamp: currentTimestamp,
+                    tlpType: CONFIG.tlp,
+                    tryType: CONFIG.try
+                }).then(res => {
+                    toast.info(`TLP has been rewarded!`)
+                    setUserReward(0);
+                })
+            }
         }
     }
 
@@ -162,46 +170,52 @@ const Market = (props) => {
             SetLPMetaData(newMetaData.meta);
             SetLPCoin(lpCoins);
         })
-        fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
-            setUserLPCoin(item);
-        })
-    }, [tokenPrice])
+        if(isLoggedIn() == true) {
+            fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
+                setUserLPCoin(item);
+            })
+        }
+    }, [tokenPrice, globalContext.account])
     
     useEffect(() => {
-        let totalSupplyTLP = 0;
-        getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const newCoins = getUniqueCoinTypes(item).map(arg => {
-                return { value: arg, label: Coin.getCoinSymbol(arg) }
+        let totalSupplyTLPValue = 0;
+        if(isLoggedIn() == true) {
+            getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+                const newCoins = getUniqueCoinTypes(item).map(arg => {
+                    return { value: arg, label: Coin.getCoinSymbol(arg) }
+                });
+                const balance = getCoinBalances(item);
+                balance.forEach((item, key) => {
+                    if(key == CONFIG.tlp) {
+                        setTLPbalace(Number(item).toString())
+                    }
+                })
+                setCoinBalance(balance);
+                setCoins(newCoins)
+            })
+            findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
+                res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
+                    setUserStakingStatus(item);
+                    setHasStakingMeta(true);
+                })
             });
-            const balance = getCoinBalances(item);
-            balance.forEach((item, key) => {
-                if(key == CONFIG.tlp) {
-                    setTLPbalace(Number(item).toString())
-                }
-            })
-            setCoinBalance(balance);
-            setCoins(newCoins)
-        })
-        findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
-            res.filter(res => res.owner.AddressOwner == localStorage.getItem('walletAddress')).map(item => {                
-                setUserStakingStatus(item);
-                setHasStakingMeta(true);
-            })
-        });
-        fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(async (items) => {          
-            let totalUserLPValue = 0; 
-            items.map(args => {
-                totalUserLPValue += Number(args.balance.value);
-                setTotalUserLP(totalUserLPValue);
-            })
-            setUserLPCoin(items);
-        });
-
+            fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(async (items) => {          
+                let totalUserLPValue = 0; 
+                items.map(args => {
+                    totalUserLPValue += Number(args.balance.value);
+                    setTotalUserLP(totalUserLPValue);
+                })
+                setUserLPCoin(items);
+            });
+        }
         getStakingPoolStatus(globalContext.provider).then(res => {
             setStakingPoolStatus(res);
-            totalSupplyTLP = res.details.data.fields.balance_tlp;
+            totalSupplyTLPValue = res.details.data.fields.balance_tlp;
+            setTotalSupplyTLP(totalSupplyTLPValue);
         })
-    
+    }, [totalLPValue, lpCoin, globalContext.account])
+
+    useEffect(() => {    
         // staking part
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
@@ -209,32 +223,42 @@ const Market = (props) => {
                 totalLPValue += Number(item.data.lpSupply.value);
             })
             let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
-            if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
-                let currentTimestamp = Date.now();
-                let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
-                console.log(Reward);
-                setStakingAPR(APR.toFixed(2));
-                setUserReward(Reward.toFixed(2));
-            }
+            setStakingAPR(APR.toFixed(2));
             setTotalLPValue(totalLPValue);
         })
-    }, [totalLPValue, lpCoin])
+    }, [totalLPValue, globalContext.account, totalSupplyTLP])
+
+    useEffect(() => {
+        if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
+            let currentTimestamp = Date.now();
+            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+            setUserReward(Reward);
+        }
+    }, [totalLPValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus])
+    
     
     const unStake = () => {
-        if(hasStakingMeta == true) {   
-            const metaPoolId = userStakingStatus.data.fields.id.id;
-            UnStakeTLP(globalContext.provider, globalContext.wallet, {
-                stakingMetaId: metaPoolId,
-                tlpType: CONFIG.tlp,
-                tryType: CONFIG.try
-            }).then(res => {
-                console.log(res);
-                toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
-            })
+        if(isLoggedIn() == false) {
+            toast.error("Please connect wallet");
+        } else if (userStakingStatus == null) {
+            toast.error("No staked TLP. Please stake TLP");
+        } else if (userStakingStatus.data.fields.staking_amount == "0") {
+            toast.error("No staked TLP. Please stake TLP");
+        } else {
+            if(hasStakingMeta == true) {   
+                const metaPoolId = userStakingStatus.data.fields.id.id;
+                UnStakeTLP(globalContext.provider, globalContext.wallet, {
+                    stakingMetaId: metaPoolId,
+                    tlpType: CONFIG.tlp,
+                    tryType: CONFIG.try
+                }).then(res => {
+                    console.log(res);
+                    toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
+                })
+            }
         }
     }
     const selectToken = (type) => {  
-        console.log(type);      
         if(coins == undefined) {
             toast.info("please wait for a few sec. now loading data");
             setIsTokenMenu(false);
@@ -265,8 +289,10 @@ const Market = (props) => {
             setFirstTokenValue(Number(firstTokenMaxValue) * value / 100);
             handleFirstTokenChange(Number(firstTokenMaxValue) * value / 100);
         } else if(index == 3) {
-            let inValue = (Number(poolLPValue) * value / 100).toFixed(0);
+            let inValue = (Number(poolLPValue) * value / 100 * (100 - 1) / 100).toFixed(0);
+            let inValueFee = (Number(poolLPValue) * value / 100 * 1 / 100).toFixed(0);
             setLPToken(inValue);
+            setLPTokenFee(inValueFee);
             handleTLPTokenChange(inValue);
         }
     }
@@ -279,7 +305,10 @@ const Market = (props) => {
             if(_firstTokenType == item.metadata[0].symbol) {
                 setPoolId(item);
                 _getLpValue = getTLPValue(_firstTokenType, value);
-                setLPToken(_getLpValue);
+                let realValue = (_getLpValue * (100 - 1) / 100).toFixed(0);
+                let feeValue =  (_getLpValue * 1 / 100).toFixed(0)
+                setLPToken(realValue);
+                setLPTokenFee(feeValue);
             } 
         })        
     }
@@ -296,8 +325,7 @@ const Market = (props) => {
     }
 
     const buyTLP = async () => {
-        const isLog = isLoggedIn();
-        if(isLog == false) {
+        if(isLoggedIn() == false) {
             toast.error("Please connect wallet");
         } else {
             try {  
@@ -311,6 +339,8 @@ const Market = (props) => {
                     maxSlippagePct : CONFIG.defaultSlippagePct,
                     price: selectTokenPrice
                 }).then((args) => {
+                    setFirstTokenValue(0);
+                    setLPToken(0);
                     toast.info("Token TLP has been bought successfully!");
                     console.log("mint successfully");
                 })
@@ -332,6 +362,9 @@ const Market = (props) => {
                             price: selectTokenPrice,
                             maxSlippagePct: CONFIG.defaultSlippagePct
                         }).then(item => {
+                            setActiveLP(null);
+                            setLPToken(0);
+                            setSellFirstTokenGetValue(0);
                             toast.info("Your TLP token has been successfully sold!");
                         })
                     }
@@ -370,6 +403,44 @@ const Market = (props) => {
             }
         })}
     }
+
+    useEffect(() => {
+        checkSwapStatus();
+    }, [firstTokenValue, globalContext.account, firstToken, activeLP, lpToken])
+
+    const checkSwapStatus = () => {
+        if(globalContext.account == null && connected == false) {
+            setStatusIndex1(0);
+        } else if (firstToken[0].label == "Select") {
+            setStatusIndex1(1);
+        } else if (globalContext.account != null && connected != false && (firstTokenValue == "" || firstTokenValue == 0)) {
+            setStatusIndex1(2);
+        } else if (globalContext.account != null && connected != false && Number(firstTokenValue) > firstTokenMaxValue) {
+            setStatusIndex1(3);
+        } else {
+            setStatusIndex1(4);
+        }
+
+        let poolValue = 0;
+        {lpMetaData.map((item) => {
+            if(item.PoolId == activeLP) 
+            poolValue = item.LPFirstTokenValue;
+        })}
+        if(globalContext.account == null && connected == false) {
+            setStatusIndex2(0);
+        } else if (activeLP == null) {
+            setStatusIndex2(1);
+        } else if (globalContext.account != null && connected != false && (lpToken == "" || lpToken == "0")) {
+            setStatusIndex2(2);
+        } else if (globalContext.account != null && connected != false && Number(lpToken) > TLPbalance) {
+            setStatusIndex2(3);
+        } else if (globalContext.account != null && connected != false && changeDecimal(sellFirstTokenGetValue) > Number(poolValue)) {
+            setStatusIndex2(4);
+        } else {
+            setStatusIndex2(5);
+        }
+    }
+
     return (
         <div className={`d-flex ${isMobile == true ? `px-3`:`px-5`}`}>
             <div className='w-15'>
@@ -414,18 +485,27 @@ const Market = (props) => {
                                 </div>
                                 <div className='pt-3'>
                                     <div className='d-flex justify-content-between'>
-                                        <p className='text-gray py-2'>Free - Buy TLP</p>
-                                        <p className='py-2'>$0</p>
+                                        <p className='text-gray py-2'>Fee - Buy TLP</p>
+                                        <p>$ {lpTokenFee}</p>
                                     </div>
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray py-2'>You will receive</p>
-                                        <p className='py-2'>{lpToken} TLP</p>
+                                        <p>{lpToken} TLP</p>
                                     </div>
                                 </div>  
-                                {globalContext.account == null && connected == false && (
+                                {statusIndex1 == 0 && (
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={connectWallet}>Connect Wallet</div>
                                 )}                       
-                                {globalContext.account != '' && connected == true && (
+                                {statusIndex1 == 1 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-green btn-disabled'>Select token</div>
+                                )}                       
+                                {statusIndex1 == 2 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-green btn-disabled'>Enter Amount</div>
+                                )}                       
+                                {statusIndex1 == 3 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-green btn-disabled'>Insufficient Amount</div>
+                                )}                       
+                                {statusIndex1 == 4 && (
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-green' onClick={() => buyTLP()}>Buy TLP</div>
                                 )}    
                             </div> 
@@ -467,33 +547,42 @@ const Market = (props) => {
                                         <div className='d-flex token-select'><h6 className='text-gray'>{sellFirstTokenSymbol}</h6></div>
                                     </div>
                                 </div>
-                                {/* <div className='trade-token-select mb-2 p-4 mt-1'>
-                                    <div><div><p className='text-gray text-left fs-12'>LP {sellSecondTokenSymbol} Amount: <span className='text-white'>{sellFirstTokenValue}</span> {sellSecondTokenSymbol}</p></div></div>
-                                    <div className='d-flex justify-content-between'>
-                                        <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={sellSecondTokenGetValue.toFixed(0)} />
-                                        <div className='d-flex token-select'><h6 className='text-gray'>{sellSecondTokenSymbol}</h6></div>
-                                    </div>
-                                </div> */}
                                 
                                 <div className='pt-3'>
-                                    {/* <div className='d-flex justify-content-between'>
-                                        <p className='text-gray py-2'>Free - Buy TLP</p>
-                                        <p className='py-2'>$0</p>
-                                    </div> */}
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray'>You will receive</p>
                                         <div>
                                             <p>{changeDecimal5Fix(sellFirstTokenGetValue)} {sellFirstTokenSymbol}</p>
-                                            {/* <p>{sellSecondTokenGetValue.toFixed(0)} {sellSecondTokenSymbol}</p> */}
+                                        </div>
+                                    </div>
+                                    <div className='d-flex justify-content-between'>
+                                        <p className='text-gray'>Available liquidity</p>
+                                        <div>
+                                            {lpMetaData.map((item) => {
+                                                if(item.PoolId == activeLP) 
+                                                return <div className='d-flex justify-content-between w-100'>{(item.LPFirstTokenValue).toFixed(2)} {item.LPFirstTokenSymbol}</div>
+                                            })}
                                         </div>
                                     </div>
                                 </div>  
-                                {globalContext.account == null && connected == false && (
-                                    <div className='earn-button w-100 text-center py-2 mt-4 border-radius mb-3'>Connect Wallet</div>
+                                {statusIndex2 == 0 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={connectWallet}>Connect Wallet</div>
                                 )}                       
-                                {globalContext.account != '' && connected == true && (
-                                    <div className='earn-button w-100 text-center py-2 mt-4 border-radius mb-3 background-red' onClick={() => sellTLP()}>SELL TLP</div>
-                                )}    
+                                {statusIndex2 == 1 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-red btn-disabled'>Select token</div>
+                                )}                       
+                                {statusIndex2 == 2 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-red btn-disabled'>Enter Amount</div>
+                                )}                       
+                                {statusIndex2 == 3 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-red btn-disabled'>Insufficient Amount</div>
+                                )}                       
+                                {statusIndex2 == 4 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-red btn-disabled'>Overflow Pool Amount</div>
+                                )}                       
+                                {statusIndex2 == 5 && (
+                                    <div className='earn-button w-100 text-center py-2 border-radius mb-3 background-red' onClick={() => sellTLP()}>SELL TLP</div>
+                                )}   
                             </div>
                         )}
                                           

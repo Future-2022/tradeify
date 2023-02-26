@@ -314,6 +314,7 @@ module trading::pool {
         inPoolID: ID,
         outPoolID: ID,
         marketPrice: u64,
+        lastPrice: u64,
         tradingAmount: u64,
         calcAmount: u64,
         updateCalcAmount: u64,
@@ -797,7 +798,8 @@ module trading::pool {
 
         let tradingStatus = 1; // open
         let _updateCalcAmount = 0;
-        let isEarn = 0;
+        let _isEarn = 0;
+        let _lastPrice = 0;
         balance::join(&mut inPoolID.balance_a, balance_A);
 
         tradingPoolID.openPosition = tradingPoolID.openPosition + 1;
@@ -808,6 +810,7 @@ module trading::pool {
             inPoolID: _inPoolID,
             outPoolID: _outPoolID,
             marketPrice: marketPrice,
+            lastPrice: _lastPrice,
             tradingAmount: _tradingAmountUpdate,
             calcAmount: calcAmount,
             updateCalcAmount: _updateCalcAmount,
@@ -817,7 +820,7 @@ module trading::pool {
             createdTimeStamp: createdTimeStamp,
             tradingType: tradingType,
             tradingStatus: tradingStatus,
-            isEarn: isEarn,
+            isEarn: _isEarn,
         };
         vec_map::insert(&mut tradingPoolID.data, item, true);
         event::emit(PositionCreationEvent {trader: _trader, inPoolID: _inPoolID, outPoolID: _outPoolID});
@@ -886,7 +889,8 @@ module trading::pool {
 
         let tradingStatus = 1; // open
         let _updateCalcAmount = 0;
-        let isEarn = 0;
+        let _isEarn = 0;
+        let _lastPrice = 0;
         balance::join(&mut inPoolID.balance_a, balance_A);
 
         tradingPoolID.openPosition = tradingPoolID.openPosition + 1;
@@ -897,6 +901,7 @@ module trading::pool {
             inPoolID: _inPoolID,
             outPoolID: _inPoolID,
             marketPrice: marketPrice,
+            lastPrice: _lastPrice,
             tradingAmount: _tradingAmountUpdate,
             calcAmount: calcAmount,
             updateCalcAmount: _updateCalcAmount,
@@ -906,7 +911,7 @@ module trading::pool {
             createdTimeStamp: createdTimeStamp,
             tradingType: tradingType,
             tradingStatus: tradingStatus,
-            isEarn: isEarn,
+            isEarn: _isEarn,
         };
         vec_map::insert(&mut tradingPoolID.data, item, true);
         event::emit(PositionCreationEvent {trader: _trader, inPoolID: _inPoolID, outPoolID: _inPoolID});
@@ -993,7 +998,6 @@ module trading::pool {
                 tradingAmount = key.tradingAmount; 
                 let updateCalcAmount = updateCalcAmountValue; 
                 let leverageValue = key.leverageValue; 
-                leverage = key.leverageValue;
                 let referID = key.referID; 
                 let hasRefer = key.hasRefer;
                 let createdTimeStamp = key.createdTimeStamp; 
@@ -1006,6 +1010,7 @@ module trading::pool {
                     inPoolID: inPoolID,
                     outPoolID: outPoolID,
                     marketPrice: marketPrice,
+                    lastPrice: current_priceB,
                     tradingAmount: tradingAmount,
                     calcAmount: calcAmount,
                     updateCalcAmount: updateCalcAmount,
@@ -1097,7 +1102,6 @@ module trading::pool {
                 tradingAmount = key.tradingAmount; 
                 let updateCalcAmount = updateCalcAmountValue; 
                 let leverageValue = key.leverageValue; 
-                leverage = key.leverageValue;
                 let referID = key.referID; 
                 let hasRefer = key.hasRefer;
                 let createdTimeStamp = key.createdTimeStamp; 
@@ -1110,6 +1114,7 @@ module trading::pool {
                     inPoolID: inPoolID,
                     outPoolID: outPoolID,
                     marketPrice: marketPrice,
+                    lastPrice: current_priceA,
                     tradingAmount: tradingAmount,
                     calcAmount: calcAmount,
                     updateCalcAmount: updateCalcAmount,

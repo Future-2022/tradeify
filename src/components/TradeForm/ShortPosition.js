@@ -30,7 +30,7 @@ import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
 
-import { getTradeDatas, getSwapPrice, getCoins, getReferralIDByCode, changeDecimal8Fix, 
+import { getTradeDatas, getCoins, getReferralIDByCode, isLoggedIn,
     getTraderStatus, getUniqueCoinTypes, getCoinBalances, getMainCoins, getTokenPrice,
     changeDecimal, fetchLPCoins, getTraderMetaData, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 
@@ -94,7 +94,7 @@ const LongPosition = () => {
 
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
-    const [firstTokenValue, setFirstTokenValue] = useState(undefined);
+    const [firstTokenValue, setFirstTokenValue] = useState("");
     const [firstTokenMaxValue, setFirstTokenMaxValue] = useState(0);
     const [firstTokenPrice, setFirstTokenPrice] = useState(0);
     const [availableLiqudity, setAvailableLiqudity] = useState(0);
@@ -104,6 +104,7 @@ const LongPosition = () => {
     const [secondTokenPrice, setSecondTokenPrice] = useState(0);
 
     const [tokenPrice, setTokenPrice] = useState([]);       
+    const [isOverflowAmount, setIsOverflowAmount] = useState(false);    
 
     const getPrice = () => {       
         getTokenPrice().then(item => {
@@ -136,17 +137,19 @@ const LongPosition = () => {
         });
     }, [tokenPrice])
 
-    useEffect(() => {
-        getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const newCoins = getUniqueCoinTypes(item).map(arg => {
-                return { value: arg, label: Coin.getCoinSymbol(arg) }
-            });
-            const balance = getCoinBalances(item);
-            const mainCoins = getMainCoins(tokenPrice, lpCoin);
-            setCoinBalance(balance);
-            setCoins(newCoins);
-            setMainCoins(mainCoins);
-        })
+    useEffect(() => {        
+        if(isLoggedIn() == true) { 
+            getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+                const newCoins = getUniqueCoinTypes(item).map(arg => {
+                    return { value: arg, label: Coin.getCoinSymbol(arg) }
+                });
+                const balance = getCoinBalances(item);
+                const mainCoins = getMainCoins(tokenPrice, lpCoin);
+                setCoinBalance(balance);
+                setCoins(newCoins);
+                setMainCoins(mainCoins);
+            })
+        }
     }, [lpCoin, tokenPrice])
     
     const connectWallet = () => {
@@ -182,7 +185,6 @@ const LongPosition = () => {
                 lpCoin.map(item => {
                     if(type == item.metadata[0].symbol) {
                         setInPoolId(item);                
-                        setAvailableLiqudity(Number(item.data.balanceA.value));
                         let price = 0;
                         tokenPrice.map(itemValue => {
                             if(itemValue.symbol == item.metadata[0].symbol) {
@@ -198,7 +200,8 @@ const LongPosition = () => {
                 globalContext.setMarketToken(token[0].label);
                 lpCoin.map(item => {
                     if(type == item.metadata[0].symbol) {
-                        setOutPoolId(item);       
+                        setOutPoolId(item); 
+                        setAvailableLiqudity(Number(item.data.balanceA.value));
                         let price = 0;
                         let priceItem = undefined;
                         tokenPrice.map(itemValue => {
@@ -224,6 +227,11 @@ const LongPosition = () => {
         setIsOpenModal(true);
     }
     const handleFirstTokenChange = (Invalue) => {
+        if(Number(Invalue) > changeDecimal(firstTokenMaxValue)) {
+            setIsOverflowAmount(true);
+        } else {
+            setIsOverflowAmount(false);
+        }
         setFirstTokenValue(Invalue);
         let _secondTokenValue = 0;
         const _firstTokenType = firstToken[0].label;
@@ -381,10 +389,16 @@ const LongPosition = () => {
                 )}
                 {globalContext.account != '' && connected != false && (
                     <>
-                        {firstTokenValue == undefined && (
-                            <div className='earn-button w-100 text-center'>Enter Amount</div>
+                        {firstToken[0].label == "Select" && (
+                            <div className='earn-button w-100 text-center btn-disabled' disabled>Select Token</div>
                         )}
-                        {firstTokenValue != undefined && secondTokenValue != undefined && (
+                        {firstTokenValue == "" && firstToken[0].label != "Select" && (
+                            <div className='earn-button w-100 text-center btn-disabled' disabled>Enter Amount</div>
+                        )}  
+                        {firstTokenValue != "" && firstToken[0].label != "Select" && isOverflowAmount == true &&  (
+                            <div className='earn-button w-100 text-center btn-disabled' disabled>Insufficient Amount</div>
+                        )}  
+                        {firstTokenValue != "" && isOverflowAmount == false && (
                             <div className='earn-button w-100 text-center' onClick={createOrder}>Create Order</div>
                         )}
                     </>
@@ -392,7 +406,7 @@ const LongPosition = () => {
                 <div className='pt-3'>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Available Liquidity</p>
-                        <p>{changeDecimal5Fix(availableLiqudity)} {firstToken[0].label}</p>
+                        <p>{changeDecimal5Fix(availableLiqudity)} {secondToken[0].label}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Liquidity Source</p>
@@ -400,7 +414,7 @@ const LongPosition = () => {
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Profits in</p>
-                        <p>{secondToken[0].label}</p>
+                        <p>{firstToken[0].label}</p>
                     </div>
                     <div className='d-flex justify-content-between'>
                         <p className='text-gray'>Liq.Price</p>

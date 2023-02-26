@@ -5,21 +5,22 @@ import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
 import { StoreContext } from '../../store';
 import { createReferralCode, submitReferralCode } from '../../lib/tradeify-sdk/referral';
-import { getReferralStatus, getTraderStatus, getReferralResult, getTradingResult } from '../../control/main';
+import { getReferralStatus, getTraderStatus, getReferralResult, isAvailaleReferralCode, getTradingResult } from '../../control/main';
 import { FaClipboard } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import LoadingSpin from "react-loading-spin";
 
 import { fetchLPCoins, getTokenPrice } from '../../control/main';
 import { CONFIG } from '../../lib/config';
+import { getObjectExistsResponse } from '@mysten/sui.js';
 
 const Referral = (props) => {
-
+    const { account, connected, connecting, connects, disconnect } = useWallet();
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const inputArea = useRef(undefined);
     const [formIndex, setFormIndex] = useState(1);
     const globalContext = useContext(StoreContext); 
-    const [referralCodeValue, setReferralCodeValue] = useState(undefined);
+    const [referralCodeValue, setReferralCodeValue] = useState("");
     // referal part parameter
     const [referralCode, setReferralCode] = useState(undefined);
     const [traderNum, setTraderNum] = useState(undefined);
@@ -34,7 +35,12 @@ const Referral = (props) => {
     // trader part parameter
     const [traderReferralCode, setTraderReferralCode] = useState(undefined);
     const [lpCoin, SetLPCoin] = useState([]);
-    const [tokenPrice, setTokenPrice] = useState([]);   
+    const [tokenPrice, setTokenPrice] = useState([]);  
+
+    const [statusIndex1, setStatusIndex1] = useState([]);   
+    const [statusIndex2, setStatusIndex2] = useState([]);  
+
+    const [isAvailable, setIsAvailable] = useState(false);   
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
@@ -53,10 +59,14 @@ const Referral = (props) => {
         }, CONFIG.timeIntervalOfPrice);
         return () => clearInterval(interval);
     }, []);
-
+    
     useEffect(() => {
         const code = new URLSearchParams(location.search).get('ref')
         setReferralCodeValue(code);
+        handleChangeReferralCode(code);
+    }, [])
+
+    useEffect(() => {        
         getReferralStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setReferralCode(item.referralCode);
             setTraderNum(item.traderNum);
@@ -73,16 +83,16 @@ const Referral = (props) => {
             setTraderTradingVolume(item.tradingAmount);
             setTraderTradingRebate(item.rebate);
         })
-    }, [lpCoin, tokenPrice])
+    }, [lpCoin, traderReferralCode])
     
     const selectFormIndex = (value) => {
         setFormIndex(value);
     }
     const create_refer_code = () => {
-        console.log(referralCodeValue);
         createReferralCode(globalContext.provider, globalContext.wallet, {
             referralCode: referralCodeValue
         }).then(args => {
+            console.log(args);
             toast.info(`Your referral code ${referralCodeValue} has been created`);
             setTraderReferralCode(0);
         }).catch(err => {
@@ -91,14 +101,22 @@ const Referral = (props) => {
     }
 
     const submit_refer_code = () => {
-        submitReferralCode(globalContext.provider, globalContext.wallet, {
-            referralCode: referralCodeValue
-        }).then(args => {
-            toast.info(`You have set referral code ${referralCodeValue}`);
-            setTraderReferralCode(0);
-        }).catch(err => {
-            console.log(err);
-        })
+        try {            
+            submitReferralCode(globalContext.provider, globalContext.wallet, {
+                referralCode: referralCodeValue
+            }).then(args => {
+                if (args.effects.status.status == "failure") {
+                    toast.error(`This referral code ${referralCodeValue} is not exist. You can set other referral code`);
+                } else {
+                    toast.info(`You have set referral code ${referralCodeValue}`);
+                }
+                setTraderReferralCode(0);
+            }).catch(err => {
+                console.log(err);
+            })
+        } catch (e) {
+            console.log(e);
+        }
     }
 
     function updateClipboard(newClip) {
@@ -116,6 +134,35 @@ const Referral = (props) => {
                 updateClipboard(inputArea.current?.innerText);
             }
         });
+    }
+    const handleChangeReferralCode = async (value) => {
+        let isAvailable = await isAvailaleReferralCode(globalContext.provider, value);
+        setIsAvailable(isAvailable);
+        setReferralCodeValue(value);
+    }
+
+    useEffect(() => {
+        checkSwapStatus();
+    }, [globalContext.account, referralCodeValue, isAvailable])
+
+    const checkSwapStatus = () => {
+        if(globalContext.account == null && connected == false) {
+            setStatusIndex1(0);
+        } else if (referralCodeValue == "" || referralCodeValue == null) {
+            setStatusIndex1(1);
+        } else if (isAvailable == false) {
+            setStatusIndex1(2);
+        } else if (referralCodeValue != "" ) {
+            setStatusIndex1(3);
+        } 
+
+        if(globalContext.account == null && connected == false) {
+            setStatusIndex2(0);
+        } else if (referralCodeValue == "" || referralCodeValue == null) {
+            setStatusIndex2(1);
+        } else if (referralCodeValue != "" ) {
+            setStatusIndex2(2);
+        } 
     }
 
     return (
@@ -140,15 +187,24 @@ const Referral = (props) => {
                                 <div className='left-bottom-bg'></div>  
                                 <h4 className='text-white pt-1'>Enter Referral Code</h4>
                                 <p className='text-gray'>Please input a referral code to benefit from fee discounts.<br /> You can input valid code on this tradefiy platform.</p>
-                                <input className='referral text-white mt-5' type='text' placeholder='Enter referral code' value={referralCodeValue} onChange={(e) => setReferralCodeValue(e.target.value)} />
-                                <div className='referral-button' onClick={submit_refer_code}>Enter referral code</div>
+                                <input className='referral text-white mt-5' type='text' placeholder='Enter referral code' value={referralCodeValue} onChange={(e) => handleChangeReferralCode(e.target.value)} />
+                                {statusIndex1 == 0 && (
+                                    <div className='referral-button' onClick={() => globalContext.setModalIsOpen(true)}>Connect wallet</div>
+                                )}
+                                {statusIndex1 == 1 && (
+                                    <div className='referral-button btn-disabled'>Enter referral code</div>
+                                )}                                
+                                {statusIndex1 == 2 && (
+                                    <div className='referral-button btn-disabled'>Unavailable referral code</div>
+                                )}                                
+                                {statusIndex1 == 3 && (
+                                    <div className='referral-button' onClick={submit_refer_code}>Set referral code</div>
+                                )}                                
                             </div>
                         )}
                         {traderReferralCode != undefined && (
                             <div className='w-100'>
-                                <div className='mt-5 trader-referral-part referral-part flex-wrap d-flex justify-content-center mt-3 p-5'>
-                                    
-                                     
+                                <div className='mt-5 trader-referral-part referral-part flex-wrap d-flex justify-content-center mt-3 p-5'>                                     
                                     <div>
                                         <p>Total trading volume</p>
                                         <h5>${traderTradingVolume}</h5>
@@ -175,7 +231,16 @@ const Referral = (props) => {
                                     <h4 className='text-white pt-1'>Generate Referral Code</h4>
                                     <p className='text-gray'>Looks like you don't have a referral code to share.<br/>Create one now and start earning rebates!</p>
                                     <input className='referral text-white mt-5' type='text' placeholder='Enter code'  value={referralCodeValue} onChange={(e) => setReferralCodeValue(e.target.value)} />
-                                    <div className='referral-button' onClick={create_refer_code}>Enter a code</div>
+                                    
+                                    {statusIndex2 == 0 && (
+                                        <div className='referral-button' onClick={() => globalContext.setModalIsOpen(true)}>Connect wallet</div>
+                                    )}
+                                    {statusIndex1 == 1 && (
+                                        <div className='referral-button btn-disabled'>Enter referral code</div>
+                                    )}
+                                    {statusIndex2 == 2 && (
+                                        <div className='referral-button' onClick={create_refer_code}>Generate a referral code</div>
+                                    )}                                    
                                 </div>
                             )}
                             {referralCode != undefined && (

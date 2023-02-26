@@ -43,7 +43,7 @@ export const CONFIG = {
     defaultSlippagePct: 1,
     tradingFee: 1, // this is % value
     nullAddress: '0x0000000000000000000000000000000000000000',
-    faucetDurationTime: 3600000, // 1 hour
+    faucetDurationTime: 10 * 60 * 1000, // 1 hour
     TLPPrice: 1,
     timeIntervalOfPrice: 3000,
 }

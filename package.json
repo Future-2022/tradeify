@@ -22,6 +22,7 @@
     "eslint-plugin-react": "^7.32.1",
     "jquery": "^3.6.3",
     "moment": "^2.29.4",
+    "particles-bg": "^2.5.5",
     "rc-slider": "^10.1.1",
     "react": "^18.2.0",
     "react-apexcharts": "^1.4.0",

@@ -24,13 +24,13 @@ const Home = (props) => {
 
 
     // TLP part 
-    const [totalLPValue, setTotalLPValue] = useState(false);
+    const [totalLPValue, setTotalLPValue] = useState(0);
     const [stakingAPR, setStakingAPR] = useState(0);
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
     const [userStakingStatus, setUserStakingStatus] = useState(undefined);
 
     
-    const [tryPrice, setTryPrice] = useState(0);   
+    const [tryPrice, setTryPrice] = useState(1);   
     const [lpCoin, SetLPCoin] = useState(undefined);
 
     const getPrice = () => {       
@@ -48,13 +48,14 @@ const Home = (props) => {
     useEffect(() => {
         let totalSupplyTLP = 0;
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+
             let totalLPValue = 0;
             lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply.value);
                 if(item.metadata[0].symbol == "TRY") {
-                    let TRYPrice = (Number(item.data.balanceA.value) / Number(item.data.balanceB.value)).toFixed(3);
+                    let TRYPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
                     setTryPrice(TRYPrice);
                 }
+                totalLPValue += Number(item.data.lpSupply.value);
             })
 
             const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
@@ -173,7 +174,7 @@ const Home = (props) => {
                                     <div className='w-80 pri-0 wmin-340'>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>AUM</h6>
-                                            <h6 className='text-white'>${tryPrice}</h6>
+                                            <h6 className='text-white'>$ {tryPrice}</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Supply</h6>
@@ -302,7 +303,7 @@ const Home = (props) => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> 
         </div>
     )
 }

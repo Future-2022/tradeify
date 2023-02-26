@@ -75,6 +75,8 @@ const Header = () => {
     const disconnectWallet = () => {
         disconnect();
         globalContext.setAccount(null);
+        localStorage.removeItem('walletAddress');
+        window.location.reload(false);
     }
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);
