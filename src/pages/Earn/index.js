@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './index.css';
 import TLP from '../../img/png/token-logo.png';
-import { FaAngleDown } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
 import { fetchUserLpCoins, findStakingMeta, isLoggedIn, getStakingPoolStatus, fetchLPCoins, changeDecimal, changeDecimal5Fix } from '../../control/main';
@@ -9,13 +8,13 @@ import { CONFIG } from '../../lib/config';
 import { StoreContext } from '../../store';
 import { stakeTLP, depositTLPStake, getStakingReward, UnStakeTLP } from '../../lib/tradeify-sdk/staking';
 
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 
 const Earn = (props) => {
     
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);   
-    const { account, connected, connecting, connects, disconnect } = useWallet();
+    const { connected } = useWallet();
     
     const [totalLPValue, setTotalLPValue] = useState(false);
     const [stakingAPR, setStakingAPR] = useState(0);
@@ -30,10 +29,9 @@ const Earn = (props) => {
     // staking parameter
     const [tlpValue, setTLPvalue] = useState("");
     const [lockTime, setLockTime] = useState("");
-    const [tryPrice, setTryPrice] = useState(1);
+    const [tlpPrice, setTlpPrice] = useState(CONFIG.TLPPrice);
     
     // UI parameter
-    const [userLpCoin, setUserLPCoin] = useState([]);
     const [totalUserLP, setTotalUserLP] = useState(0);
 
     const [statusIndex, setStatusIndex] = useState(undefined);
@@ -118,7 +116,6 @@ const Earn = (props) => {
                     tlpType: CONFIG.tlp,
                     tryType: CONFIG.try
                 }).then(res => {
-                    console.log(res);
                     setUserStakingStatus(undefined);                
                     setUserReward(0);
                     toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
@@ -136,7 +133,6 @@ const Earn = (props) => {
                     totalUserLPValue += Number(args.balance.value);
                     setTotalUserLP(totalUserLPValue);
                 })
-                setUserLPCoin(items);
             });
         }
         getStakingPoolStatus(globalContext.provider).then(res => {
@@ -159,10 +155,6 @@ const Earn = (props) => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
-                if(item.metadata[0].symbol == "TRY") {
-                    let TRYPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
-                    setTryPrice(TRYPrice);
-                }
                 totalLPValue += Number(item.data.lpSupply.value);
             })
             let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
@@ -258,8 +250,8 @@ const Earn = (props) => {
                                         <h4 className='py-2'>{stakingAPR.toFixed(2)}%</h4>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
-                                        <p className='text-gray py-2'>TRY Price</p>
-                                        <p className='text-pink-sharp'>$ {tryPrice}</p>
+                                        <p className='text-gray py-2'>TLP Price</p>
+                                        <p className='text-pink-sharp'>$ {tlpPrice}</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total staked</p>

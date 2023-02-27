@@ -1,43 +1,40 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './index.css';
 
-import TokenIcon1 from '../../img/png/SUI.png';
-import TokenIcon2 from '../../img/png/eth-bg.png';
-import TokenIcon3 from '../../img/svg/BTC.svg';
-
-import TLP from '../../img/png/token-logo.png';
-import { getTotalTRYValue, getStakingPoolStatus, 
-    fetchLPCoins, LPMetaData, getTokenPrice } from '../../control/main';
-import { StoreContext } from '../../store';
-
-import { CONFIG } from '../../lib/config';
-
 import { FaAngleDown } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
 
+import TLP from '../../img/png/token-logo.png';
+import { StoreContext } from '../../store';
+import { CONFIG } from '../../lib/config';
+
+import { getTotalTRYValue, getStakingPoolStatus, 
+    fetchLPCoins, LPMetaData, getTokenPrice } from '../../control/main';
+
 const Home = (props) => {
+
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });  
     const globalContext = useContext(StoreContext); 
     const [tokenPrice, setTokenPrice] = useState([]); 
+
     // TRY part
     const [totalTRYValue, setTotalTRYValue] = useState(false);
 
-
     // TLP part 
     const [totalLPValue, setTotalLPValue] = useState(0);
-    const [stakingAPR, setStakingAPR] = useState(0);
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
-    const [userStakingStatus, setUserStakingStatus] = useState(undefined);
 
     
     const [tryPrice, setTryPrice] = useState(1);   
     const [lpCoin, SetLPCoin] = useState(undefined);
 
+    // Get Price part
     const getPrice = () => {       
         getTokenPrice().then(item => {
             setTokenPrice(item);
         })  
     }
+
     useEffect(() => {
         const interval = setInterval(() => {
             getPrice();
@@ -60,12 +57,6 @@ const Home = (props) => {
 
             const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
             SetLPCoin(newMetaData);
-
-            if(stakingPoolStatus != undefined || userStakingStatus != undefined) {
-                let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
-                let currentTimestamp = Date.now();
-                setStakingAPR(APR);
-            }
             setTotalLPValue(totalLPValue);
         })
         getStakingPoolStatus(globalContext.provider).then(res => {

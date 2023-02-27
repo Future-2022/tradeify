@@ -1,8 +1,6 @@
 
-export const CONFIG = {  
-     
+export const CONFIG = {       
     rpcUrl: 'https://fullnode.devnet.sui.io:443',
-
     // link: 'http://localhost:3000/',
     link: 'https://tradeify.app/',
 
@@ -38,12 +36,17 @@ export const CONFIG = {
     // trading package
     tradingPoolID: '0x41c9d86500914cc1a4b60688e1e22aecc6d101f8',
 
+    nullAddress: '0x0000000000000000000000000000000000000000',
+
+    eth_binance_api: 'https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT',
+    bnb_binance_api: 'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT',
+
     // Main default setting parameter
     MainDecimal: 9,
     defaultSlippagePct: 1,
     tradingFee: 1, // this is % value
-    nullAddress: '0x0000000000000000000000000000000000000000',
-    faucetDurationTime: 10 * 60 * 1000, // 1 hour
     TLPPrice: 1,
-    timeIntervalOfPrice: 3000,
+    TRYPrice: 100,
+    faucetDurationTime: 10 * 60 * 1000, // 1 hour
+    timeIntervalOfPrice: 5000,    
 }

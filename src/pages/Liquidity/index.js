@@ -7,8 +7,6 @@ import { useMediaQuery } from 'react-responsive';
 import DonutChart from 'react-donut-chart';
 
 import TokenIcon1 from '../../img/png/SUI.png';
-import TokenIcon2 from '../../img/png/eth-bg.png';
-import TokenIcon3 from '../../img/svg/BTC.svg';
 
 import { fetchLPCoins, LPMetaData, getStakingPoolStatus, getTokenPrice } from '../../control/main';
 import { StoreContext } from '../../store';

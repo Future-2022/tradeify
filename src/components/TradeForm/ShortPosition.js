@@ -109,14 +109,13 @@ const LongPosition = () => {
     const getPrice = () => {       
         getTokenPrice().then(item => {
             setTokenPrice(item);      
-            console.log('here');  
-            console.log(secondToken[0].label);  
 
             if(secondToken[0].label != 'Select') {
                 console.log('ok');
                 item.map(itemValue => {
                     if(itemValue.symbol == secondToken[0].label) {
-                        globalContext.setMarketTokenPrice(itemValue);
+                        globalContext.setMarketTokenPrice(itemValue);                                             
+                        setLimitPrice(itemValue.value);
                     }
                 })
             }    

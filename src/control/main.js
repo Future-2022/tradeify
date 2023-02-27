@@ -356,7 +356,7 @@ export const getTokenPrice = async () => {
     let ethAvgPrice = 0;
     let ethChangePrice = 0;
     let ethIsEarn = 0;
-    let ethAPIUrl = 'https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'
+    let ethAPIUrl = CONFIG.eth_binance_api;
     
     let btcPrice = 0;
     let btcLowPrice = 0;
@@ -364,33 +364,33 @@ export const getTokenPrice = async () => {
     let btcAvgPrice = 0;
     let btcChangePrice = 0;
     let btcIsEarn = 0;
-    let btcAPIUrl = 'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT';
+    let btcAPIUrl = CONFIG.bnb_binance_api;
 
     await axios.get(ethAPIUrl).then((response) => {
-      ethPrice = Number(response.data.openPrice).toFixed(2);
+      ethPrice = Number(response.data.lastPrice).toFixed(2);
       ethLowPrice = Number(response.data.lowPrice).toFixed(2);
       ethHighPrice = Number(response.data.highPrice).toFixed(2);
       ethAvgPrice = Number(response.data.weightedAvgPrice).toFixed(2);
       if(ethAvgPrice <= ethPrice) {
         ethIsEarn = 1;
-        ethChangePrice = ((ethPrice - ethAvgPrice) / ethAvgPrice * 100).toFixed(2);
+        ethChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       } else {
         ethIsEarn = 0;
-        ethChangePrice = ((ethAvgPrice - ethPrice) / ethAvgPrice * 100).toFixed(2);
+        ethChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       }
     });
 
     await axios.get(btcAPIUrl).then((response) => {
-      btcPrice = Number(response.data.openPrice).toFixed(2);
+      btcPrice = Number(response.data.lastPrice).toFixed(2);
       btcLowPrice = Number(response.data.lowPrice).toFixed(2);
       btcHighPrice = Number(response.data.highPrice).toFixed(2);
       btcAvgPrice = Number(response.data.weightedAvgPrice).toFixed(2);
       if(btcAvgPrice <= btcPrice) {
         btcIsEarn = 1;
-        btcChangePrice = ((btcPrice - btcAvgPrice) / btcAvgPrice * 100).toFixed(2);
+        btcChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       } else {
         btcIsEarn = 0;
-        btcChangePrice = ((btcAvgPrice - btcPrice) / btcAvgPrice * 100).toFixed(2);
+        btcChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       }
     });
     return [
@@ -495,7 +495,6 @@ export const getStakingPoolStatus = async (provider) => {
         null,
         'descending'
     )
-    console.log(events);
     events.data.forEach(envelope => {
       const event = envelope.event
       if (!('moveEvent' in event)) {

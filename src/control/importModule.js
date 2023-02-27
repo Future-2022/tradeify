@@ -1,13 +1,3 @@
-import {
-    ObjectId,
-    Provider,
-    Coin as SuiCoin,
-    getObjectExistsResponse,
-    JsonRpcProvider,
-    getCreatedObjects,
-    TransactionEffects
-} from '@mysten/sui.js'
-
 export const importImage = (symbol) => {
   let value = '';
   if(symbol == 'ETH') {

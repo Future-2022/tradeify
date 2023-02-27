@@ -4,7 +4,7 @@ import './index.css';
 import TLP from '../../img/png/token-logo.png';
 import DateSelector from '../../img/png/date-selector.png';
 
-import { FaAngleDown, FaClipboard } from 'react-icons/fa';
+import { FaAngleDown } from 'react-icons/fa';
 
 import { useMediaQuery } from 'react-responsive';
 const LockStake = (props) => {
@@ -21,12 +21,7 @@ const LockStake = (props) => {
                         <div className={`market-form window ${isMobile == true ? `p-3`:`p-5 w-50`}`}>
                             <div className='d-flex justify-content-between'>
                                 <h4>Create Lock</h4>
-                                {/* <h6 className='text-pink mt-2'>Staking steps {`>`}</h6> */}
                             </div>
-                            {/* <div className='market-form-input d-flex justify-content-center mt-3'>
-                                <div className={`py-3 w-50 ${switchMarket == 1 && 'active'}`}><p className={`text-center ${switchMarket != 1 ? 'text-grey':'text-white'}`} onClick={() => setSwitchMarket(1)}>LOCK MCB</p></div>
-                                <div className={`py-3 w-50 ${switchMarket == 2 && 'active'}`}><p className={`text-center ${switchMarket != 2 ? 'text-grey ':'text-white'}`} onClick={() => setSwitchMarket(2)}>LOCK TRY</p></div>
-                            </div> */}
                             <div className='trade-token-select mb-2 p-4 mt-5'>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray text-left'>Lock Amount</p>
@@ -43,7 +38,6 @@ const LockStake = (props) => {
                                     <div className='percent-item'><p>100%</p></div>
                                 </div>
                             </div>
-                            {/* <div className='ex-logo-part'><img src={ExchangeLogo} width={45} className='exchange-logo' /></div> */}
                             <div className='trade-token-select mt-3 p-4'>
                                 <div className='d-flex justify-content-between'><p className='text-gray text-left'>Locked until</p></div>
                                 <div className='d-flex justify-content-between'>

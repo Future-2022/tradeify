@@ -127,6 +127,7 @@ const Swap = (props) => {
                     value = item;
                 }
             });
+            console.log(token[0].value);
             if(isSelectActive == 1) {
                 lpCoin.map(item => {
                     if(item.metadata[0].typeArg == token[0].value) {

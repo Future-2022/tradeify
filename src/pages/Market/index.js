@@ -5,11 +5,7 @@ import { useWallet } from '@mysten/wallet-adapter-react';
 import { FaAngleDown, FaAngleRight, FaBoxOpen, FaOpencart, FaRegFrownOpen } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
 import {
-    ObjectId,
-    Provider,
     Coin,
-    GetObjectDataResponse,
-    JsonRpcProvider,
 } from '@mysten/sui.js'
 import Modal from 'react-modal';
 
@@ -21,14 +17,11 @@ import { changeDecimal, fetchLPCoins, getStakingPoolStatus, getTokenPrice,
      getCoinBalances, getCoins, findStakingMeta, changeBigNumber, changeDecimal5Fix } from '../../control/main';
 import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
-import { buyTLPSdk, calcSwapOut, sellTLPSdk } from '../../lib/tradeify-sdk/pool';
+import { buyTLPSdk, sellTLPSdk } from '../../lib/tradeify-sdk/pool';
 import { UnStakeTLP, getStakingReward } from '../../lib/tradeify-sdk/staking';
 import Exchange1Logo from '../../img/png/exchange1.png';
 import Exchange2Logo from '../../img/png/exchange2.png';
 import TokenIcon from '../../img/png/token-logo.png';
-
-
-
 
 const customStyles = {
     content: {
@@ -48,9 +41,10 @@ const customStyles = {
       backgroundColor: 'rgb(0 0 0 / 86%)'
     }
 };
+
 const Market = (props) => {
 
-    const { wallets, wallet, select, connected, disconnect } = useWallet();
+    const { wallet, connected } = useWallet();
     const globalContext = useContext(StoreContext); 
     const [switchMarket, setSwitchMarket] = useState(1);
     const [activeLP, setActiveLP] = useState(null);
@@ -70,10 +64,6 @@ const Market = (props) => {
     const [sellFirstTokenSymbol, setSellFirstTokenSymbol] = useState(null);
     const [sellFirstTokenValue, setSellFirstTokenValue] = useState(0);
     const [sellFirstTokenGetValue, setSellFirstTokenGetValue] = useState(0);
-
-    const [sellSecondTokenSymbol, setSellSecondTokenSymbol] = useState(null);
-    const [sellSecondTokenValue, setSellSecondTokenValue] = useState(0);
-
 
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
@@ -395,11 +385,10 @@ const Market = (props) => {
         setIsLPMenu(false);
         {lpMetaData.map((item) => {
             if(item.PoolId == index) {
+                console.log(item)
                 setPoolLPValue(item.LPTokenValue);                
                 setSellFirstTokenSymbol(item.LPFirstTokenSymbol);
-                setSellSecondTokenSymbol(item.LPSecondTokenSymbol);
                 setSellFirstTokenValue(item.LPFirstTokenValue);
-                setSellSecondTokenValue(item.LPSecondTokenValue);
             }
         })}
     }
@@ -541,7 +530,7 @@ const Market = (props) => {
                                 <div className='ex-logo-part'><img src={Exchange2Logo} width={45} className='exchange-logo' /></div>
 
                                 <div className='trade-token-select only-border-red mb-2 p-4 mt-1'>
-                                    <div><div><p className='text-gray text-left fs-12'>LP {sellFirstTokenSymbol} Amount: <span className='text-white'>{sellSecondTokenValue}</span> {sellFirstTokenSymbol}</p></div></div>
+                                    <div><div><p className='text-gray text-left fs-12'>LP {sellFirstTokenSymbol} Amount: <span className='text-white'>{sellFirstTokenValue.toFixed(2)}</span> {sellFirstTokenSymbol}</p></div></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={changeDecimal5Fix(sellFirstTokenGetValue)} />
                                         <div className='d-flex token-select'><h6 className='text-gray'>{sellFirstTokenSymbol}</h6></div>
@@ -704,4 +693,3 @@ const Market = (props) => {
 }
 
 export default Market;
-
