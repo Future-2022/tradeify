@@ -5,7 +5,8 @@ import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
 import { StoreContext } from '../../store';
 import { createReferralCode, submitReferralCode } from '../../lib/tradeify-sdk/referral';
-import { getReferralStatus, getTraderStatus, getReferralResult, isAvailaleReferralCode, getTradingResult } from '../../control/main';
+import { getReferralStatus, getTraderStatus, getReferralResult, isAvailaleReferralCode, getTradingResult,
+    checkCreateReferralCode } from '../../control/main';
 import { FaClipboard } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import LoadingSpin from "react-loading-spin";
@@ -88,9 +89,16 @@ const Referral = (props) => {
     const selectFormIndex = (value) => {
         setFormIndex(value);
     }
-    const create_refer_code = () => {
+    
+    const create_refer_code = async () => {
+        let referralCode = getRandomInt(CONFIG.referCodeLength);
+        let isChecking = await checkCreateReferralCode(globalContext.provider, referralCode);
+        
+        console.log(referralCode);
+        console.log(isChecking);
+        if(isChecking == true) {
         createReferralCode(globalContext.provider, globalContext.wallet, {
-            referralCode: referralCodeValue
+            referralCode: referralCode
         }).then(args => {
             console.log(args);
             toast.info(`Your referral code ${referralCodeValue} has been created`);
@@ -98,6 +106,10 @@ const Referral = (props) => {
         }).catch(err => {
             console.log(err);
         })
+        }
+    }
+    function getRandomInt(max) {
+        return Math.floor(Math.random() * max);
     }
 
     const submit_refer_code = () => {
@@ -158,10 +170,8 @@ const Referral = (props) => {
 
         if(globalContext.account == null && connected == false) {
             setStatusIndex2(0);
-        } else if (referralCodeValue == "" || referralCodeValue == null) {
+        } else {
             setStatusIndex2(1);
-        } else if (referralCodeValue != "" ) {
-            setStatusIndex2(2);
         } 
     }
 
@@ -230,16 +240,13 @@ const Referral = (props) => {
                                     <div className='left-bottom-bg'></div> 
                                     <h4 className='text-white pt-1'>Generate Referral Code</h4>
                                     <p className='text-gray'>Looks like you don't have a referral code to share.<br/>Create one now and start earning rebates!</p>
-                                    <input className='referral text-white mt-5' type='text' placeholder='Enter code'  value={referralCodeValue} onChange={(e) => setReferralCodeValue(e.target.value)} />
+                                    {/* <input className='referral text-white mt-5' type='text' placeholder='Enter code'  value={referralCodeValue} onChange={(e) => setReferralCodeValue(e.target.value)} /> */}
                                     
                                     {statusIndex2 == 0 && (
-                                        <div className='referral-button' onClick={() => globalContext.setModalIsOpen(true)}>Connect wallet</div>
+                                        <div className='referral-button mt-5' onClick={() => globalContext.setModalIsOpen(true)}>Connect wallet</div>
                                     )}
-                                    {statusIndex1 == 1 && (
-                                        <div className='referral-button btn-disabled'>Enter referral code</div>
-                                    )}
-                                    {statusIndex2 == 2 && (
-                                        <div className='referral-button' onClick={create_refer_code}>Generate a referral code</div>
+                                    {statusIndex2 == 1 && (
+                                        <div className='referral-button mt-5' onClick={create_refer_code}>Generate a referral code</div>
                                     )}                                    
                                 </div>
                             )}

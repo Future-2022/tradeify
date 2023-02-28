@@ -59,12 +59,16 @@ const sliderRed = ['rgba(240, 68, 56, .3)', 'rgba(240, 68, 56, 1)'];
 
 const leverageMarks = {
     2: "2x",
-    5: "5x",
     10: "10x",
-    15: "15x",
     20: "20x",
-    25: "25x",
     30: "30x",
+    40: "40x",
+    50: "50x",
+    60: "60x",
+    70: "70x",
+    80: "80x",
+    90: "100x",
+    100: "100x",
 };
 
 const provider = new JsonRpcProvider(CONFIG.rpcUrl);
@@ -172,49 +176,54 @@ const LongPosition = () => {
             setIsOpenModal(false);
         } else {
             const token = coins.filter(item => item.label == type);
-            let value = undefined;
-            coinBalance.forEach((item, index) => {
-                if(index == token[0].value) {
-                    value = item;
-                }
-            });
-            if(isSelectActive == 1) {
-                setFirstToken(token);
-                setFirstTokenMaxValue(value);
-                lpCoin.map(item => {
-                    if(type == item.metadata[0].symbol) {
-                        setInPoolId(item);                
-                        let price = 0;
-                        tokenPrice.map(itemValue => {
-                            if(itemValue.symbol == item.metadata[0].symbol) {
-                                price = itemValue.value;
-                            }
-                        })
-                        setFirstTokenPrice(price);
-                    }
-                })
+            if(token.length == 0) {
+                toast.info(`You haven't ${type} token. Please buy or faucet token.`);
+                setIsOpenModal(false);
             } else {
-                setSecondToken(token);   
-                setMarketPrice(token);      
-                globalContext.setMarketToken(token[0].label);
-                lpCoin.map(item => {
-                    if(type == item.metadata[0].symbol) {
-                        setOutPoolId(item); 
-                        setAvailableLiqudity(Number(item.data.balanceA.value));
-                        let price = 0;
-                        let priceItem = undefined;
-                        tokenPrice.map(itemValue => {
-                            if(itemValue.symbol == item.metadata[0].symbol) {
-                                price = itemValue.value;
-                                priceItem = itemValue;
-                            }
-                        })
-                        setSecondTokenPrice(price);
-                        globalContext.setMarketTokenPrice(priceItem);
+                let value = undefined;
+                coinBalance.forEach((item, index) => {
+                    if(index == token[0].value) {
+                        value = item;
                     }
                 });
-            }
-            setIsOpenModal(false);
+                if(isSelectActive == 1) {
+                    setFirstToken(token);
+                    setFirstTokenMaxValue(value);
+                    lpCoin.map(item => {
+                        if(type == item.metadata[0].symbol) {
+                            setInPoolId(item);                
+                            let price = 0;
+                            tokenPrice.map(itemValue => {
+                                if(itemValue.symbol == item.metadata[0].symbol) {
+                                    price = itemValue.value;
+                                }
+                            })
+                            setFirstTokenPrice(price);
+                        }
+                    })
+                } else {
+                    setSecondToken(token);   
+                    setMarketPrice(token);      
+                    globalContext.setMarketToken(token[0].label);
+                    lpCoin.map(item => {
+                        if(type == item.metadata[0].symbol) {
+                            setOutPoolId(item);    
+                            setAvailableLiqudity(Number(item.data.balanceA.value));   
+                            let price = 0;
+                            let priceItem = undefined;
+                            tokenPrice.map(itemValue => {
+                                if(itemValue.symbol == item.metadata[0].symbol) {
+                                    price = itemValue.value;
+                                    priceItem = itemValue;
+                                }
+                            })
+                            setSecondTokenPrice(price);
+                            globalContext.setMarketTokenPrice(priceItem);
+                        }
+                    });
+                }
+                setIsOpenModal(false);
+            }  
         }
     }
 
@@ -222,8 +231,13 @@ const LongPosition = () => {
         setIsOpenModal(false);
     }
     const openModal = (type) => {
-        setIsSelectActive(type);
-        setIsOpenModal(true);
+        if(tokenPrice.length == 0) {
+            toast.info("please wait for a few sec. now loading data");
+            setIsOpenModal(false);
+        } else {
+            setIsSelectActive(type);
+            setIsOpenModal(true);
+        }
     }
     const handleFirstTokenChange = (Invalue) => {
         if(Number(Invalue) > changeDecimal(firstTokenMaxValue)) {
@@ -277,7 +291,7 @@ const LongPosition = () => {
                     marketPrice: marketPrice,
                     tradingAmount: changeBigNumber(firstTokenValue),
                     calcAmount: Number(changeBigNumber(secondTokenValue)).toFixed(0),
-                    leverageValue: leverageValue,
+                    leverageValue: leverageValue * 10,
                     hasRefer: hasRefer,
                     referID: referID,
                     createdTimeStamp: createdTimeStamp,
@@ -369,7 +383,7 @@ const LongPosition = () => {
                     <div className='py-3'>
                         <Slider
                             min={1.1}
-                            max={30}
+                            max={100}
                             step={0.1}
                             marks={leverageMarks}
                             onChange={(value) => { setLeverageValue(value) }}

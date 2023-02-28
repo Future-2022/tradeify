@@ -36,6 +36,6 @@ export class LP {
   }
 
   static isLp(type) {
-    return type.startsWith(`${CONFIG.tradeifyPackageId}::pool::TLP`)
+    return type.startsWith(`${CONFIG.tradeifyPackageId}::tlp::TLP`)
   }
 }

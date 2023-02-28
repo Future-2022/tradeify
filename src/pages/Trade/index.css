@@ -1,5 +1,5 @@
 .trade-header {
-    background-color: #342D55;
+    background-color: #342d55a3;
     padding: 8px 24px;
     border-radius: 8px;
 }
@@ -37,7 +37,7 @@
 .trade-form {
     border-radius: 8px;
     padding: 12px;
-    background-color: #342D55;
+    background-color: #342d55a3;
     color: white;
     position: relative;
     overflow: hidden;

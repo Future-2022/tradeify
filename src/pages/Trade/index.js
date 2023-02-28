@@ -47,7 +47,7 @@ const Trade = (props) => {
                                 </div>
                                 <div>
                                     <p className='text-gray'>24h Change</p>
-                                    <h6 className={globalContext.marketTokenPrice.isEarn == 1 ? 'text-green': 'text-red-value'}>{globalContext.marketTokenPrice.isEarn == 1 ? '+': '-'} {globalContext.marketTokenPrice.changeValue}%</h6>
+                                    <h6 className={globalContext.marketTokenPrice.isEarn == 1 ? 'text-green': 'text-red-value'}>{globalContext.marketTokenPrice.isEarn == 1 ? '+': ''} {globalContext.marketTokenPrice.changeValue}%</h6>
                                 </div>
                                 <div>
                                     <p className='text-gray'>24h High</p>

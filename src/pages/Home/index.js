@@ -9,7 +9,7 @@ import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
 
 import { getTotalTRYValue, getStakingPoolStatus, 
-    fetchLPCoins, LPMetaData, getTokenPrice } from '../../control/main';
+    fetchLPCoins, LPMetaData, getTokenPrice, changeDecimal } from '../../control/main';
 
 const Home = (props) => {
 
@@ -23,7 +23,6 @@ const Home = (props) => {
     // TLP part 
     const [totalLPValue, setTotalLPValue] = useState(0);
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
-
     
     const [tryPrice, setTryPrice] = useState(1);   
     const [lpCoin, SetLPCoin] = useState(undefined);
@@ -48,16 +47,16 @@ const Home = (props) => {
 
             let totalLPValue = 0;
             lpCoins.map(item => {
-                if(item.metadata[0].symbol == "TRY") {
-                    let TRYPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
-                    setTryPrice(TRYPrice);
-                }
-                totalLPValue += Number(item.data.lpSupply.value);
+                // if(item.metadata[0].symbol == "TRY") {
+                //     let TRYPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
+                //     setTryPrice(TRYPrice);
+                // }
+                totalLPValue += Number(item.data.lpSupply);
             })
 
             const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
             SetLPCoin(newMetaData);
-            setTotalLPValue(totalLPValue);
+            setTotalLPValue(changeDecimal(totalLPValue));
         })
         getStakingPoolStatus(globalContext.provider).then(res => {
             setStakingPoolStatus(res);
@@ -209,7 +208,7 @@ const Home = (props) => {
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Total Staked</h6>
-                                            <h6 className='text-white'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</h6>
+                                            <h6 className='text-white'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Market Cap</h6>

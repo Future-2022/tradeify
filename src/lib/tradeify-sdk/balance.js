@@ -23,6 +23,7 @@ export class Supply {
     this.value = value
   }
   static fromMoveObjectField(field) {
+    console.log(field);
     if (!field.type.startsWith('0x2::balance::Supply<')) {
       throw new Error('error parsing Supply')
     }

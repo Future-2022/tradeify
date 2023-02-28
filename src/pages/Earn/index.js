@@ -3,7 +3,7 @@ import './index.css';
 import TLP from '../../img/png/token-logo.png';
 import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
-import { fetchUserLpCoins, findStakingMeta, isLoggedIn, getStakingPoolStatus, fetchLPCoins, changeDecimal, changeDecimal5Fix } from '../../control/main';
+import { fetchUserLpCoins, findStakingMeta, isLoggedIn, getStakingPoolStatus, fetchLPCoins, changeDecimal, changeDecimal5Fix, changeBigNumber } from '../../control/main';
 import { CONFIG } from '../../lib/config';
 import { StoreContext } from '../../store';
 import { stakeTLP, depositTLPStake, getStakingReward, UnStakeTLP } from '../../lib/tradeify-sdk/staking';
@@ -52,7 +52,7 @@ const Earn = (props) => {
         const currentTimestamp = Date.now();        
         if(hasStakingMeta == false) {
             stakeTLP(globalContext.provider, globalContext.wallet, {
-                tlpAmount: tlpValue,
+                tlpAmount: changeBigNumber(tlpValue),
                 lockTime: Number(lockTime * 1000),
                 currentTimestamp: currentTimestamp,
                 tlpType: CONFIG.tlp,
@@ -66,7 +66,7 @@ const Earn = (props) => {
             const metaPoolId = userStakingStatus.data.fields.id.id;
             depositTLPStake(globalContext.provider, globalContext.wallet, {
                 stakingMetaId: metaPoolId,
-                tlpAmount: tlpValue,
+                tlpAmount: changeBigNumber(tlpValue),
                 lockTime: Number(lockTime * 1000),
                 currentTimestamp: currentTimestamp,
                 tlpType: CONFIG.tlp,
@@ -155,7 +155,7 @@ const Earn = (props) => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply.value);
+                totalLPValue += Number(item.data.lpSupply);
             })
             let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
             setStakingAPR(APR);
@@ -203,7 +203,7 @@ const Earn = (props) => {
                             <div className='trade-token-select only-border-warning mb-2 p-4 mt-5'>
                                 <div className='d-flex justify-content-between'>
                                     <h5 className='font-bold text-gray text-left fs-12'>TLP Balance</h5>
-                                    <h5 className='text-gray text-left fs-12 font-bold'>Max: {totalUserLP} TLP</h5>
+                                    <h5 className='text-gray text-left fs-12 font-bold'>Max: {changeDecimal(totalUserLP)} TLP</h5>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <input type='text' className='token-select-input' placeholder='0.0' value={tlpValue} onChange={(e) => handleChangeTLP(e.target.value)} />
@@ -255,11 +255,11 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total staked</p>
-                                        <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</p>
+                                        <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total TLP value</p>
-                                        <p className='text-pink-sharp'>{totalLPValue} TLP</p>
+                                        <p className='text-pink-sharp'>{changeDecimal(totalLPValue)} TLP</p>
                                     </div>
                                 </div>                         
                             </div>
@@ -270,11 +270,11 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1 mt-3'>
                                         <p className='text-gray py-2'>Balance</p>
-                                        <p>{totalUserLP} TLP</p>
+                                        <p>{changeDecimal(totalUserLP)} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Staked TLP</p>
-                                        <p>{userStakingStatus != undefined ? userStakingStatus.data.fields.staking_amount : 0} TLP</p>
+                                        <p>{userStakingStatus != undefined ? changeDecimal(userStakingStatus.data.fields.staking_amount) : 0} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Claimable rewards</p>

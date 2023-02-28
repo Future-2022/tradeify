@@ -119,7 +119,7 @@ export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
     let netValue = changeDecimal5Fix(valueItem.calcAmount) * Number(markPrice) / Number(entryPrice);
     let calcAmount = changeDecimal5Fix(valueItem.calcAmount);
     console.log(valueItem);
-    let resultEarnAmount = changeDecimal(Number(valueItem.updateCalcAmount));
+    let resultEarnAmount = changeDecimal5Fix(Number(valueItem.updateCalcAmount));
     let netResultValue = changeDecimal5Fix(Number(valueItem.calcAmount) + Number(valueItem.updateCalcAmount))
     if(valueItem.tradingType == 0) {
       if(calcAmount > netValue) {
@@ -156,7 +156,7 @@ export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
         colletral: inPool.metadata[0].symbol,
         colletralIcon: colletralIcon,
         tradingAmount: changeDecimal5Fix(valueItem.tradingAmount),
-        leverageValue: valueItem.leverageValue,
+        leverageValue: valueItem.leverageValue / 10,
         type: type,
         netResultValue: netResultValue,
         markPrice: markPrice.toFixed(4),
@@ -184,6 +184,7 @@ export const getTokenName = (LPSymbol) => {
   return tokenName;
 }
 export const LPMetaData = (tokenPrice, totalLPValue, metaValue) => {
+    
     let MetaValue = {
         "meta": []
     }; 
@@ -198,9 +199,9 @@ export const LPMetaData = (tokenPrice, totalLPValue, metaValue) => {
       })
       const tokenName = getTokenName(LPSymbol);
       let LPFirstIcon = importImage(item.metadata[0].symbol);
-      const lpValue = Number(item.data.lpSupply.value);
+      const lpValue = Number(item.data.lpSupply);
       const balanceA = Number(item.data.balanceA.value);
-      const LPTokenValue = Number(item.data.lpSupply.value);
+      const LPTokenValue = Number(item.data.lpSupply);
       const LPPercentage = Number(LPTokenValue/totalLPValue * 100);
       const LPFee = (Number(item.data.lpFeeBps) / 10).toFixed(2);
       const LPWeight = (LPTokenValue / totalLPValue * 100).toFixed(2);
@@ -238,6 +239,10 @@ export function suiCoinToCoin(coin) {
 }
 export function changeDecimal(value) {
   const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(3);
+  return balance
+}
+export function changeDecimal0Fix(value) {
+  const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(0);
   return balance
 }
 export function changeBigNumber(value) {
@@ -341,15 +346,16 @@ export function selectCoinSetWithCombinedBalanceGreaterThanOrEqual(
 
 export async function fetchUserLpCoins(provider, addr) {
   const infos = (await provider.getObjectsOwnedByAddress(addr)).filter(obj => {
+    console.log(SuiCoin.getCoinTypeArg(obj));
     return SuiCoin.isCoin(obj) && LP.isLp(SuiCoin.getCoinTypeArg(obj))
   })
-
+  console.log(infos);
   return (await (provider).getObjectBatch(infos.map(info => info.objectId))).map(
     suiCoinToCoin
   )
 }
 export const getTokenPrice = async () => {
-    let suiPrice = 100;
+    let suiPrice = 1;
     let ethPrice = 0;
     let ethLowPrice = 0;
     let ethHighPrice = 0;
@@ -371,12 +377,11 @@ export const getTokenPrice = async () => {
       ethLowPrice = Number(response.data.lowPrice).toFixed(2);
       ethHighPrice = Number(response.data.highPrice).toFixed(2);
       ethAvgPrice = Number(response.data.weightedAvgPrice).toFixed(2);
-      if(ethAvgPrice <= ethPrice) {
+      ethChangePrice = Number(response.data.priceChangePercent).toFixed(2);
+      if(Number(ethChangePrice) > 0) {
         ethIsEarn = 1;
-        ethChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       } else {
         ethIsEarn = 0;
-        ethChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       }
     });
 
@@ -384,13 +389,12 @@ export const getTokenPrice = async () => {
       btcPrice = Number(response.data.lastPrice).toFixed(2);
       btcLowPrice = Number(response.data.lowPrice).toFixed(2);
       btcHighPrice = Number(response.data.highPrice).toFixed(2);
-      btcAvgPrice = Number(response.data.weightedAvgPrice).toFixed(2);
-      if(btcAvgPrice <= btcPrice) {
+      btcAvgPrice = Number(response.data.weightedAvgPrice).toFixed(2);      
+      btcChangePrice = Number(response.data.priceChangePercent).toFixed(2);
+      if(Number(btcChangePrice) > 0) {
         btcIsEarn = 1;
-        btcChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       } else {
         btcIsEarn = 0;
-        btcChangePrice = Number(response.data.priceChangePercent).toFixed(2);
       }
     });
     return [
@@ -646,8 +650,21 @@ export const isAvailaleReferralCode = async (provider, value) => {
     console.log(result)
     console.log(value)
     if(Number(result.referralCode) == value) {
-      console.log('ok')
       returnValue = true;
+    }
+  })
+  return returnValue;
+}
+export const checkCreateReferralCode = async (provider, value) => {
+  const referralStatusAddress = [];
+  referralStatusAddress.push(CONFIG.referRegistryId);
+  let returnValue = true;
+  const batch = await provider.getObjectBatch(referralStatusAddress);
+  const referData = batch[0].details.data.fields.data.fields.contents;
+  referData.map(item => {
+    const result = item.fields.key.fields;
+    if(Number(result.referralCode) == value) {
+      returnValue = false;
     }
   })
   return returnValue;

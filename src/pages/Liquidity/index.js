@@ -8,7 +8,7 @@ import DonutChart from 'react-donut-chart';
 
 import TokenIcon1 from '../../img/png/SUI.png';
 
-import { fetchLPCoins, LPMetaData, getStakingPoolStatus, getTokenPrice } from '../../control/main';
+import { fetchLPCoins, LPMetaData, getStakingPoolStatus, getTokenPrice, changeDecimal } from '../../control/main';
 import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
 
@@ -58,7 +58,7 @@ const Liquidity = (props) => {
                 
                 setTLPPoolValue(tlpPoolValue.toFixed(0));
                 setStakingPoolStatus(res);
-                const stakingAPR = ((res.details.data.fields.balance_tlp / totalLPValue) * 100).toFixed(2);
+                const stakingAPR = ((changeDecimal(res.details.data.fields.balance_tlp) / totalLPValue) * 100).toFixed(2);
                 const totalOwned = 100 - stakingAPR;
                 console.log(stakingAPR);
                 setStakingAPR(stakingAPR)
@@ -71,8 +71,9 @@ const Liquidity = (props) => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply.value);
+                totalLPValue += Number(item.data.lpSupply);
             })
+            console.log(totalLPValue);
             const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
             newMetaData.meta.map(item => {
                 if(item.LPSymbol != "TRY") {
@@ -87,7 +88,7 @@ const Liquidity = (props) => {
             });
             SetLPCoin(newMetaData);
             SetChartData(ChartData.meta);
-            setTotalLPValue(totalLPValue);
+            setTotalLPValue(changeDecimal(totalLPValue));
         })
     }, [tokenPrice])
 
@@ -123,11 +124,11 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Total Staked</p>
-                                    <div className='py-2 text-grey-sharp'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</div>
+                                    <div className='py-2 text-grey-sharp'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>TLP pool Value</p>
-                                    <div className='py-2 text-grey-sharp'>${tlpPoolValue}</div>
+                                    <div className='py-2 text-grey-sharp'>$ {tlpPoolValue}</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Protocol Owned</p>

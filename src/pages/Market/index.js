@@ -153,15 +153,15 @@ const Market = (props) => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply.value);
+                totalLPValue += Number(item.data.lpSupply);
             })
-            setTotalLPValue(totalLPValue);
             const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
             SetLPMetaData(newMetaData.meta);
             SetLPCoin(lpCoins);
         })
         if(isLoggedIn() == true) {
             fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
+                console.log(item)
                 setUserLPCoin(item);
             })
         }
@@ -177,7 +177,7 @@ const Market = (props) => {
                 const balance = getCoinBalances(item);
                 balance.forEach((item, key) => {
                     if(key == CONFIG.tlp) {
-                        setTLPbalace(Number(item).toString())
+                        setTLPbalace(changeDecimal(Number(item)).toString())
                     }
                 })
                 setCoinBalance(balance);
@@ -193,7 +193,7 @@ const Market = (props) => {
                 let totalUserLPValue = 0; 
                 items.map(args => {
                     totalUserLPValue += Number(args.balance.value);
-                    setTotalUserLP(totalUserLPValue);
+                    setTotalUserLP(changeDecimal(totalUserLPValue));
                 })
                 setUserLPCoin(items);
             });
@@ -203,18 +203,18 @@ const Market = (props) => {
             totalSupplyTLPValue = res.details.data.fields.balance_tlp;
             setTotalSupplyTLP(totalSupplyTLPValue);
         })
-    }, [totalLPValue, lpCoin, globalContext.account])
+    }, [totalLPValue, lpCoin, globalContext.account, lpToken])
 
     useEffect(() => {    
         // staking part
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             let totalLPValue = 0;
             lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply.value);
+                totalLPValue += Number(item.data.lpSupply);
             })
             let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
             setStakingAPR(APR.toFixed(2));
-            setTotalLPValue(totalLPValue);
+            setTotalLPValue(changeDecimal(totalLPValue));
         })
     }, [totalLPValue, globalContext.account, totalSupplyTLP])
 
@@ -294,9 +294,11 @@ const Market = (props) => {
         lpCoin.map((item) => {
             if(_firstTokenType == item.metadata[0].symbol) {
                 setPoolId(item);
+                let fee = Number(item.data.lpFeeBps) / 100;
+                console.log(fee);
                 _getLpValue = getTLPValue(_firstTokenType, value);
-                let realValue = (_getLpValue * (100 - 1) / 100).toFixed(0);
-                let feeValue =  (_getLpValue * 1 / 100).toFixed(0)
+                let realValue = (_getLpValue * (100 - fee) / 100).toFixed(4);
+                let feeValue =  (_getLpValue * fee / 100).toFixed(4)
                 setLPToken(realValue);
                 setLPTokenFee(feeValue);
             } 
@@ -341,6 +343,8 @@ const Market = (props) => {
     }
 
     const sellTLP = async () => {
+        console.log('ok');
+        console.log(userLpCoin);
         await userLpCoin.map(variable => {
             if (variable.balance.value > lpToken) {
                 lpCoin.map((item) => {
@@ -348,7 +352,7 @@ const Market = (props) => {
                         sellTLPSdk(wallet, {
                             pool: item,
                             lpIn: variable.id,
-                            amount: lpToken,
+                            amount: changeBigNumber(lpToken),
                             price: selectTokenPrice,
                             maxSlippagePct: CONFIG.defaultSlippagePct
                         }).then(item => {
@@ -364,6 +368,7 @@ const Market = (props) => {
     }
 
     const handleTLPTokenChange = (value) => {
+        console.log(value)
         setLPToken(value);
         getTokenValue(value);
     }
@@ -373,7 +378,8 @@ const Market = (props) => {
                 tokenPrice.map(itemValue => {
                     if(itemValue.symbol == item.metadata[0].symbol) {
                         setSelectTokenPrice(itemValue.value);
-                        setSellFirstTokenGetValue(changeBigNumber(value * CONFIG.TLPPrice / itemValue.value))
+                        console.log(itemValue.value)
+                        setSellFirstTokenGetValue(value * CONFIG.TLPPrice / itemValue.value)
                     }
                 })
             }
@@ -386,7 +392,7 @@ const Market = (props) => {
         {lpMetaData.map((item) => {
             if(item.PoolId == index) {
                 console.log(item)
-                setPoolLPValue(item.LPTokenValue);                
+                setPoolLPValue(changeDecimal(item.LPTokenValue));                
                 setSellFirstTokenSymbol(item.LPFirstTokenSymbol);
                 setSellFirstTokenValue(item.LPFirstTokenValue);
             }
@@ -532,7 +538,7 @@ const Market = (props) => {
                                 <div className='trade-token-select only-border-red mb-2 p-4 mt-1'>
                                     <div><div><p className='text-gray text-left fs-12'>LP {sellFirstTokenSymbol} Amount: <span className='text-white'>{sellFirstTokenValue.toFixed(2)}</span> {sellFirstTokenSymbol}</p></div></div>
                                     <div className='d-flex justify-content-between'>
-                                        <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={changeDecimal5Fix(sellFirstTokenGetValue)} />
+                                        <input type='text' className='token-select-input text-gray' disabled placeholder='0.0' value={sellFirstTokenGetValue.toFixed(4)} />
                                         <div className='d-flex token-select'><h6 className='text-gray'>{sellFirstTokenSymbol}</h6></div>
                                     </div>
                                 </div>
@@ -541,7 +547,7 @@ const Market = (props) => {
                                     <div className='d-flex justify-content-between'>
                                         <p className='text-gray'>You will receive</p>
                                         <div>
-                                            <p>{changeDecimal5Fix(sellFirstTokenGetValue)} {sellFirstTokenSymbol}</p>
+                                            <p>{sellFirstTokenGetValue.toFixed(4)} {sellFirstTokenSymbol}</p>
                                         </div>
                                     </div>
                                     <div className='d-flex justify-content-between'>
@@ -589,7 +595,7 @@ const Market = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between py-2'>
                                     <p className='text-gray py-2'>Total Staked TLP</p>
-                                    <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? stakingPoolStatus.details.data.fields.balance_tlp : 0} TLP</p>
+                                    <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</p>
                                 </div>
                                 <div className='d-flex justify-content-between py-2'>
                                     <p className='text-gray py-2'>Total Supply TLP</p>
@@ -608,7 +614,7 @@ const Market = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between py-1'>
                                     <p className='text-gray py-2'>You staked</p>
-                                    <p>{userStakingStatus != undefined ? userStakingStatus.data.fields.staking_amount : 0} TLP</p>
+                                    <p>{userStakingStatus != undefined ? changeDecimal(userStakingStatus.data.fields.staking_amount) : 0} TLP</p>
                                 </div>
                                 <div className='d-flex justify-content-between py-1'>
                                     <p className='text-gray py-2'>Claimable rewards</p>
@@ -680,7 +686,7 @@ const Market = (props) => {
                                         </div>
                                         <div>
                                             <h5 className='text-white text-right'>$ {item.price}</h5>
-                                            <p className={`${item.isEarn == 1 ? 'text-green':'text-red-value'} text-right`}>{item.isEarn == 1 ? '+':'-'} {item.changeValue} %</p>
+                                            <p className={`${item.isEarn == 1 ? 'text-green':'text-red-value'} text-right`}>{item.isEarn == 1 ? '+':''} {item.changeValue} %</p>
                                         </div>
                                     </div>
                                 })}

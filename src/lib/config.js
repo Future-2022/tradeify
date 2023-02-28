@@ -17,24 +17,25 @@ export const CONFIG = {
     try_id: '0x07b06a8ce0ffabf224db68d35bb297aec0d54fca',
     try: '0x3e6c269e2af8ef50e083e7e36d83952e6bb22eb1::try::TRY',  
 
-    tlp: '0xbc8e8a28382728711fe0187a5181d580b32dc199::pool::TLP',
+    tlp: '0xfa0022d3b5e34a0d85e413f851ad848cf16a1d56::tlp::TLP',
 
     // mint, buy/sell, swap package
-    tradeifyPackageId: '0xbc8e8a28382728711fe0187a5181d580b32dc199',
-    poolRegistryId: '0xc1243bc2933cc53b073a3d184a74be635f6afae0',
+    tradeifyPackageId: '0xfa0022d3b5e34a0d85e413f851ad848cf16a1d56',
+    poolRegistryId: '0x5c90a12c68993b0ca8ab3576e145f0388c85b646',
+    TLPStorageId: '0xaf1bf42417929148ca44858d44bffdfb7ed04733',
 
     // staking package
-    stakingPackageId: '0xbc8e8a28382728711fe0187a5181d580b32dc199',
-    stakingPoolId: '0xfad02d6dc14d80188d9dfcce47fb36dc16de95cf',
+    stakingPackageId: '0xfa0022d3b5e34a0d85e413f851ad848cf16a1d56',
+    stakingPoolId: '0x857f96c40bee52b356d797193c206a45df4e5849',
 
     // referral package
-    referralPackageId: '0xbc8e8a28382728711fe0187a5181d580b32dc199',
-    referRegistryId: '0x6168775c657add5d670e6c2eb0b0b42c3b5b4df5',
-    refTraderRegistryId: '0xe21b72efd7965000cb74c1faad8d54c9d28700f9',
-    referralStaus: '0x6252d36c30c8ab0a8f0dadf020c45778040b80cb',
+    referralPackageId: '0xfa0022d3b5e34a0d85e413f851ad848cf16a1d56',
+    referRegistryId: '0xd3d343d3db90a7d1c974f660bd2826448482d8ee',
+    refTraderRegistryId: '0x2ba1f5bf2759e87bfb3d81d34aa0c9f42f0455f8',
+    referralStaus: '0xe7c03c89ec603e1cbc29b8b79cbe2b087282244d',
 
     // trading package
-    tradingPoolID: '0x41c9d86500914cc1a4b60688e1e22aecc6d101f8',
+    tradingPoolID: '0xaf0a7551ad81449ed28c7a19cca27d770520388f',
 
     nullAddress: '0x0000000000000000000000000000000000000000',
 
@@ -49,4 +50,6 @@ export const CONFIG = {
     TRYPrice: 100,
     faucetDurationTime: 10 * 60 * 1000, // 1 hour
     timeIntervalOfPrice: 5000,    
+    referCodeLength: 100000000000,
+    TLPDecimal: 100000
 }

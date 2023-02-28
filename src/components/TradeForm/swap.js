@@ -115,7 +115,6 @@ const Swap = (props) => {
     }, [lpCoin, tokenPrice])
 
     const selectToken = async (type) => {
-        // checkSwapStatus();
         if(coins == undefined) {
             toast.info("please wait for a few sec. now loading data");
             setIsOpenModal(false);
@@ -127,7 +126,6 @@ const Swap = (props) => {
                     value = item;
                 }
             });
-            console.log(token[0].value);
             if(isSelectActive == 1) {
                 lpCoin.map(item => {
                     if(item.metadata[0].typeArg == token[0].value) {
@@ -170,8 +168,13 @@ const Swap = (props) => {
         setIsOpenModal(false);
     }
     const openModal = (type) => {
-        setIsSelectActive(type);
-        setIsOpenModal(true);
+        if(tokenPrice.length == 0) {
+            toast.info("please wait for a few sec. now loading data");
+            setIsOpenModal(false);
+        } else {
+            setIsSelectActive(type);
+            setIsOpenModal(true);
+        }
     }
 
     useEffect(() => {
@@ -225,10 +228,12 @@ const Swap = (props) => {
             setStatusIndex(2);
         } else if (globalContext.account != null && connected != false && firstTokenValue == "") {
             setStatusIndex(3);
-        } else if (Number(secondTokenValue) > availableLiquidity || Number(firstTokenValue) > changeDecimal(firstTokenMaxValue)) {
+        } else if (Number(firstTokenValue) > changeDecimal(firstTokenMaxValue)) {
             setStatusIndex(4);
-        } else if(Number(firstTokenValue) > 0){
+        } else if (Number(secondTokenValue) > availableLiquidity) {
             setStatusIndex(5);
+        } else if(Number(firstTokenValue) > 0){
+            setStatusIndex(6);
         }
     }
     return (
@@ -277,6 +282,9 @@ const Swap = (props) => {
                 <div className='earn-button w-100 text-center btn-disabled'>Insufficient Amount</div>
             )}
             {statusIndex == 5 && (
+                <div className='earn-button w-100 text-center btn-disabled'>Overflow pool Amount</div>
+            )}
+            {statusIndex == 6 && (
                 <div className='earn-button w-100 text-center' onClick={runSwap}>Swap</div>
             )}
 
@@ -299,44 +307,44 @@ const Swap = (props) => {
                 </div>
             </div> 
             
-            <Modal
-              isOpen={isOpenModal}
-              onRequestClose={closeModal}
-              style={customStyles}
-              ariaHideApp={false}
-              contentLabel="Example Modal"
-            >
-                <div>
-                    <div className='d-flex justify-content-between'>
-                        <h5 className='text-white my-auto'>Select token</h5>
-                        <h4 className='text-white cursor-pointer' onClick={() =>setIsOpenModal(false)}>x</h4>
-                    </div>
-                    <div className='py-3'>
-                        <p className='text-white'>
-                            To continue working with the site, you need to connect a wallet and allow the site access to your account.
-                        </p>
-                    </div>
+                <Modal
+                    isOpen={isOpenModal}
+                    onRequestClose={closeModal}
+                    style={customStyles}
+                    ariaHideApp={false}
+                    contentLabel="Example Modal"
+                >
                     <div>
-                        <div className='pt-4'>
-                            {mainCoins.map(item => {
-                                return <div className='d-flex token-item justify-content-between' onClick={() => selectToken(item.symbol)}>
-                                    <div className='d-flex'>
-                                        <img src={item.tokenIcon} width={45} />
-                                        <div className='ml-4'>
-                                            <h5 className='text-white text-left'>{item.symbol}</h5>
-                                            <p className='text-gray'>{item.tokenName}</p>
+                        <div className='d-flex justify-content-between'>
+                            <h5 className='text-white my-auto'>Select token</h5>
+                            <h4 className='text-white cursor-pointer' onClick={() =>setIsOpenModal(false)}>x</h4>
+                        </div>
+                        <div className='py-3'>
+                            <p className='text-white'>
+                                To continue working with the site, you need to connect a wallet and allow the site access to your account.
+                            </p>
+                        </div>
+                        <div>
+                            <div className='pt-4'>
+                                {mainCoins.map(item => {
+                                    return <div className='d-flex token-item justify-content-between' onClick={() => selectToken(item.symbol)}>
+                                        <div className='d-flex'>
+                                            <img src={item.tokenIcon} width={45} />
+                                            <div className='ml-4'>
+                                                <h5 className='text-white text-left'>{item.symbol}</h5>
+                                                <p className='text-gray'>{item.tokenName}</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5 className='text-white text-right'>$ {item.price}</h5>
+                                            <p className={`${item.isEarn == 1 ? 'text-green':'text-red-value'} text-right`}>{item.isEarn == 1 ? '+':''} {item.changeValue} %</p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <h5 className='text-white text-right'>$ {item.price}</h5>
-                                        <p className='text-green text-right'>+0.17</p>
-                                    </div>
-                                </div>
-                            })}
+                                })}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </Modal>                         
+                </Modal>                        
         </div>
     )
 }

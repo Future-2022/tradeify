@@ -54,13 +54,15 @@ export class Pool {
         if (!Pool.isPool(field.type)) {
             throw new Error(`not a Pool type`)
         }
+        // console.log(field);
+        
         const struct = (typeToTag(field.type)).struct
         const [typeA] = (struct.typeParams).map(tagToType);
         return {
             typeArgs: [typeA],
             id: field.fields.id.id,
             balanceA: Balance.fromMoveObjectField(typeA, field.fields.balance_a),
-            lpSupply: Supply.fromMoveObjectField(field.fields.lp_supply),
+            lpSupply: field.fields.lp_supply,
             lpFeeBps: BigInt(field.fields.lp_fee_bps),
         }
     }

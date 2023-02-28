@@ -15,6 +15,8 @@ module trading::pool {
     use std::option::{Self, Option};
     use sui::vec_map::{Self, VecMap};
 
+    use trading::tlp::{Self, TLP, TLPStorage};
+
     /// The number of basis points in 100%.
     const DEFAULT_DECIMAL: u64 = 1000000000;
     const BPS_IN_100_PCT: u64 = 100 * 100;    
@@ -166,6 +168,11 @@ module trading::pool {
             id: object::new(ctx),
             data: vec_map::empty()
         }
+    }
+
+    fun mint_tlp(tlp_storage: &mut TLPStorage, value: u64, ctx: &mut TxContext): Coin<TLP> {
+        // We can create a Coin<IPX> with 0 value without minting
+        if (value == 0) { coin::zero<TLP>(ctx) } else { tlp::mint(tlp_storage, value, ctx) }
     }
 
     fun add_refTrader_registry(
@@ -334,13 +341,11 @@ module trading::pool {
     }
 
 
-    struct TLP has drop {}
-
     /// Pool struct for tradeify
     struct Pool<phantom A> has key {
         id: UID,
         balance_a: Balance<A>,
-        lp_supply: Supply<TLP>,
+        lp_supply: u64,
         /// The liquidity provider fees expressed in basis points (1 bps is 0.01%)
         lp_fee_bps: u64,
     }
@@ -377,60 +382,59 @@ module trading::pool {
 
     // create pool part
     public fun create_pool<A>(
-        registry: &mut PoolRegistry,
+        registry: &mut PoolRegistry,    
+        tlp_storage: &mut TLPStorage, 
         init_a: Balance<A>,
         price_a: u64,
         lp_fee_bps: u64,
         ctx: &mut TxContext,
-    ): Balance<TLP> {
+    ) {
         assert!(balance::value(&init_a) > 0, EZeroInput);
         assert!(lp_fee_bps < BPS_IN_100_PCT, EInvalidFeeParam);
 
         // add to registry (guarantees that there's only one pool per currency pair)
         registry_add<A>(registry);
 
+        let deposit_a = balance::value(&init_a);
+        let amt_lp = muldiv(deposit_a, price_a, TLP_PRICE);
+        // let amt_lp_update = ceil_div_u64(amt_lp, DEFAULT_DECIMAL);
+
+        let coin_lp = mint_tlp(tlp_storage, amt_lp, ctx);
+        
+        tlp::transfer(coin_lp, tx_context::sender(ctx));
         // create pool
         let pool = Pool<A> {
             id: object::new(ctx),
             balance_a: init_a,
-            lp_supply: create_supply(TLP {}),
+            lp_supply: amt_lp,
             lp_fee_bps,
-        };
-
-        let deposit_a = balance::value(&pool.balance_a);
-        let amt_lp = muldiv(deposit_a, price_a, TLP_PRICE);
-        let balance_lp = ceil_div_u64(amt_lp, DEFAULT_DECIMAL);
-        let lp_balance = balance::increase_supply(&mut pool.lp_supply, balance_lp);
-
+        };        
         event::emit(PoolCreationEvent { pool_id: object::id(&pool) });
         transfer::share_object(pool);
-        lp_balance
     }
 
     public fun create_pool_<A>(
-        registry: &mut PoolRegistry,
+        registry: &mut PoolRegistry,        
+        tlp_storage: &mut TLPStorage, 
         init_a: Coin<A>,
         price_a: u64,
         lp_fee_bps: u64,
         ctx: &mut TxContext,
     ) {
-        let lp_balance = create_pool(
+        create_pool(
             registry,
+            tlp_storage,
             coin::into_balance(init_a),
             price_a,
             lp_fee_bps,
             ctx
-        );
-
-        transfer::transfer(
-            coin::from_balance(lp_balance, ctx),
-            tx_context::sender(ctx)
         );
     }
 
     // create liquidity pool
     public entry fun maybe_split_then_create_pool<A>(
         registry: &mut PoolRegistry,
+        tlp_storage: &mut TLPStorage, 
         input_a: Coin<A>,
         amount_a: u64,
         price_a: u64,
@@ -438,31 +442,34 @@ module trading::pool {
         ctx: &mut TxContext
     ) {
         let init_a = maybe_split_and_transfer_rest(input_a, amount_a, tx_context::sender(ctx), ctx);
-        create_pool_(registry, init_a, price_a, lp_fee_bps, ctx);
+        create_pool_(registry, tlp_storage, init_a, price_a, lp_fee_bps, ctx);
     }
 
     public fun buy_tlp<A>(
+        tlp_storage: &mut TLPStorage, 
         pool: &mut Pool<A>,
         input_a: Balance<A>,
         price_a: u64,
         ctx: &mut TxContext
-    ):Balance<TLP> {        
+    ) {        
         assert!(balance::value(&input_a) > 0, EZeroInput);   
 
         let deposit_a = balance::value(&input_a);
-        let amt_lp = muldiv(deposit_a, price_a, TLP_PRICE);
-        let balance_lp_before_fee = ceil_div_u64(amt_lp, DEFAULT_DECIMAL);
-        let balance_lp = muldiv(balance_lp_before_fee, (BPS_IN_100_PCT - pool.lp_fee_bps), BPS_IN_100_PCT);
-        let lp_balance = balance::increase_supply(&mut pool.lp_supply, balance_lp);
+        let amt_lp_before_fee = muldiv(deposit_a, price_a, TLP_PRICE);
+        let amt_lp = muldiv(amt_lp_before_fee, (BPS_IN_100_PCT - pool.lp_fee_bps), BPS_IN_100_PCT);
+        
+        pool.lp_supply = pool.lp_supply + amt_lp;
+        let coin_lp = mint_tlp(tlp_storage, amt_lp, ctx);
 
         balance::join(
             &mut pool.balance_a,
             input_a
         );
-        lp_balance
+        tlp::transfer(coin_lp, tx_context::sender(ctx));
     }
 
     public entry fun buy_tlp_<A>(
+        tlp_storage: &mut TLPStorage, 
         pool: &mut Pool<A>,
         input_a: Coin<A>,
         amount_a: u64,
@@ -471,12 +478,11 @@ module trading::pool {
     ) {
         let sender = tx_context::sender(ctx);
         let init_a = maybe_split_and_transfer_rest(input_a, amount_a, tx_context::sender(ctx), ctx);
-        let lp_balance = buy_tlp(pool, coin::into_balance(init_a), price_a, ctx);
-
-        destroy_or_transfer_balance(lp_balance, sender, ctx)
+        buy_tlp(tlp_storage, pool, coin::into_balance(init_a), price_a, ctx);
     }
 
-    public fun sell_tlp<A> (        
+    public fun sell_tlp<A> ( 
+        tlp_storage: &mut TLPStorage,        
         pool: &mut Pool<A>,
         input: Balance<TLP>,
         price_a: u64,
@@ -484,13 +490,15 @@ module trading::pool {
     ):Balance<A> {
 
         let input_tlp = balance::value(&input);
-        let amt_out = muldiv((input_tlp * DEFAULT_DECIMAL), TLP_PRICE, price_a);
+        let amt_out = muldiv(input_tlp, TLP_PRICE, price_a);
         
-        balance::decrease_supply(&mut pool.lp_supply, input);
+        pool.lp_supply = pool.lp_supply - input_tlp;
+        tlp::burn(tlp_storage, coin::from_balance(input, ctx));        
         balance::split(&mut pool.balance_a, amt_out)
     }
 
     public entry fun sell_tlp_<A>(
+        tlp_storage: &mut TLPStorage, 
         pool: &mut Pool<A>,
         input_tlp: Coin<TLP>,
         amount_tlp: u64,
@@ -499,7 +507,7 @@ module trading::pool {
     ) {        
         let sender = tx_context::sender(ctx);
         let input_lp = maybe_split_and_transfer_rest(input_tlp, amount_tlp, tx_context::sender(ctx), ctx);
-        let out_balance = sell_tlp(pool, coin::into_balance(input_lp), price_a, ctx);
+        let out_balance = sell_tlp(tlp_storage, pool, coin::into_balance(input_lp), price_a, ctx);        
         destroy_or_transfer_balance(out_balance, sender, ctx)
     }
 
@@ -594,7 +602,7 @@ module trading::pool {
         deposit_try(staking_pool, init_try)
     }
 
-
+    
     public fun stake_tlp<A, B>(
         staking_pool: &mut StakingPool<A, B>,
         input_tlp: Coin<A>,
@@ -631,7 +639,6 @@ module trading::pool {
         let stake_tlp = maybe_split_and_transfer_rest(input_tlp, stake_amount, tx_context::sender(ctx), ctx);
         stake_tlp(staking_pool, stake_tlp, owner, start_timestamp, lock_time, ctx);
     }
-
 
     public fun deposit_tlp_stake<A, B>(
         staking_pool: &mut StakingPool<A, B>,
@@ -707,7 +714,7 @@ module trading::pool {
         destroy_or_transfer_balance(out_tlp, sender, ctx);
     } 
 
-
+    
     // Referral part
     public fun create_referral_code(
         ctx: &mut TxContext, 
@@ -1156,4 +1163,5 @@ module trading::pool {
         let sender = tx_context::sender(ctx);     
         destroy_or_transfer_balance(amount, sender, ctx);
     }
+
 }

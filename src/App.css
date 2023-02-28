@@ -1,9 +1,27 @@
 body {
     /* background-color: #241F3E!important; */
-    background: #241F3E;
-    background: radial-gradient(circle, rgba(41,24,64,1) 48%, rgba(25,39,42,1) 100%);
-    font-family: "IBM Plex Sans"!important;
+    /* background: #241F3E; */
+    /* background: radial-gradient(circle, rgba(41,24,64,1) 48%, rgba(25,39,42,1) 100%); */
+    /* font-family: "IBM Plex Sans"!important; */
+    /* background: linear-gradient(-90deg, rgba(41,24,64,1), rgb(28, 25, 42), rgba(41,24,64,1), rgb(30, 25, 42)); */
+	/* background-size: 200% 200%; */
+	background-size: 300% 300%;
+    background-image: linear-gradient(
+        -45deg, 
+        rgb(23, 17, 59) 0%, 
+        rgb(21, 25, 48) 25%, 
+        rgb(31, 19, 52) 51%, 
+        rgb(43, 20, 52) 100%
+  );  
+  animation: AnimateBG 10s ease infinite;
 }
+
+@keyframes AnimateBG { 
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+  }
+
 h1, h2, h3, h4, h5, h6 {
     font-family: "IBM Plex Sans"!important;
     font-weight: 500!important;

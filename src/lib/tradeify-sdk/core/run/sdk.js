@@ -37,6 +37,7 @@ export function maybeSplitThenDeposit( typeArgs, args ) {
             function: 'buy_tlp_',
             typeArguments: [typeArgs[0]],
             arguments: [
+                CONFIG.TLPStorageId,
                 args.pool,
                 args.inputA,
                 args.amountA.toString(),
@@ -55,12 +56,13 @@ export function maybeSplitThenWithdraw( typeArgs, args ) {
         function: 'sell_tlp_',
         typeArguments: [typeArgs.first],
         arguments: [
+            CONFIG.TLPStorageId,
             args.pool,
             args.lpIn,
             args.amount.toString(),
             args.price,
         ],
-        gasBudget: 10000,
+        gasBudget: 40000,
         },
     }
 }
@@ -134,7 +136,7 @@ export function stakeTLPSdk(typeArgs, args) {
             arguments: [
                 CONFIG.stakingPoolId, 
                 args.tlpObjectId, 
-                args.stakeAmount, 
+                args.stakeAmount.toString(), 
                 args.ownerAddress, 
                 args.currentTime.toString(), 
                 args.lockTime
@@ -155,7 +157,7 @@ export function depositTLPStakeSdk(typeArgs, args) {
                 CONFIG.stakingPoolId, 
                 args.stakingMetaId, 
                 args.tlpObjectId, 
-                args.stakeAmount, 
+                args.stakeAmount.toString(), 
                 args.currentTime.toString(), 
                 args.lockTime
             ],
@@ -213,7 +215,7 @@ export function CreateReferralCodeSdk(args) {
             function: 'create_referral_code_',
             typeArguments: [],
             arguments: [
-                args.referralCode,
+                args.referralCode.toString(),
                 CONFIG.referralStaus,
                 CONFIG.referRegistryId
             ],

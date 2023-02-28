@@ -104,7 +104,6 @@ export const calcSwapOut = (pool, inValue, isACS) => {
 }
 
 const withdrawTx = (args) => {
-
   return maybeSplitThenWithdraw({first: args.pool.data.typeArgs[0]}, {
     pool: args.pool.id,
     lpIn: args.lpIn,
@@ -135,7 +134,6 @@ export const buyTLPSdk = async (provider, wallet, args) => {
     amountA: args.amountA,
     price: Number(args.price).toFixed(0),
   })
-  console.log(tx);
   return await wallet.signAndExecuteTransaction(tx)
 }
 // const sellTLPSdk
