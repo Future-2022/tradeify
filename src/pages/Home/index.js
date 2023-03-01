@@ -9,7 +9,7 @@ import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
 
 import { getTotalTRYValue, getStakingPoolStatus, 
-    fetchLPCoins, LPMetaData, getTokenPrice, changeDecimal } from '../../control/main';
+    fetchLPCoins, LPMetaData, getTokenPrice, changeDecimal, changeDecimal0Fix } from '../../control/main';
 
 const Home = (props) => {
 
@@ -56,7 +56,7 @@ const Home = (props) => {
 
             const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
             SetLPCoin(newMetaData);
-            setTotalLPValue(changeDecimal(totalLPValue));
+            setTotalLPValue(changeDecimal0Fix(totalLPValue));
         })
         getStakingPoolStatus(globalContext.provider).then(res => {
             setStakingPoolStatus(res);
@@ -208,7 +208,7 @@ const Home = (props) => {
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Total Staked</h6>
-                                            <h6 className='text-white'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</h6>
+                                            <h6 className='text-white'>{stakingPoolStatus != undefined ? changeDecimal0Fix(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Market Cap</h6>

@@ -346,10 +346,8 @@ export function selectCoinSetWithCombinedBalanceGreaterThanOrEqual(
 
 export async function fetchUserLpCoins(provider, addr) {
   const infos = (await provider.getObjectsOwnedByAddress(addr)).filter(obj => {
-    console.log(SuiCoin.getCoinTypeArg(obj));
     return SuiCoin.isCoin(obj) && LP.isLp(SuiCoin.getCoinTypeArg(obj))
   })
-  console.log(infos);
   return (await (provider).getObjectBatch(infos.map(info => info.objectId))).map(
     suiCoinToCoin
   )

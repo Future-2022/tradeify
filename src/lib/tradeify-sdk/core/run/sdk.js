@@ -51,18 +51,18 @@ export function maybeSplitThenWithdraw( typeArgs, args ) {
     return {
         kind: 'moveCall',
         data: {
-        packageObjectId: PACKAGE_ID,
-        module: 'pool',
-        function: 'sell_tlp_',
-        typeArguments: [typeArgs.first],
-        arguments: [
-            CONFIG.TLPStorageId,
-            args.pool,
-            args.lpIn,
-            args.amount.toString(),
-            args.price,
-        ],
-        gasBudget: 40000,
+            packageObjectId: PACKAGE_ID,
+            module: 'pool',
+            function: 'sell_tlp_',
+            typeArguments: [typeArgs.first],
+            arguments: [
+                CONFIG.TLPStorageId,
+                args.pool,
+                args.lpIn,
+                args.amount.toString(),
+                args.price,
+            ],
+            gasBudget: 40000,
         },
     }
 }

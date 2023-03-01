@@ -3,7 +3,8 @@ import './index.css';
 import TLP from '../../img/png/token-logo.png';
 import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
-import { fetchUserLpCoins, findStakingMeta, isLoggedIn, getStakingPoolStatus, fetchLPCoins, changeDecimal, changeDecimal5Fix, changeBigNumber } from '../../control/main';
+import { fetchUserLpCoins, findStakingMeta, isLoggedIn, getStakingPoolStatus, fetchLPCoins, changeDecimal, 
+    changeDecimal5Fix, changeBigNumber, changeDecimal0Fix, changeDecimal8Fix } from '../../control/main';
 import { CONFIG } from '../../lib/config';
 import { StoreContext } from '../../store';
 import { stakeTLP, depositTLPStake, getStakingReward, UnStakeTLP } from '../../lib/tradeify-sdk/staking';
@@ -35,6 +36,31 @@ const Earn = (props) => {
     const [totalUserLP, setTotalUserLP] = useState(0);
 
     const [statusIndex, setStatusIndex] = useState(undefined);
+
+    const getRewardValue = () => {       
+        if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
+            console.log('ookk')
+            let currentTimestamp = Date.now();
+            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+            setUserReward(Reward);
+        } 
+    }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('first')
+            getRewardValue();
+        }, CONFIG.timeIntervalOfReward);
+        return () => clearInterval(interval);
+    }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus]);
+
+    // useEffect(() => {
+    //     if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
+    //         let currentTimestamp = Date.now();
+    //         let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+    //         setUserReward(Reward);
+    //     }
+    // }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus])
     
     const handleChangeTLP = (value) => {
         setTLPvalue(value);
@@ -45,7 +71,7 @@ const Earn = (props) => {
     }
 
     const handleChangeTLPByPercentage = (percentage) => {
-        setTLPvalue((totalUserLP * percentage / 100).toFixed(0));
+        setTLPvalue(((totalUserLP - 0.5) * percentage / 100).toFixed(0));
     }
 
     const stakeTLPEvent = () => {
@@ -131,7 +157,7 @@ const Earn = (props) => {
                 let totalUserLPValue = 0;            
                 items.map(args => {
                     totalUserLPValue += Number(args.balance.value);
-                    setTotalUserLP(totalUserLPValue);
+                    setTotalUserLP(changeDecimal(totalUserLPValue));
                 })
             });
         }
@@ -163,13 +189,7 @@ const Earn = (props) => {
         })
     }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP])
     
-    useEffect(() => {
-        if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
-            let currentTimestamp = Date.now();
-            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
-            setUserReward(Reward);
-        }
-    }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus])
+    
 
     useEffect(() => {
         checkSwapStatus();
@@ -180,7 +200,7 @@ const Earn = (props) => {
             setStatusIndex(0);
         } else if (tlpValue == "" || lockTime == "") {
             setStatusIndex(1);
-        } else if (Number(tlpValue) > Number(totalUserLP)) {
+        } else if ((Number(tlpValue)) > Number(totalUserLP)) {
             setStatusIndex(2);
         } else if (Number(tlpValue) > 0 && Number(lockTime) > 0) {
             setStatusIndex(3);
@@ -203,7 +223,7 @@ const Earn = (props) => {
                             <div className='trade-token-select only-border-warning mb-2 p-4 mt-5'>
                                 <div className='d-flex justify-content-between'>
                                     <h5 className='font-bold text-gray text-left fs-12'>TLP Balance</h5>
-                                    <h5 className='text-gray text-left fs-12 font-bold'>Max: {changeDecimal(totalUserLP)} TLP</h5>
+                                    <h5 className='text-gray text-left fs-12 font-bold'>Max: {Number(totalUserLP) > 1 ? Number(totalUserLP - 0.5).toFixed(0) : Number(totalUserLP).toFixed(0)} TLP</h5>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <input type='text' className='token-select-input' placeholder='0.0' value={tlpValue} onChange={(e) => handleChangeTLP(e.target.value)} />
@@ -255,11 +275,11 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total staked</p>
-                                        <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</p>
+                                        <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? changeDecimal0Fix(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Total TLP value</p>
-                                        <p className='text-pink-sharp'>{changeDecimal(totalLPValue)} TLP</p>
+                                        <p className='text-pink-sharp'>{changeDecimal0Fix(totalLPValue)} TLP</p>
                                     </div>
                                 </div>                         
                             </div>
@@ -278,7 +298,7 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Claimable rewards</p>
-                                        <p>{changeDecimal5Fix(userReward)} TRY</p>
+                                        <p>{changeDecimal8Fix(userReward)} TRY</p>
                                     </div>
                                     <div className='d-flex mt-3'>
                                         <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2' onClick={() => getReward()}>Claim rewards</div>

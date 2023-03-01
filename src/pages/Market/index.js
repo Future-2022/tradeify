@@ -14,7 +14,7 @@ import './index.css';
 
 import { changeDecimal, fetchLPCoins, getStakingPoolStatus, getTokenPrice,
      LPMetaData, isLoggedIn, fetchUserLpCoins, getUniqueCoinTypes, getMainCoins,
-     getCoinBalances, getCoins, findStakingMeta, changeBigNumber, changeDecimal5Fix } from '../../control/main';
+     getCoinBalances, getCoins, findStakingMeta, changeBigNumber, changeDecimal5Fix, changeDecimal0Fix, changeDecimal8Fix } from '../../control/main';
 import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
 import { buyTLPSdk, sellTLPSdk } from '../../lib/tradeify-sdk/pool';
@@ -100,6 +100,9 @@ const Market = (props) => {
                 const mainCoins = getMainCoins(tokenPrice, lpCoin);
                 setMainCoins(mainCoins);
             })
+            if(switchMarket == 1) {
+                handleFirstTokenChange(firstTokenValue)
+            }
         }
     }, [lpCoin, tokenPrice])
 
@@ -137,7 +140,7 @@ const Market = (props) => {
 
      const getPrice = () => {       
         getTokenPrice().then(item => {
-            setTokenPrice(item);    
+            setTokenPrice(item);   
         })  
     }
 
@@ -214,17 +217,24 @@ const Market = (props) => {
             })
             let APR = (Number(totalSupplyTLP) / Number(totalLPValue)) * 100;
             setStakingAPR(APR.toFixed(2));
-            setTotalLPValue(changeDecimal(totalLPValue));
+            setTotalLPValue(changeDecimal0Fix(totalLPValue));
         })
     }, [totalLPValue, globalContext.account, totalSupplyTLP])
 
-    useEffect(() => {
+    const getRewardValue = () => {       
         if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
             let currentTimestamp = Date.now();
             let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
             setUserReward(Reward);
-        }
-    }, [totalLPValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus])
+        } 
+    }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getRewardValue();
+        }, CONFIG.timeIntervalOfReward);
+        return () => clearInterval(interval);
+    }, [totalLPValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus]);
     
     
     const unStake = () => {
@@ -279,11 +289,13 @@ const Market = (props) => {
             setFirstTokenValue(Number(firstTokenMaxValue) * value / 100);
             handleFirstTokenChange(Number(firstTokenMaxValue) * value / 100);
         } else if(index == 3) {
-            let inValue = (Number(poolLPValue) * value / 100 * (100 - 1) / 100).toFixed(0);
-            let inValueFee = (Number(poolLPValue) * value / 100 * 1 / 100).toFixed(0);
-            setLPToken(inValue);
+            console.log(TLPbalance);
+            let realValue = (Number((TLPbalance - 0.5)) * value / 100).toFixed(0);
+            let inValue = (Number(TLPbalance) * value / 100 * (100 - 1) / 100).toFixed(0);
+            let inValueFee = (Number(TLPbalance) * value / 100 * 1 / 100).toFixed(0);
+            console.log(realValue)
             setLPTokenFee(inValueFee);
-            handleTLPTokenChange(inValue);
+            handleTLPTokenChange(realValue);
         }
     }
 
@@ -294,13 +306,12 @@ const Market = (props) => {
         lpCoin.map((item) => {
             if(_firstTokenType == item.metadata[0].symbol) {
                 setPoolId(item);
-                let fee = Number(item.data.lpFeeBps) / 100;
-                console.log(fee);
+                let fee = Number(item.data.lpFeeBps);
                 _getLpValue = getTLPValue(_firstTokenType, value);
-                let realValue = (_getLpValue * (100 - fee) / 100).toFixed(4);
-                let feeValue =  (_getLpValue * fee / 100).toFixed(4)
-                setLPToken(realValue);
-                setLPTokenFee(feeValue);
+                let realValue = (_getLpValue * (10000 - fee) / 10000).toFixed(4);
+                let feeValue =  (_getLpValue * fee / 10000).toFixed(4)
+                setLPToken(changeDecimal(realValue));
+                setLPTokenFee(changeDecimal(feeValue));
             } 
         })        
     }
@@ -309,11 +320,11 @@ const Market = (props) => {
         let price = 0;
         tokenPrice.map(item => {
             if(item.symbol == tokenType) {
-                price = item.value;
+                price = (Number(item.value)).toFixed(0);
                 setSelectTokenPrice(price);
             }
         })
-        return (value * price / CONFIG.TLPPrice).toFixed(0);
+        return (changeBigNumber(value) * price / CONFIG.TLPPrice).toFixed(0);
     }
 
     const buyTLP = async () => {
@@ -343,32 +354,29 @@ const Market = (props) => {
     }
 
     const sellTLP = async () => {
-        console.log('ok');
-        console.log(userLpCoin);
+        console.log(changeBigNumber(lpToken));
         await userLpCoin.map(variable => {
-            if (variable.balance.value > lpToken) {
-                lpCoin.map((item) => {
-                    if(item.id == activeLP) {
-                        sellTLPSdk(wallet, {
-                            pool: item,
-                            lpIn: variable.id,
-                            amount: changeBigNumber(lpToken),
-                            price: selectTokenPrice,
-                            maxSlippagePct: CONFIG.defaultSlippagePct
-                        }).then(item => {
-                            setActiveLP(null);
-                            setLPToken(0);
-                            setSellFirstTokenGetValue(0);
-                            toast.info("Your TLP token has been successfully sold!");
-                        })
-                    }
-                })
-            }
+            console.log(variable.balance.value)
+            lpCoin.map((item) => {
+                if(item.id == activeLP) {
+                    sellTLPSdk(globalContext.provider, wallet, {
+                        pool: item,
+                        lpIn: variable.id,
+                        amount: changeBigNumber(lpToken),
+                        price: selectTokenPrice,
+                        maxSlippagePct: CONFIG.defaultSlippagePct
+                    }).then(item => {
+                        setActiveLP(null);
+                        setLPToken(0);
+                        setSellFirstTokenGetValue(0);
+                        toast.info("Your TLP token has been successfully sold!");
+                    })
+                }
+            })
         })        
     }
 
     const handleTLPTokenChange = (value) => {
-        console.log(value)
         setLPToken(value);
         getTokenValue(value);
     }
@@ -429,7 +437,7 @@ const Market = (props) => {
             setStatusIndex2(2);
         } else if (globalContext.account != null && connected != false && Number(lpToken) > TLPbalance) {
             setStatusIndex2(3);
-        } else if (globalContext.account != null && connected != false && changeDecimal(sellFirstTokenGetValue) > Number(poolValue)) {
+        } else if (globalContext.account != null && connected != false && sellFirstTokenGetValue > Number(poolValue)) {
             setStatusIndex2(4);
         } else {
             setStatusIndex2(5);
@@ -521,7 +529,7 @@ const Market = (props) => {
                                     </div>
                                 </div>
                                 <div className='trade-token-select only-border-red my-2 px-4 py-2'>
-                                    <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Max Amount : {poolLPValue}</h5><h5 className='text-gray-light text-left fs-12'>TLP balance: {TLPbalance}</h5></div>
+                                    <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Max Amount : {poolLPValue}</h5><h5 className='text-gray-light text-left fs-12'>TLP balance: {Number(TLPbalance) > 1 ? Number(TLPbalance - 0.5).toFixed(0) : Number(TLPbalance).toFixed(0)}</h5></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input' value={lpToken} placeholder='0.0' onChange={(e) => handleTLPTokenChange(e.target.value)}/>
                                         <div className='d-flex cursor-pointer' disabled={true} ><h5>TLP</h5></div>                                       
@@ -595,7 +603,7 @@ const Market = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between py-2'>
                                     <p className='text-gray py-2'>Total Staked TLP</p>
-                                    <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</p>
+                                    <p className='text-pink-sharp'>{stakingPoolStatus != undefined ? changeDecimal0Fix(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</p>
                                 </div>
                                 <div className='d-flex justify-content-between py-2'>
                                     <p className='text-gray py-2'>Total Supply TLP</p>
@@ -618,7 +626,7 @@ const Market = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between py-1'>
                                     <p className='text-gray py-2'>Claimable rewards</p>
-                                    <p>{changeDecimal5Fix(userReward)} TRY</p>
+                                    <p>{changeDecimal8Fix(userReward)} TRY</p>
                                 </div>
                                 <div className='d-flex mt-3'>
                                     <div className='earn-button-grey w-100 text-center  py-2 border-radius mb-3 ml-2' onClick={() => getReward()}>Claim rewards</div>

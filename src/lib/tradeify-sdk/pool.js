@@ -103,18 +103,23 @@ export const calcSwapOut = (pool, inValue, isACS) => {
   return Number(outValue)
 }
 
-const withdrawTx = (args) => {
-  return maybeSplitThenWithdraw({first: args.pool.data.typeArgs[0]}, {
+// Sell tlp function
+export const sellTLPSdk = async (provider, wallet, args) => {
+  console.log(args.amount);
+  const [inputTLP] = await Promise.all([
+    await getOrCreateCoinOfLargeEnoughBalance(
+      provider,
+      wallet,
+      CONFIG.tlp,
+      args.amount
+    )])
+  
+  let tx = maybeSplitThenWithdraw({first: args.pool.data.typeArgs[0]}, {
     pool: args.pool.id,
-    lpIn: args.lpIn,
+    lpIn: inputTLP.id,
     price: Number(args.price).toFixed(0),
     amount: args.amount,
   })
-}
-
-// Sell tlp function
-export const sellTLPSdk = async (wallet, args) => {
-  const tx = withdrawTx(args);
   console.log(tx);
   return await wallet.signAndExecuteTransaction(tx)
 }
@@ -134,6 +139,7 @@ export const buyTLPSdk = async (provider, wallet, args) => {
     amountA: args.amountA,
     price: Number(args.price).toFixed(0),
   })
+  console.log(tx)
   return await wallet.signAndExecuteTransaction(tx)
 }
 // const sellTLPSdk

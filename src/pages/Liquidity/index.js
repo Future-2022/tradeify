@@ -8,7 +8,7 @@ import DonutChart from 'react-donut-chart';
 
 import TokenIcon1 from '../../img/png/SUI.png';
 
-import { fetchLPCoins, LPMetaData, getStakingPoolStatus, getTokenPrice, changeDecimal } from '../../control/main';
+import { fetchLPCoins, LPMetaData, getStakingPoolStatus, getTokenPrice, changeDecimal, changeDecimal0Fix } from '../../control/main';
 import { StoreContext } from '../../store';
 import { CONFIG } from '../../lib/config';
 
@@ -88,7 +88,7 @@ const Liquidity = (props) => {
             });
             SetLPCoin(newMetaData);
             SetChartData(ChartData.meta);
-            setTotalLPValue(changeDecimal(totalLPValue));
+            setTotalLPValue(changeDecimal0Fix(totalLPValue));
         })
     }, [tokenPrice])
 
@@ -124,7 +124,7 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Total Staked</p>
-                                    <div className='py-2 text-grey-sharp'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</div>
+                                    <div className='py-2 text-grey-sharp'>{stakingPoolStatus != undefined ? changeDecimal0Fix(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</div>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>TLP pool Value</p>
@@ -132,7 +132,7 @@ const Liquidity = (props) => {
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Protocol Owned</p>
-                                    <div className='py-2 text-grey-sharp'>{protocolOwned}%</div>
+                                    <div className='py-2 text-grey-sharp'>{protocolOwned.toFixed(2)}%</div>
                                 </div>
                                 <div className='d-flex mt-3'>
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3 mr-2' onClick={() => goLink('market')}>Buy / Sell TLP</div>

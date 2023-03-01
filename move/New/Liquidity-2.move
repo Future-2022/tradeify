@@ -678,7 +678,7 @@ module trading::pool {
     ): (Balance<B>) {
         assert!(current_time > (user_stake.start_timestamp + user_stake.lock_time), STAKINGLOCK);
         assert!(owner == user_stake.owner, INVALID_USER);
-        let balance = (current_time - user_stake.start_timestamp) * user_stake.staking_amount / balance::value(&staking_pool.balance_tlp);
+        let balance = muldiv((current_time - user_stake.start_timestamp), (user_stake.staking_amount * 10), balance::value(&staking_pool.balance_tlp));
         user_stake.start_timestamp = current_time;
         return balance::split(&mut staking_pool.balance_try, balance)
     }
@@ -1163,5 +1163,4 @@ module trading::pool {
         let sender = tx_context::sender(ctx);     
         destroy_or_transfer_balance(amount, sender, ctx);
     }
-
 }
