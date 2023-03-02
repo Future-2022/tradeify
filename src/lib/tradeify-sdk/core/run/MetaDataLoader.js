@@ -1,8 +1,8 @@
-import { JsonRpcProvider } from '@mysten/sui.js'
+import { JsonRpcProvider, Network } from '@mysten/sui.js'
 import { CONFIG } from '../../../config';
 import { CoinMetadata } from '../../coin'
 
-const provider = new JsonRpcProvider(CONFIG.rpcUrl)
+const provider = new JsonRpcProvider(Network.DEVNET)
 const cache = new Map()
 
 export class CoinMetadataLoader {
@@ -35,7 +35,7 @@ export class CoinMetadataLoader {
       cache.set(typeStr, metadata)
       return metadata
     } catch (e) {
-      throw new Error(`failed to load metadata for type ${typeStr}`)
+      console.log(e);
     }
   }
 }

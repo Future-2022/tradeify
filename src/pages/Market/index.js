@@ -96,10 +96,8 @@ const Market = (props) => {
 
     useEffect(() => {
         if(isLoggedIn() == true) {
-            getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-                const mainCoins = getMainCoins(tokenPrice, lpCoin);
-                setMainCoins(mainCoins);
-            })
+            const mainCoins = getMainCoins(tokenPrice, lpCoin);
+            setMainCoins(mainCoins);
             if(switchMarket == 1) {
                 handleFirstTokenChange(firstTokenValue)
             }

@@ -32,7 +32,6 @@ import ShortPosition from './ShortPosition';
 
 import Modal from 'react-modal';
 
-const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 const TradeForm = () => {    
     const { wallet, connected } = useWallet();
     const [count, setCount] = useState(0);

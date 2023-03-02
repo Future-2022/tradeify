@@ -46,7 +46,7 @@ export const CONFIG = {
     TLPPrice: 1,
     TRYPrice: 100,
     faucetDurationTime: 10 * 60 * 1000, // 1 hour
-    timeIntervalOfPrice: 5000,    
+    timeIntervalOfPrice: 2000,    
     timeIntervalOfReward: 1000,    
     referCodeLength: 100000000000,
     TLPDecimal: 100000

@@ -18,6 +18,7 @@ const Liquidity = (props) => {
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);        
     const [lpCoin, SetLPCoin] = useState(undefined);        
+    const [lpCoins, SetLPCoins] = useState(undefined);        
     const [chartData, SetChartData] = useState([]);     
 
     const [totalLPValue, setTotalLPValue] = useState(0);  
@@ -50,7 +51,6 @@ const Liquidity = (props) => {
     useEffect(() => {
         getStakingPoolStatus(globalContext.provider).then(res => {
             let tlpPoolValue = 0;
-            console.log(lpCoin)
             if(lpCoin != undefined) {
                 lpCoin.meta.map(item => {
                     tlpPoolValue += Number(item.totalPooledValue);
@@ -66,14 +66,16 @@ const Liquidity = (props) => {
             }
         })
     }, [lpCoin])
-
-    useEffect(() => { 
+    useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
-            let totalLPValue = 0;
+            SetLPCoins(lpCoins);
+        })
+    }, [])
+
+    useEffect(() => {         
             lpCoins.map(item => {
                 totalLPValue += Number(item.data.lpSupply);
             })
-            console.log(totalLPValue);
             const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
             newMetaData.meta.map(item => {
                 if(item.LPSymbol != "TRY") {
@@ -89,7 +91,6 @@ const Liquidity = (props) => {
             SetLPCoin(newMetaData);
             SetChartData(ChartData.meta);
             setTotalLPValue(changeDecimal0Fix(totalLPValue));
-        })
     }, [tokenPrice])
 
     return (

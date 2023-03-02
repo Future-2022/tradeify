@@ -352,6 +352,7 @@ export async function fetchUserLpCoins(provider, addr) {
     suiCoinToCoin
   )
 }
+
 export const getTokenPrice = async () => {
     let suiPrice = 1;
     let ethPrice = 0;
@@ -607,7 +608,7 @@ export const getTraderStatus = async (provider, wallet) => {
   })
   return {referralCode};
 }
-export const getReferralResult = async (provider, wallet, lpCoin, tokenPrice) => {
+export const getReferralResult = async (provider, wallet, lpCoin) => {
   const referralStatusAddress = [];
   referralStatusAddress.push(CONFIG.tradingPoolID);
   const batch = await provider.getObjectBatch(referralStatusAddress);
@@ -619,15 +620,9 @@ export const getReferralResult = async (provider, wallet, lpCoin, tokenPrice) =>
     
     if(result.referID == wallet) {
       let token = undefined;
-      let tokenPriceValue = 0;
       lpCoin.map(itemValue => {
         if(result.inPoolID == itemValue.id) {
           token = itemValue.metadata[0].symbol;
-        }
-      })
-      tokenPrice.map(itemValue => {
-        if(itemValue.symbol == token) {
-          tokenPriceValue = itemValue.value; 
         }
       })
       tradingAmount += Number(result.tradingAmount * Number(result.marketPrice));
@@ -646,7 +641,6 @@ export const isAvailaleReferralCode = async (provider, value) => {
   referData.map(item => {
     const result = item.fields.key.fields;
     console.log(result)
-    console.log(value)
     if(Number(result.referralCode) == value) {
       returnValue = true;
     }
@@ -668,7 +662,7 @@ export const checkCreateReferralCode = async (provider, value) => {
   return returnValue;
 }
 
-export const getTradingResult = async (provider, wallet, lpCoin, tokenPrice) => {
+export const getTradingResult = async (provider, wallet, lpCoin) => {
   const referralStatusAddress = [];
   referralStatusAddress.push(CONFIG.tradingPoolID);
   const batch = await provider.getObjectBatch(referralStatusAddress);
@@ -677,19 +671,12 @@ export const getTradingResult = async (provider, wallet, lpCoin, tokenPrice) => 
   let rebate = 0;
   tradingData.map(item => {
     const result = item.fields.key.fields;
-    console.log(result)
     if(result.hasRefer == "1") {
       if(result.trader == wallet) {
         let token = undefined;
-        let tokenPriceValue = 0;
         lpCoin.map(itemValue => {
           if(result.inPoolID == itemValue.id) {
             token = itemValue.metadata[0].symbol;
-          }
-        })
-        tokenPrice.map(itemValue => {
-          if(itemValue.symbol == token) {
-            tokenPriceValue = itemValue.value; 
           }
         })
         tradingAmount += Number(result.tradingAmount * Number(result.marketPrice));

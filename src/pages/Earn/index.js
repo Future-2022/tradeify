@@ -290,7 +290,7 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1 mt-3'>
                                         <p className='text-gray py-2'>Balance</p>
-                                        <p>{changeDecimal(totalUserLP)} TLP</p>
+                                        <p>{Number(totalUserLP).toFixed(0)} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Staked TLP</p>

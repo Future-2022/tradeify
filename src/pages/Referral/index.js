@@ -76,11 +76,11 @@ const Referral = (props) => {
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setTraderReferralCode(item.referralCode);
         })
-        getReferralResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin, tokenPrice).then(item => {
+        getReferralResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin).then(item => {
             setReferTradingVolume(item.tradingAmount);
             setReferTradingRebate(item.rebate);
         })
-        getTradingResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin, tokenPrice).then(item => {
+        getTradingResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin).then(item => {
             setTraderTradingVolume(item.tradingAmount);
             setTraderTradingRebate(item.rebate);
         })
@@ -101,7 +101,7 @@ const Referral = (props) => {
             referralCode: referralCode
         }).then(args => {
             console.log(args);
-            toast.info(`Your referral code ${referralCodeValue} has been created`);
+            toast.info(`Your referral code ${referralCode} has been created`);
             setTraderReferralCode(0);
         }).catch(err => {
             console.log(err);

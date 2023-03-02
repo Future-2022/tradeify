@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext } from 'react';
-import { Coin, JsonRpcProvider } from '@mysten/sui.js'
+import { Coin, JsonRpcProvider, Network } from '@mysten/sui.js'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWallet } from '@mysten/wallet-adapter-react';
 import Modal from 'react-modal';
@@ -53,7 +53,6 @@ const Header = () => {
     const [isFaucetMenu, setIsFaucetMenu] = useState(false);
     const [userCoins, setUserCoins] = useState([]);
     const [coinBalances, setCoinBalances] = useState([]);
-    const [provider, setProvider] = useState({});
 
     const handleConnect = async (walletName) => {
         await select(walletName.toString());  
@@ -138,6 +137,19 @@ const Header = () => {
             }
         }
     }
+    const mint_sui = async () => {
+        const provider = new JsonRpcProvider(Network.DEVNET);
+        try {                
+            await provider.requestSuiFromFaucet(
+                localStorage.getItem('walletAddress')
+            ).then((res) => {
+                console.log(res);
+                toast.info("Token has been minted successfully!");
+            })
+        } catch (e) {
+            toast.error('Too many requests from this client have been sent to the faucet. Please retry later')
+        }
+    }
     return (
         <div className='nav py-2'>
             <div className='container'>
@@ -203,7 +215,7 @@ const Header = () => {
                                              
                         {isFaucetMenu == true && (
                             <div className='menu-faucet' onMouseLeave={() => setIsFaucetMenu(false)}>
-                                <div className='d-flex justify-content-between'><a className='no-effect d-flex justify-content-between w-100' href='https://docs.sui.io/explore/wallet-browser#add-sui-tokens-to-your-sui-wallet' target="_blank" ><img src={TokenIcon1} className='faucet-icon'/>SUI</a></div>
+                                <div className='d-flex justify-content-between' onClick={() => mint_sui()}><a className='no-effect d-flex justify-content-between w-100'><img src={TokenIcon1} className='faucet-icon'/>SUI</a></div>
                                 <div className='d-flex justify-content-between' onClick={() => mint_token("eth")} ><img src={TokenIcon2} className='faucet-icon' />ETH</div>
                                 <div className='d-flex justify-content-between' onClick={() => mint_token("btc")} ><img src={TokenIcon3} className='faucet-icon'/>BTC</div>
                             </div>

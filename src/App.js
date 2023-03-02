@@ -2,7 +2,7 @@ import React, { useEffect, useContext } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { WalletStandardAdapterProvider } from '@mysten/wallet-adapter-wallet-standard'
 import { WalletProvider } from '@mysten/wallet-adapter-react'
-import { JsonRpcProvider } from '@mysten/sui.js'
+import { JsonRpcProvider, Network } from '@mysten/sui.js'
 import "@fontsource/ibm-plex-sans";
 import './App.css';
 import './css/tailwind.output.css';
@@ -23,7 +23,7 @@ import { StoreContext } from './store';
 
 import { CONFIG } from './lib/config';
 const supportedWallets = [new WalletStandardAdapterProvider()]
-const provider = new JsonRpcProvider(CONFIG.rpcUrl);
+const provider = new JsonRpcProvider(Network.DEVNET);
 
 function App() {
   const [modalIsOpen, setModalIsOpen] = React.useState(false);

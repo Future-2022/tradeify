@@ -25,7 +25,9 @@ const Home = (props) => {
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
     
     const [tryPrice, setTryPrice] = useState(1);   
+
     const [lpCoin, SetLPCoin] = useState(undefined);
+    const [lpCoins, SetLPCoins] = useState([]);
 
     // Get Price part
     const getPrice = () => {       
@@ -40,32 +42,33 @@ const Home = (props) => {
         }, CONFIG.timeIntervalOfPrice);
         return () => clearInterval(interval);
     }, []);
-    
+
     useEffect(() => {
-        let totalSupplyTLP = 0;
-        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
-
-            let totalLPValue = 0;
-            lpCoins.map(item => {
-                // if(item.metadata[0].symbol == "TRY") {
-                //     let TRYPrice = Number(item.data.balanceA.value) / Number(item.data.balanceB.value);
-                //     setTryPrice(TRYPrice);
-                // }
-                totalLPValue += Number(item.data.lpSupply);
-            })
-
-            const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
-            SetLPCoin(newMetaData);
-            setTotalLPValue(changeDecimal0Fix(totalLPValue));
-        })
+        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (item) => {
+            console.log(item)
+            SetLPCoins(item)
+        })             
         getStakingPoolStatus(globalContext.provider).then(res => {
             setStakingPoolStatus(res);
-            totalSupplyTLP = res.details.data.fields.balance_tlp;
         })
         getTotalTRYValue(globalContext.provider).then(res => {
             setTotalTRYValue(res);
         })
-    }, [tokenPrice])
+    }, [])
+    
+    useEffect(() => {
+        let totalLPValue = 0;
+        if(lpCoins.length != 0) {
+            lpCoins.map(item => {
+                totalLPValue += Number(item.data.lpSupply);
+            })
+        }
+
+        // const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
+        const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
+        SetLPCoin(newMetaData);
+        setTotalLPValue(changeDecimal0Fix(totalLPValue));
+    }, [tokenPrice, lpCoins])
 
     return (
         <div className='pb-5'>

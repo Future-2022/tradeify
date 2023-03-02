@@ -71,7 +71,6 @@ const leverageMarks = {
     100: "100x",
 };
 
-const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 const LongPosition = () => {   
     const globalContext = useContext(StoreContext);     
 
