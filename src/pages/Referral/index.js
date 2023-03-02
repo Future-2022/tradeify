@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import './index.css';
+
 import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
 import { StoreContext } from '../../store';
@@ -8,15 +9,14 @@ import { createReferralCode, submitReferralCode } from '../../lib/tradeify-sdk/r
 import { getReferralStatus, getTraderStatus, getReferralResult, isAvailaleReferralCode, getTradingResult,
     checkCreateReferralCode } from '../../control/main';
 import { FaClipboard } from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import LoadingSpin from "react-loading-spin";
+import { toast } from 'react-toastify';
 
-import { fetchLPCoins, getTokenPrice } from '../../control/main';
+import { fetchLPCoins } from '../../control/main';
 import { CONFIG } from '../../lib/config';
-import { getObjectExistsResponse } from '@mysten/sui.js';
 
 const Referral = (props) => {
-    const { account, connected, connecting, connects, disconnect } = useWallet();
+    
+    const { connected } = useWallet();
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const inputArea = useRef(undefined);
     const [formIndex, setFormIndex] = useState(1);
@@ -36,7 +36,6 @@ const Referral = (props) => {
     // trader part parameter
     const [traderReferralCode, setTraderReferralCode] = useState(undefined);
     const [lpCoin, SetLPCoin] = useState([]);
-    const [tokenPrice, setTokenPrice] = useState([]);  
 
     const [statusIndex1, setStatusIndex1] = useState([]);   
     const [statusIndex2, setStatusIndex2] = useState([]);  
@@ -48,34 +47,26 @@ const Referral = (props) => {
             SetLPCoin(lpCoins);
         })
     }, [])
-
-    const getPrice = () => {       
-        getTokenPrice().then(item => {
-            setTokenPrice(item);           
-        })  
-    }
-    useEffect(() => {
-        const interval = setInterval(() => {
-            getPrice();
-        }, CONFIG.timeIntervalOfPrice);
-        return () => clearInterval(interval);
-    }, []);
     
     useEffect(() => {
         const code = new URLSearchParams(location.search).get('ref')
         setReferralCodeValue(code);
         handleChangeReferralCode(code);
     }, [])
-
-    useEffect(() => {        
+    useEffect(() => {              
         getReferralStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setReferralCode(item.referralCode);
             setTraderNum(item.traderNum);
             setReferralLink(item.referralLink);
         })
+    }, [referralCode])
+    useEffect(() => {
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setTraderReferralCode(item.referralCode);
         })
+    }, [traderReferralCode])
+
+    useEffect(() => {  
         getReferralResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin).then(item => {
             setReferTradingVolume(item.tradingAmount);
             setReferTradingRebate(item.rebate);
@@ -84,7 +75,7 @@ const Referral = (props) => {
             setTraderTradingVolume(item.tradingAmount);
             setTraderTradingRebate(item.rebate);
         })
-    }, [lpCoin, traderReferralCode])
+    }, [lpCoin])
     
     const selectFormIndex = (value) => {
         setFormIndex(value);
@@ -97,15 +88,14 @@ const Referral = (props) => {
         console.log(referralCode);
         console.log(isChecking);
         if(isChecking == true) {
-        createReferralCode(globalContext.provider, globalContext.wallet, {
-            referralCode: referralCode
-        }).then(args => {
-            console.log(args);
-            toast.info(`Your referral code ${referralCode} has been created`);
-            setTraderReferralCode(0);
-        }).catch(err => {
-            console.log(err);
-        })
+            createReferralCode(globalContext.provider, globalContext.wallet, {
+                referralCode: referralCode
+            }).then(args => {
+                toast.info(`Your referral code ${referralCode} has been created`);
+                setTraderReferralCode(0);
+            }).catch(err => {
+                console.log(err);
+            })
         }
     }
     function getRandomInt(max) {

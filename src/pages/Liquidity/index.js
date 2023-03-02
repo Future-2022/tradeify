@@ -18,7 +18,7 @@ const Liquidity = (props) => {
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
     const globalContext = useContext(StoreContext);        
     const [lpCoin, SetLPCoin] = useState(undefined);        
-    const [lpCoins, SetLPCoins] = useState(undefined);        
+    const [lpCoins, SetLPCoins] = useState([]);        
     const [chartData, SetChartData] = useState([]);     
 
     const [totalLPValue, setTotalLPValue] = useState(0);  
@@ -50,48 +50,44 @@ const Liquidity = (props) => {
 
     useEffect(() => {
         getStakingPoolStatus(globalContext.provider).then(res => {
-            let tlpPoolValue = 0;
-            if(lpCoin != undefined) {
-                lpCoin.meta.map(item => {
-                    tlpPoolValue += Number(item.totalPooledValue);
-                })
                 
-                setTLPPoolValue(tlpPoolValue.toFixed(0));
-                setStakingPoolStatus(res);
-                const stakingAPR = ((changeDecimal(res.details.data.fields.balance_tlp) / totalLPValue) * 100).toFixed(2);
-                const totalOwned = 100 - stakingAPR;
-                console.log(stakingAPR);
-                setStakingAPR(stakingAPR)
-                setProtocolOwned(totalOwned);
-            }
+            // setTLPPoolValue(tlpPoolValue.toFixed(0));
+            setStakingPoolStatus(res);
+            const stakingAPR = ((changeDecimal(res.details.data.fields.balance_tlp) / totalLPValue) * 100).toFixed(2);
+            const totalOwned = 100 - stakingAPR;
+            console.log(stakingAPR);
+            setStakingAPR(stakingAPR)
+            setProtocolOwned(totalOwned);
         })
-    }, [lpCoin])
+    }, [totalLPValue])
+
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             SetLPCoins(lpCoins);
         })
     }, [])
 
-    useEffect(() => {         
-            lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply);
-            })
-            const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
-            newMetaData.meta.map(item => {
-                if(item.LPSymbol != "TRY") {
-                    const newItem = {
-                        label: item.LPSymbol,
-                        value: Number(item.LPPercentage.toFixed(2))
-                    }
-                    
-                    if (ChartData.meta.length < 3) 
-                        ChartData = { "meta" : ChartData['meta'] ? [...ChartData['meta'], newItem] : [newItem] }
+    useEffect(() => {    
+        let totalLPValue = 0;     
+        lpCoins.map(item => {
+            totalLPValue += Number(item.data.lpSupply);
+        })
+        const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
+        newMetaData.meta.map(item => {
+            if(item.LPSymbol != "TRY") {
+                const newItem = {
+                    label: item.LPSymbol,
+                    value: Number(item.LPPercentage.toFixed(2))
                 }
-            });
-            SetLPCoin(newMetaData);
-            SetChartData(ChartData.meta);
-            setTotalLPValue(changeDecimal0Fix(totalLPValue));
-    }, [tokenPrice])
+                
+                if (ChartData.meta.length < 3) 
+                    ChartData = { "meta" : ChartData['meta'] ? [...ChartData['meta'], newItem] : [newItem] }
+            }
+        });
+        SetLPCoin(newMetaData);
+        SetChartData(ChartData.meta);
+        setTotalLPValue(changeDecimal0Fix(totalLPValue));
+    }, [tokenPrice, lpCoins])
 
     return (
         <div className='pb-5'>
@@ -127,10 +123,10 @@ const Liquidity = (props) => {
                                     <p className='text-gray py-2'>Total Staked</p>
                                     <div className='py-2 text-grey-sharp'>{stakingPoolStatus != undefined ? changeDecimal0Fix(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</div>
                                 </div>
-                                <div className='d-flex justify-content-between'>
+                                {/* <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>TLP pool Value</p>
                                     <div className='py-2 text-grey-sharp'>$ {tlpPoolValue}</div>
-                                </div>
+                                </div> */}
                                 <div className='d-flex justify-content-between'>
                                     <p className='text-gray py-2'>Protocol Owned</p>
                                     <div className='py-2 text-grey-sharp'>{protocolOwned.toFixed(2)}%</div>

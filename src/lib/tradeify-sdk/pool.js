@@ -142,8 +142,8 @@ export const buyTLPSdk = async (provider, wallet, args) => {
   console.log(tx)
   return await wallet.signAndExecuteTransaction(tx)
 }
-// const sellTLPSdk
 
+// const sellTLPSdk
 export const swap = async (provider, wallet, args) => {
   const input = await getOrCreateCoinOfLargeEnoughBalance(
     provider,

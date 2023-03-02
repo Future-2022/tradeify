@@ -39,28 +39,18 @@ const Earn = (props) => {
 
     const getRewardValue = () => {       
         if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
-            console.log('ookk')
             let currentTimestamp = Date.now();
-            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount * 10)/Number(totalSupplyTLP);
             setUserReward(Reward);
         } 
     }
 
     useEffect(() => {
         const interval = setInterval(() => {
-            console.log('first')
             getRewardValue();
         }, CONFIG.timeIntervalOfReward);
         return () => clearInterval(interval);
     }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus]);
-
-    // useEffect(() => {
-    //     if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
-    //         let currentTimestamp = Date.now();
-    //         let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
-    //         setUserReward(Reward);
-    //     }
-    // }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP, stakingPoolStatus, userStakingStatus])
     
     const handleChangeTLP = (value) => {
         setTLPvalue(value);
@@ -71,7 +61,7 @@ const Earn = (props) => {
     }
 
     const handleChangeTLPByPercentage = (percentage) => {
-        setTLPvalue(((totalUserLP - 0.5) * percentage / 100).toFixed(0));
+        setTLPvalue(((totalUserLP) * percentage / 100).toFixed(9));
     }
 
     const stakeTLPEvent = () => {
@@ -223,7 +213,7 @@ const Earn = (props) => {
                             <div className='trade-token-select only-border-warning mb-2 p-4 mt-5'>
                                 <div className='d-flex justify-content-between'>
                                     <h5 className='font-bold text-gray text-left fs-12'>TLP Balance</h5>
-                                    <h5 className='text-gray text-left fs-12 font-bold'>Max: {Number(totalUserLP) > 1 ? Number(totalUserLP - 0.5).toFixed(0) : Number(totalUserLP).toFixed(0)} TLP</h5>
+                                    <h5 className='text-gray text-left fs-12 font-bold'>Max: {Number(totalUserLP)} TLP</h5>
                                 </div>
                                 <div className='d-flex justify-content-between'>
                                     <input type='text' className='token-select-input' placeholder='0.0' value={tlpValue} onChange={(e) => handleChangeTLP(e.target.value)} />
@@ -290,7 +280,7 @@ const Earn = (props) => {
                                     </div>
                                     <div className='d-flex justify-content-between py-1 mt-3'>
                                         <p className='text-gray py-2'>Balance</p>
-                                        <p>{Number(totalUserLP).toFixed(0)} TLP</p>
+                                        <p>{Number(totalUserLP)} TLP</p>
                                     </div>
                                     <div className='d-flex justify-content-between py-1'>
                                         <p className='text-gray py-2'>Staked TLP</p>

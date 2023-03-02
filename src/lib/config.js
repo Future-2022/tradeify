@@ -1,6 +1,6 @@
 
 export const CONFIG = {       
-    rpcUrl: 'https://fullnode.devnet.sui.io:443',
+    rpcUrl: 'https://fullnode.devnet.vincagame.com:443/',
     // link: 'http://localhost:3000/',
     link: 'https://tradeify.app/',
 

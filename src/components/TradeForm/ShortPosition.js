@@ -75,13 +75,11 @@ const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 const LongPosition = () => {   
     const globalContext = useContext(StoreContext);     
 
-    const { wallet, connected } = useWallet();
+    const { connected } = useWallet();
     const [isOpenModal, setIsOpenModal] = useState(false);
-    const { account, connecting, connects, disconnect } = useSuiWallet();
     const [optionIndex, setOptionIndex] = useState(1);
     const [limitPrice, setLimitPrice] = useState(undefined);
     const [isOrderMenu, setIsOrderMenu] = useState(false);
-    const [isTokenMenu, setIsTokenMenu] = useState(false);
     const [orderType, setOrderType] = useState(1);
     const [leverageValue, setLeverageValue] = useState(5);
     
@@ -108,7 +106,9 @@ const LongPosition = () => {
     const [secondTokenPrice, setSecondTokenPrice] = useState(0);
 
     const [tokenPrice, setTokenPrice] = useState([]);       
-    const [isOverflowAmount, setIsOverflowAmount] = useState(false);    
+    const [isOverflowAmount, setIsOverflowAmount] = useState(false);
+    
+    const [traderData, setTraderData] = useState([]); 
 
     const getPrice = () => {       
         getTokenPrice().then(item => {
@@ -135,24 +135,33 @@ const LongPosition = () => {
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(lpCoins => {
-            SetLPCoin(lpCoins);            
-            getTradeData(lpCoins);
+            SetLPCoin(lpCoins);    
         });
-    }, [tokenPrice])
+    }, [])
+
+    useEffect(() => {     
+        if(lpCoin.length > 0) {   
+            getTradeData(lpCoin);
+        }
+    }, [lpCoin, tokenPrice, traderData])
 
     useEffect(() => {        
-        if(isLoggedIn() == true) { 
+        if(isLoggedIn() == true) {
             getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
                 const newCoins = getUniqueCoinTypes(item).map(arg => {
                     return { value: arg, label: Coin.getCoinSymbol(arg) }
                 });
                 const balance = getCoinBalances(item);
-                const mainCoins = getMainCoins(tokenPrice, lpCoin);
                 setCoinBalance(balance);
                 setCoins(newCoins);
-                setMainCoins(mainCoins);
             })
         }
+    }, [])
+
+    useEffect(() => {        
+        const mainCoins = getMainCoins(tokenPrice, lpCoin);
+        setMainCoins(mainCoins);
+        // console.log(firstTokenValue);
     }, [lpCoin, tokenPrice])
     
     const connectWallet = () => {
@@ -297,6 +306,8 @@ const LongPosition = () => {
                     createdTimeStamp: createdTimeStamp,
                     tradingType: tradingType
                 }).then(res => {
+                    setFirstTokenValue(0);
+                    setSecondTokenValue(0);
                     toast.info("You have created position successfully!");
                 }) 
 
@@ -305,11 +316,17 @@ const LongPosition = () => {
     }
 
     const getTradeData = (lpCoinVal) => {
-        getTradeDatas(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const traderData = getTraderMetaData(lpCoinVal, item, tokenPrice);
-            globalContext.setTraderData(traderData);
-        })
+        if(traderData.length > 0) {
+            const Data = getTraderMetaData(lpCoinVal, traderData, tokenPrice);
+            globalContext.setTraderData(Data);
+        }
     }
+
+    useEffect(() => {
+        getTradeDatas(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            setTraderData(item);
+        })
+    }, [firstTokenValue, globalContext.event])
 
     const setMarketPrice = (secondToken) => {
         let price = 0;        
@@ -478,7 +495,7 @@ const LongPosition = () => {
                                     </div>
                                     <div>
                                         <h5 className='text-white text-right'>$ {item.price}</h5>
-                                        <p className='text-green text-right'>+0.17</p>
+                                        <p className={`${item.isEarn == 1 ? 'text-green':'text-red-value'} text-right`}>{item.isEarn == 1 ? '+':''} {item.changeValue} %</p>
                                     </div>
                                 </div>
                             })}

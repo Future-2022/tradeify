@@ -2,7 +2,7 @@ import { JsonRpcProvider, Network } from '@mysten/sui.js'
 import { CONFIG } from '../../../config';
 import { CoinMetadata } from '../../coin'
 
-const provider = new JsonRpcProvider(Network.DEVNET)
+const provider = new JsonRpcProvider(CONFIG.rpcUrl)
 const cache = new Map()
 
 export class CoinMetadataLoader {

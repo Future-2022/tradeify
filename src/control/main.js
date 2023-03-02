@@ -238,8 +238,9 @@ export function suiCoinToCoin(coin) {
     return new Coin(SuiCoin.getCoinTypeArg(coin), SuiCoin.getID(coin), balance)
 }
 export function changeDecimal(value) {
-  const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(3);
-  return balance
+  const val = (Number(value)/(10**CONFIG.MainDecimal).toString());
+  const balance = val.toString().match(/^-?\d+(?:\.\d{0,3})?/)[0]
+  return Number(balance);
 }
 export function changeDecimal0Fix(value) {
   const balance = (Number(value)/(10**CONFIG.MainDecimal).toString()).toFixed(0);

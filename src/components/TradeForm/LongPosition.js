@@ -93,7 +93,6 @@ const LongPosition = () => {
     const [lpCoin, SetLPCoin] = useState([]);
     const [inPoolId, setInPoolId] = useState(null);  
     const [outPoolId, setOutPoolId] = useState(null);  
-    const [isACS, setIsACS] = useState(undefined);
 
     // buy constant
     const [firstToken, setFirstToken] = useState([{label: "Select"}]);
@@ -107,7 +106,9 @@ const LongPosition = () => {
     const [secondTokenPrice, setSecondTokenPrice] = useState(0);
 
     const [tokenPrice, setTokenPrice] = useState([]);       
-    const [isOverflowAmount, setIsOverflowAmount] = useState(false);       
+    const [isOverflowAmount, setIsOverflowAmount] = useState(false);  
+
+    const [traderData, setTraderData] = useState([]);       
 
     const getPrice = () => {       
         getTokenPrice().then(item => {
@@ -132,25 +133,32 @@ const LongPosition = () => {
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(lpCoins => {
-            SetLPCoin(lpCoins);            
-            getTradeData(lpCoins);
+            SetLPCoin(lpCoins);    
         });
-    }, [tokenPrice])
+    }, [])
 
-    useEffect(() => {
+    useEffect(() => {     
+        if(lpCoin.length > 0) {   
+            getTradeData(lpCoin);
+        }
+    }, [lpCoin, tokenPrice, traderData, globalContext.event])
+
+    useEffect(() => {        
         if(isLoggedIn() == true) {
             getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
                 const newCoins = getUniqueCoinTypes(item).map(arg => {
                     return { value: arg, label: Coin.getCoinSymbol(arg) }
                 });
                 const balance = getCoinBalances(item);
-                const mainCoins = getMainCoins(tokenPrice, lpCoin);
                 setCoinBalance(balance);
                 setCoins(newCoins);
-                setMainCoins(mainCoins);
             })
         }
-        // console.log(firstTokenValue);
+    }, [])
+
+    useEffect(() => {        
+        const mainCoins = getMainCoins(tokenPrice, lpCoin);
+        setMainCoins(mainCoins);
     }, [lpCoin, tokenPrice])
     
     const connectWallet = () => {
@@ -293,6 +301,8 @@ const LongPosition = () => {
                     createdTimeStamp: createdTimeStamp,
                     tradingType: tradingType
                 }).then(res => {
+                    setFirstTokenValue(0);
+                    setSecondTokenValue(0);
                     toast.info("You have created position successfully!");
                 }) 
 
@@ -301,11 +311,17 @@ const LongPosition = () => {
     }
 
     const getTradeData = (lpCoinVal) => {
-        getTradeDatas(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
-            const traderData = getTraderMetaData(lpCoinVal, item, tokenPrice);
-            globalContext.setTraderData(traderData);
-        })
+        if(traderData.length > 0) {
+            const Data = getTraderMetaData(lpCoinVal, traderData, tokenPrice);
+            globalContext.setTraderData(Data);
+        }
     }
+
+    useEffect(() => {
+        getTradeDatas(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
+            setTraderData(item);
+        })
+    }, [firstTokenValue, globalContext.event])
 
     const setMarketPrice = (secondToken) => {
         let price = 0;        

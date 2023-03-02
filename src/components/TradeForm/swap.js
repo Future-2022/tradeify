@@ -50,7 +50,7 @@ const customStyles = {
 const Swap = (props) => {    
 
     const globalContext = useContext(StoreContext);     
-    const { wallets, wallet, select, connected, disconnect } = useWallet();
+    const { wallet, connected } = useWallet();
     const [tokenPrice, setTokenPrice] = useState([]);   
     const [isOpenModal, setIsOpenModal] = useState(false);
     const [isSelectActive, setIsSelectActive] = useState(1);
@@ -77,6 +77,8 @@ const Swap = (props) => {
     
     const [mainCoins, setMainCoins] = useState([]);
     const [statusIndex, setStatusIndex] = useState([]);
+
+    const [swapFee, setSwapFee] = useState(0);
     
     const getPrice = () => {       
         getTokenPrice().then(item => {
@@ -99,19 +101,23 @@ const Swap = (props) => {
         return () => clearInterval(interval);
     }, [secondToken]);
 
-    useEffect(() => {
+    useEffect(() => {        
         if(isLoggedIn() == true) {
             getCoins(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
                 const newCoins = getUniqueCoinTypes(item).map(arg => {
                     return { value: arg, label: Coin.getCoinSymbol(arg) }
                 });
-                const mainCoins = getMainCoins(tokenPrice, lpCoin);
-                setMainCoins(mainCoins);
                 const balance = getCoinBalances(item);
                 setCoinBalance(balance);
-                setCoins(newCoins)
+                setCoins(newCoins);
             })
         }
+    }, [])
+
+    useEffect(() => {        
+        const mainCoins = getMainCoins(tokenPrice, lpCoin);
+        setMainCoins(mainCoins);
+        // console.log(firstTokenValue);
     }, [lpCoin, tokenPrice])
 
     const selectToken = async (type) => {
@@ -181,7 +187,7 @@ const Swap = (props) => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
             SetLPCoin(lpCoins);
         })
-    }, [tokenPrice])
+    }, [])
 
     const runSwap = async () => {
         try {
@@ -211,8 +217,8 @@ const Swap = (props) => {
     const handleFirstTokenChange = (value) => {
         setFirstTokenValue(value);
         let _secondTokenValue = 0;
-        _secondTokenValue = (value * firstTokenPrice / secondTokenPrice).toFixed(3)
-        console.log(_secondTokenValue);
+        _secondTokenValue = (value * firstTokenPrice / secondTokenPrice * 99 / 100).toFixed(5);
+        setSwapFee((value * firstTokenPrice / secondTokenPrice * 1 / 100).toFixed(5));
         setSecondTokenValue(_secondTokenValue);
     }
     useEffect(() => {
@@ -290,7 +296,7 @@ const Swap = (props) => {
 
             <div className='d-flex justify-content-between'>
                 <p className='text-left text-gray pt-2'>Fees</p>
-                <p className='pt-2'>3%</p>
+                <p className='pt-2'>{swapFee} {secondToken[0].label} (1%)</p>
             </div>      
             <div className='pt-3'>
                 <div className='d-flex justify-content-between'>

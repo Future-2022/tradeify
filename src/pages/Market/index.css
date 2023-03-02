@@ -27,12 +27,12 @@
 .right-top-bg {    
     top: -60px;
     right: 0;
-    background: linear-gradient(90deg,#4c00ff,#0066ff);   
+    background: linear-gradient(90deg,#5f97ff,#5c9cfd);   
 }
 .right-top-bg2 {    
     top: -60px;
     right: 0;       
-    background: linear-gradient(90deg,#8614ff,#ff7300);   
+    background: linear-gradient(90deg,#ff7e14,#ff7300);   
 }
 .your-stats .right-top-bg {
     position: absolute;

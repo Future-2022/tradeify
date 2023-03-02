@@ -78,7 +78,7 @@ const Market = (props) => {
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });
 
     const [userLpCoin, setUserLPCoin] = useState(undefined);
-    const [lpCoin, SetLPCoin] = useState([]);
+    const [lpCoins, SetLPCoins] = useState([]);
     const [lpMetaData, SetLPMetaData] = useState([]);
     const [lpToken, setLPToken] = useState("");  
     const [lpTokenFee, setLPTokenFee] = useState(0);  
@@ -96,13 +96,15 @@ const Market = (props) => {
 
     useEffect(() => {
         if(isLoggedIn() == true) {
-            const mainCoins = getMainCoins(tokenPrice, lpCoin);
+            const mainCoins = getMainCoins(tokenPrice, lpCoins);
             setMainCoins(mainCoins);
             if(switchMarket == 1) {
-                handleFirstTokenChange(firstTokenValue)
+                handleFirstTokenChange(firstTokenValue);
+            } else if (switchMarket == 2) {
+                handleTLPTokenChange(lpToken);
             }
         }
-    }, [lpCoin, tokenPrice])
+    }, [lpCoins, tokenPrice])
 
     const connectWallet = () => {
         globalContext.setModalIsOpen(true);
@@ -149,24 +151,30 @@ const Market = (props) => {
         return () => clearInterval(interval);
     }, []);
     
-
     useEffect(() => {
-        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
-            let totalLPValue = 0;
-            lpCoins.map(item => {
-                totalLPValue += Number(item.data.lpSupply);
-            })
-            const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
-            SetLPMetaData(newMetaData.meta);
-            SetLPCoin(lpCoins);
-        })
+        fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (item) => {
+            console.log(item)
+            SetLPCoins(item)
+        }) 
         if(isLoggedIn() == true) {
             fetchUserLpCoins(globalContext.provider, localStorage.getItem('walletAddress')).then((item) => {
                 console.log(item)
                 setUserLPCoin(item);
             })
         }
-    }, [tokenPrice, globalContext.account])
+    }, [])
+
+    useEffect(() => {
+        // fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
+            let totalLPValue = 0;
+            lpCoins.map(item => {
+                totalLPValue += Number(item.data.lpSupply);
+            })
+            const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
+            SetLPMetaData(newMetaData.meta);
+            // SetLPCoin(lpCoins);
+        // })
+    }, [tokenPrice, globalContext.account, lpCoins])
     
     useEffect(() => {
         let totalSupplyTLPValue = 0;
@@ -204,7 +212,7 @@ const Market = (props) => {
             totalSupplyTLPValue = res.details.data.fields.balance_tlp;
             setTotalSupplyTLP(totalSupplyTLPValue);
         })
-    }, [totalLPValue, lpCoin, globalContext.account, lpToken])
+    }, [totalLPValue, globalContext.account, lpToken])
 
     useEffect(() => {    
         // staking part
@@ -222,7 +230,7 @@ const Market = (props) => {
     const getRewardValue = () => {       
         if(stakingPoolStatus != undefined && userStakingStatus != undefined) {
             let currentTimestamp = Date.now();
-            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount)/Number(totalSupplyTLP);
+            let Reward = (currentTimestamp - userStakingStatus.data.fields.start_timestamp) * Number(userStakingStatus.data.fields.staking_amount * 10)/Number(totalSupplyTLP);
             setUserReward(Reward);
         } 
     }
@@ -288,12 +296,12 @@ const Market = (props) => {
             handleFirstTokenChange(Number(firstTokenMaxValue) * value / 100);
         } else if(index == 3) {
             console.log(TLPbalance);
-            let realValue = (Number((TLPbalance - 0.5)) * value / 100).toFixed(0);
-            let inValue = (Number(TLPbalance) * value / 100 * (100 - 1) / 100).toFixed(0);
-            let inValueFee = (Number(TLPbalance) * value / 100 * 1 / 100).toFixed(0);
+            let realValue = (Number((TLPbalance)) * value / 100);
+            let inValue = (Number(TLPbalance) * value / 100 * (100 - 1) / 100);
+            let inValueFee = (Number(TLPbalance) * value / 100 * 1 / 100);
             console.log(realValue)
             setLPTokenFee(inValueFee);
-            handleTLPTokenChange(realValue);
+            handleTLPTokenChange(realValue.toFixed(8));
         }
     }
 
@@ -301,7 +309,7 @@ const Market = (props) => {
         setFirstTokenValue(value);
         let _getLpValue = 0;
         const _firstTokenType = firstToken[0].label;
-        lpCoin.map((item) => {
+        lpCoins.map((item) => {
             if(_firstTokenType == item.metadata[0].symbol) {
                 setPoolId(item);
                 let fee = Number(item.data.lpFeeBps);
@@ -352,10 +360,9 @@ const Market = (props) => {
     }
 
     const sellTLP = async () => {
-        console.log(changeBigNumber(lpToken));
         await userLpCoin.map(variable => {
             console.log(variable.balance.value)
-            lpCoin.map((item) => {
+            lpCoins.map((item) => {
                 if(item.id == activeLP) {
                     sellTLPSdk(globalContext.provider, wallet, {
                         pool: item,
@@ -379,7 +386,7 @@ const Market = (props) => {
         getTokenValue(value);
     }
     const getTokenValue = (value) => {
-        lpCoin.map((item) => {
+        lpCoins.map((item) => {
             if(item.id == activeLP) {
                 tokenPrice.map(itemValue => {
                     if(itemValue.symbol == item.metadata[0].symbol) {
@@ -527,7 +534,7 @@ const Market = (props) => {
                                     </div>
                                 </div>
                                 <div className='trade-token-select only-border-red my-2 px-4 py-2'>
-                                    <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Max Amount : {poolLPValue}</h5><h5 className='text-gray-light text-left fs-12'>TLP balance: {Number(TLPbalance) > 1 ? Number(TLPbalance - 0.5).toFixed(0) : Number(TLPbalance).toFixed(0)}</h5></div>
+                                    <div className='d-flex justify-content-between'><h5 className='text-gray text-left fs-12'>Max Amount : {poolLPValue}</h5><h5 className='text-gray-light text-left fs-12'>TLP balance: {Number(TLPbalance)}</h5></div>
                                     <div className='d-flex justify-content-between'>
                                         <input type='text' className='token-select-input' value={lpToken} placeholder='0.0' onChange={(e) => handleTLPTokenChange(e.target.value)}/>
                                         <div className='d-flex cursor-pointer' disabled={true} ><h5>TLP</h5></div>                                       

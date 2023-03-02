@@ -23,7 +23,7 @@ import { StoreContext } from './store';
 
 import { CONFIG } from './lib/config';
 const supportedWallets = [new WalletStandardAdapterProvider()]
-const provider = new JsonRpcProvider(Network.DEVNET);
+const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 
 function App() {
   const [modalIsOpen, setModalIsOpen] = React.useState(false);
@@ -36,6 +36,8 @@ function App() {
   const [isAlterSecondToken, setIsAlterSecondToken] = React.useState("SUI");
   const [traderData, setTraderData] = React.useState([]);
 
+  const [event, setEvent] = React.useState(0);
+
   const storeValue = {
     account, setAccount,
     modalIsOpen, setModalIsOpen,
@@ -47,6 +49,7 @@ function App() {
     marketToken, setMarketToken,
     traderData, setTraderData,
     marketTokenPrice, setMarketTokenPrice,
+    event, setEvent,
   }
 
   return (

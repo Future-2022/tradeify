@@ -5,8 +5,7 @@ import './index.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { StoreContext } from '../../store';
 import { closeOrderFun } from '../../lib/tradeify-sdk/trading';
-import { ToastContainer, toast } from 'react-toastify';
-import { is } from '@mysten/sui.js';
+import { toast } from 'react-toastify';
 import { getTokenPrice } from '../../control/main';
 
 const Order = () => {
@@ -25,7 +24,8 @@ const Order = () => {
         closeOrderFun(tokenPrice, globalContext.provider, globalContext.wallet, inPool, outPool, createdTimeStamp, earnAmount, isEarn, tradingAmount).then(item => {
             if(item == false) {
                 toast.error("You have lost order!");
-            } else {                
+            } else {         
+                globalContext.setEvent(Math.random());       
                 toast.info("Order has been closed successfully!");
             }
         })

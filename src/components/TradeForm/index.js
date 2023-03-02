@@ -1,27 +1,10 @@
 
 import React, { useState, useEffect, useContext } from 'react';
-import { FaAngleDown, FaAngleLeft, FaArrowRight } from 'react-icons/fa';
-import { WalletAdapter } from '@mysten/wallet-adapter-base';
-import { useWallet } from '@mysten/wallet-adapter-react';
-import {
-    ObjectId,
-    Provider,
-    Coin as SuiCoin,
-    GetObjectDataResponse,
-    JsonRpcProvider,
-} from '@mysten/sui.js'
-import { Slider } from 'rsuite';
-
-import { useSuiWallet } from '../../context/ConnectWallet/useSuiWallet';
 import { StoreContext } from '../../store';
-import { CONFIG } from '../../lib/config';
 
 import './index.css';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { FaAlignRight } from 'react-icons/fa';
-
-import ExchangeLogo from '../../img/png/exchange.png';
 import TokenIcon1 from '../../img/png/SUI.png';
 import TokenIcon2 from '../../img/svg/BTC.svg';
 import TokenIcon3 from '../../img/png/eth-bg.png';
@@ -30,43 +13,11 @@ import Swap from './swap';
 import LongPosition from './LongPosition';
 import ShortPosition from './ShortPosition';
 
-import Modal from 'react-modal';
-
-const TradeForm = () => {    
-    const { wallet, connected } = useWallet();
-    const [count, setCount] = useState(0);
-
-    const { account, connecting, connects, disconnect } = useSuiWallet();
-    const globalContext = useContext(StoreContext);     
+const TradeForm = () => {      
 
     const [formIndex, setFormIndex] = useState(1);
-    const [optionIndex, setOptionIndex] = useState(1);
-    const [limitPrice, setLimitPrice] = useState(1234.23);
-    const [isOrderMenu, setIsOrderMenu] = useState(false);
     const [isTokenMenu, setIsTokenMenu] = useState(false);
-    const [orderType, setOrderType] = useState(1);
-    const [leverageValue, setLeverageValue] = useState(6);
-
-    const getWalletAddress = async (wallet) => {
-        const accs = await wallet.getAccounts();
-        return accs[0]
-    }
-
-
-    const connectWallet = () => {
-        globalContext.setModalIsOpen(true);
-    }
-    const openMenu = () => {
-        if(isOrderMenu == true) {
-            setIsOrderMenu(false);
-        } else {
-            setIsOrderMenu(true);
-        }
-    }
-    const selectOrderType = (index) => {
-        setOrderType(index)
-        setIsOrderMenu(false);
-    }
+    
     return (
         <div>
             <div className='trade-form'>
