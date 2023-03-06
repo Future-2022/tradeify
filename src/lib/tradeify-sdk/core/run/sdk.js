@@ -47,6 +47,7 @@ export function maybeSplitThenDeposit( typeArgs, args ) {
         },
     }
 }
+
 export function maybeSplitThenWithdraw( typeArgs, args ) {
     return {
         kind: 'moveCall',
@@ -104,27 +105,6 @@ export function newSwap(typeArgs, args) {
         },
     }
 }
-export function maybeSplitThenSwapB(typeArgs, args) {
-    return {
-        kind: 'moveCall',
-        data: {
-            packageObjectId: PACKAGE_ID,
-            module: 'pool',
-            function: 'maybe_split_then_swap_b',
-            typeArguments: [
-                typeArgs.first, 
-                typeArgs.second
-            ],
-            arguments: [
-                args.pool,
-                args.input, 
-                args.amount.toString(), 
-                args.minOut.toString()
-            ],
-            gasBudget: 10000,
-        },
-    }
-}
 export function stakeTLPSdk(typeArgs, args) {
     return {
         kind: 'moveCall',
@@ -161,7 +141,7 @@ export function depositTLPStakeSdk(typeArgs, args) {
                 args.currentTime.toString(), 
                 args.lockTime
             ],
-            gasBudget: 10000,
+            gasBudget: 50000,
         },
     }
 }
@@ -241,33 +221,7 @@ export function SubmitReferralCodeSdk(args) {
         },
     }
 }
-export function createLongPositionASdk(typeArgs, args) {
-    return {
-        kind: 'moveCall',
-        data: {
-            packageObjectId: CONFIG.referralPackageId,
-            module: 'pool',
-            function: 'create_position_A_',
-            typeArguments: [typeArgs[0], typeArgs[1]],
-            arguments: [
-                args.poolID,
-                CONFIG.tradingPoolID,
-                args.coinA,
-                args.marketPrice.toString(),
-                args.tradingAmount,
-                args.calcAmount.toString(),
-                args.leverageValue.toString(),
-                args.hasRefer.toString(),
-                args.referID.toString(),
-                args.isDiff.toString(),
-                args.isACS.toString(),
-                args.createdTimeStamp,
-                args.tradingType.toString(),
-            ],
-            gasBudget: 10000,
-        },
-    }
-}
+
 export function createPositionSdk(typeArgs, args) {
     console.log(args);
     return {

@@ -111,6 +111,7 @@ function parseStructTypeArgs(str) {
 }
 
 function toString(type) {
+  console.log(type)
   if ('bool' in type) {
     return 'bool'
   }

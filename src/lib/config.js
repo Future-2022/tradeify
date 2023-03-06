@@ -1,6 +1,7 @@
 
 export const CONFIG = {       
     rpcUrl: 'https://fullnode.devnet.vincagame.com:443/',
+    suiUrl: 'https://fullnode.devnet.sui.io:443/',
     // link: 'http://localhost:3000/',
     link: 'https://tradeify.app/',
 
@@ -43,11 +44,11 @@ export const CONFIG = {
     MainDecimal: 9,
     defaultSlippagePct: 1,
     tradingFee: 1, // this is % value
-    TLPPrice: 1,
-    TRYPrice: 100,
+    TLPPrice: 1, // this is % value
+    TRYPrice: 1,
     faucetDurationTime: 10 * 60 * 1000, // 1 hour
-    timeIntervalOfPrice: 2000,    
-    timeIntervalOfReward: 1000,    
+    timeIntervalOfPrice: 300,    
+    timeIntervalOfReward: 300,    
     referCodeLength: 100000000000,
     TLPDecimal: 100000
 }

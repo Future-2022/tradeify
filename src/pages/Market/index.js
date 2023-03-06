@@ -130,9 +130,11 @@ const Market = (props) => {
                     currentTimestamp: currentTimestamp,
                     tlpType: CONFIG.tlp,
                     tryType: CONFIG.try
-                }).then(res => {
+                }).then(res => {                    
+                    setUserStakingStatus(undefined);  
                     toast.info(`TLP has been rewarded!`)
-                    setUserReward(0);
+                    setUserReward(0);                    
+                    globalContext.setEvent(Math.random())
                 })
             }
         }
@@ -212,7 +214,7 @@ const Market = (props) => {
             totalSupplyTLPValue = res.details.data.fields.balance_tlp;
             setTotalSupplyTLP(totalSupplyTLPValue);
         })
-    }, [totalLPValue, globalContext.account, lpToken])
+    }, [totalLPValue, globalContext.account, lpToken, globalContext.event])
 
     useEffect(() => {    
         // staking part
@@ -259,6 +261,9 @@ const Market = (props) => {
                     tryType: CONFIG.try
                 }).then(res => {
                     console.log(res);
+                    setUserStakingStatus(undefined);                
+                    setUserReward(0);
+                    globalContext.setEvent(Math.random())
                     toast.info(`${(userStakingStatus.data.fields.staking_amount - userStakingStatus.data.fields.staking_amount * CONFIG.tradingFee / 100)} TLP has been unstaked!`)
                 })
             }
@@ -269,19 +274,26 @@ const Market = (props) => {
             toast.info("please wait for a few sec. now loading data");
             setIsTokenMenu(false);
         } else {
-            console.log(coins);
-            const token = coins.filter(item => item.label == type);
-            if(token.length == 0) {
-                toast.error("You don't have this token, please mint token!");
-                setIsTokenMenu(false);
-            }
+            let token = [];
             let value = undefined;
-            coinBalance.forEach((item, index) => {
-                if(index == token[0].value) {
-                    value = item;
-                    console.log(changeDecimal(Number(value)));
+
+            mainCoins.forEach((item, index) => {
+                if(item.symbol == type) {
+                    token.push(item);
                 }
             });
+
+            let priceFlag = false;
+            coinBalance.forEach((item, index) => {
+                if(index == token[0].tokenId) {
+                    value = item;
+                    priceFlag = true;
+                }
+            });
+            if(priceFlag == false) {
+                value = 0;
+            }
+            
             if(isSelectActive == 1) {
                 setFirstToken(token);
                 setFirstTokenMaxValue(changeDecimal(Number(value)));
@@ -572,7 +584,8 @@ const Market = (props) => {
                                             })}
                                         </div>
                                     </div>
-                                </div>  
+                                </div> 
+                                {/* {console.log(statusIndex2)}  */}
                                 {statusIndex2 == 0 && (
                                     <div className='earn-button w-100 text-center py-2 border-radius mb-3' onClick={connectWallet}>Connect Wallet</div>
                                 )}                       

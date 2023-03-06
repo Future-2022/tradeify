@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext } from 'react';
-import { Coin, JsonRpcProvider, Network } from '@mysten/sui.js'
+import { Coin, devnetConnection, JsonRpcProvider } from '@mysten/sui.js'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWallet } from '@mysten/wallet-adapter-react';
 import Modal from 'react-modal';
@@ -56,6 +56,7 @@ const Header = () => {
 
     const handleConnect = async (walletName) => {
         await select(walletName.toString());  
+        globalContext.setEvent(Math.random())
         closeModal();
     }
     
@@ -138,7 +139,7 @@ const Header = () => {
         }
     }
     const mint_sui = async () => {
-        const provider = new JsonRpcProvider(Network.DEVNET);
+        const provider = new JsonRpcProvider(devnetConnection);
         try {                
             await provider.requestSuiFromFaucet(
                 localStorage.getItem('walletAddress')

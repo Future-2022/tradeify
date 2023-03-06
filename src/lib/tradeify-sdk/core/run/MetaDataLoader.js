@@ -1,8 +1,10 @@
-import { JsonRpcProvider, Network } from '@mysten/sui.js'
+import { JsonRpcProvider, devnetConnection } from '@mysten/sui.js'
 import { CONFIG } from '../../../config';
 import { CoinMetadata } from '../../coin'
-
-const provider = new JsonRpcProvider(CONFIG.rpcUrl)
+import { StoreContext } from '../../../../store';
+import React, { useState, useEffect, useContext } from 'react';
+const provider = new JsonRpcProvider(devnetConnection)
+// console.log(provider)
 const cache = new Map()
 
 export class CoinMetadataLoader {

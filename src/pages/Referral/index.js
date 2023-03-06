@@ -59,12 +59,12 @@ const Referral = (props) => {
             setTraderNum(item.traderNum);
             setReferralLink(item.referralLink);
         })
-    }, [referralCode])
+    }, [referralCode, globalContext.account])
     useEffect(() => {
         getTraderStatus(globalContext.provider, localStorage.getItem('walletAddress')).then(item => {
             setTraderReferralCode(item.referralCode);
         })
-    }, [traderReferralCode])
+    }, [traderReferralCode, globalContext.account])
 
     useEffect(() => {  
         getReferralResult(globalContext.provider, localStorage.getItem('walletAddress'), lpCoin).then(item => {
@@ -75,7 +75,7 @@ const Referral = (props) => {
             setTraderTradingVolume(item.tradingAmount);
             setTraderTradingRebate(item.rebate);
         })
-    }, [lpCoin])
+    }, [lpCoin, globalContext.account])
     
     const selectFormIndex = (value) => {
         setFormIndex(value);

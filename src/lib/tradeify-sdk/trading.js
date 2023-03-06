@@ -5,43 +5,11 @@ import {
     SuiObject,
     SuiTransactionResponse,
   } from '@mysten/sui.js'
-import { mint_test_token_eth } from './core/run/sdk'
-import { WalletAdapter } from '@mysten/wallet-adapter-base'
-import { Type } from './core/type'
-import { CoinMetadataLoader } from './core/run/MetaDataLoader';
-import { Pool as PoolObj } from './core/run/pool';
 import { changeBigNumber, getOrCreateCoinOfLargeEnoughBalance, getSwapPrice } from '../../control/main';
 import { createPositionSdk, createPosition2Sdk, closeOrderBSdk, closeOrder2Sdk } from './core/run/sdk';
-import { ceilDiv } from './core/math';
-import { CONFIG } from '../config';
-
-export const createLongPositionAOrder = async (provider, wallet, args) => {
-    const input = await getOrCreateCoinOfLargeEnoughBalance(
-        provider,
-        wallet,
-        args.tokenTypeA,
-        BigInt(args.tradingAmount)
-    )
-    console.log(args);
-    const tx = createLongPositionASdk([args.tokenTypeA, args.tokenTypeB], {
-        poolID: args.poolID,
-        coinA: input.id,
-        marketPrice: args.marketPrice,
-        tradingAmount: args.tradingAmount,
-        calcAmount: args.calcAmount,
-        leverageValue: args.leverageValue,
-        hasRefer: args.hasRefer,
-        referID: args.referID,
-        isDiff: args.isDiff,
-        isACS: args.isACS,
-        createdTimeStamp: args.createdTimeStamp,
-        tradingType: args.tradingType
-    })
-    console.log(tx);
-    return await wallet.signAndExecuteTransaction(tx)
-}
 
 export const createPosition = async (provider, wallet, args) => {  
+    console.log(args)
     let tx = undefined;
     const input = await getOrCreateCoinOfLargeEnoughBalance(
         provider,

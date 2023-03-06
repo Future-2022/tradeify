@@ -30,7 +30,7 @@ const TradeForm = () => {
 
                 {/* Long position part */}
                 {formIndex == 1 && (
-                    <LongPosition />
+                    <LongPosition formIndex={formIndex} />
                 )}
 
                 {/* Short position part */}

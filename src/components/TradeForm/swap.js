@@ -125,16 +125,28 @@ const Swap = (props) => {
             toast.info("please wait for a few sec. now loading data");
             setIsOpenModal(false);
         } else { 
-            const token = coins.filter(item => item.label == type);
+            let token = [];
             let value = undefined;
-            coinBalance.forEach((item, index) => {
-                if(index == token[0].value) {
-                    value = item;
+
+            mainCoins.forEach((item, index) => {
+                if(item.symbol == type) {
+                    token.push(item);
                 }
             });
+
+            let priceFlag = false;
+            coinBalance.forEach((item, index) => {
+                if(index == token[0].tokenId) {
+                    value = item;
+                    priceFlag = true;
+                }
+            });
+            if(priceFlag == false) {
+                value = 0;
+            }
             if(isSelectActive == 1) {
                 lpCoin.map(item => {
-                    if(item.metadata[0].typeArg == token[0].value) {
+                    if(item.metadata[0].typeArg == token[0].tokenId) {
                         setInPoolId(item);                        
                         tokenPrice.map(itemValue => {
                             if(itemValue.symbol == item.metadata[0].symbol) {
@@ -148,7 +160,7 @@ const Swap = (props) => {
                 setFirstTokenMaxValue(value);
             } else {
                 lpCoin.map(item => {
-                    if(item.metadata[0].typeArg == token[0].value) {
+                    if(item.metadata[0].typeArg == token[0].tokenId) {
                         setOutPoolId(item);                        
                         let priceItem = undefined;
                         tokenPrice.map(itemValue => {
@@ -192,8 +204,8 @@ const Swap = (props) => {
     const runSwap = async () => {
         try {
             await swap(globalContext.provider, wallet, {
-                inputType1: firstToken[0].value,
-                inputType2: secondToken[0].value,
+                inputType1: firstToken[0].tokenId,
+                inputType2: secondToken[0].tokenId,
                 amount: BigInt(changeBigNumber(firstTokenValue)),
                 inPoolId: inPoolId,
                 outPoolId: outPoolId,
@@ -221,6 +233,7 @@ const Swap = (props) => {
         setSwapFee((value * firstTokenPrice / secondTokenPrice * 1 / 100).toFixed(5));
         setSecondTokenValue(_secondTokenValue);
     }
+
     useEffect(() => {
         checkSwapStatus();
     }, [firstTokenValue, globalContext.account, firstToken, secondToken])
@@ -242,6 +255,77 @@ const Swap = (props) => {
             setStatusIndex(6);
         }
     }
+
+    
+
+    const changeTokenOption = async () => {
+        let fristTokenTemp = firstToken;
+        let secondTokenTemp = secondToken;
+
+        let firstTokenVal = [];
+        let value = undefined;
+
+        mainCoins.forEach((item, index) => {
+            if(item.symbol == secondTokenTemp[0].symbol) {
+                firstTokenVal.push(item);
+            }
+        });
+
+        let priceFlag = false;
+        coinBalance.forEach((item, index) => {
+            if(index == firstTokenVal[0].tokenId) {
+                value = item;
+                priceFlag = true;
+            }
+        });
+        if(priceFlag == false) {
+            value = 0;
+        }
+        lpCoin.map(item => {
+            if(item.metadata[0].typeArg == firstTokenVal[0].tokenId) {              
+                tokenPrice.map(itemValue => {
+                    if(itemValue.symbol == item.metadata[0].symbol) {
+                        setFirstTokenPrice(itemValue.value);
+                    }
+                })
+            }
+            
+        })
+        await setFirstToken(firstTokenVal);
+
+        let secondTokenVal = [];
+        let secondValue = undefined;
+
+        mainCoins.forEach((item, index) => {
+            if(item.symbol == fristTokenTemp[0].symbol) {
+                secondTokenVal.push(item);
+            }
+        });
+
+        let priceFlagSecond = false;
+        coinBalance.forEach((item, index) => {
+            if(index == secondTokenVal[0].tokenId) {
+                secondValue = item;
+                priceFlagSecond = true;
+            }
+        });
+        if(priceFlagSecond == false) {
+            secondValue = 0;
+        }
+        lpCoin.map(item => {
+            if(item.metadata[0].typeArg == secondTokenVal[0].tokenId) {                
+                tokenPrice.map(itemValue => {
+                    if(itemValue.symbol == item.metadata[0].symbol) {
+                        setSecondTokenPrice(itemValue.value);
+                    }
+                })
+            }
+            
+        })
+        await setSecondToken(secondTokenVal);
+
+        handleFirstTokenChange(0);
+    }
     return (
         <div> 
             <div className='trade-token-select mb-2 mt-2'>
@@ -254,7 +338,7 @@ const Swap = (props) => {
                     <div className='d-flex cursor-pointer token-select' onClick={() => openModal(1)}><h4>{firstToken[0].label}</h4><FaAngleDown className='fs-26 mt-2' /></div>
                 </div>
             </div>
-            <div className='ex-logo-part'><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
+            <div className='ex-logo-part' onClick={() => changeTokenOption()}><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
             <div className='trade-token-select mt-2'>
                 <div className='d-flex justify-content-between'><p className='text-gray text-left'>Receive</p></div>
                 <div className='d-flex justify-content-between'>

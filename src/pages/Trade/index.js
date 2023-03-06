@@ -27,7 +27,6 @@ const Trade = (props) => {
     }
 
     useEffect(() => {
-        console.log(globalContext.marketTokenPrice);
     }, [globalContext.marketTokenPrice])
 
     return (

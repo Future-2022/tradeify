@@ -1,7 +1,7 @@
 // Copyright (c) Turbos Finance, Inc.
 // SPDX-License-Identifier: MIT
 
-module tradeify::tradefiy_time {
+module time::tradefiy_time {
     //! Monotonically increasing timestamping provided by an off-chain oracle.
     use sui::transfer::{transfer, share_object};
     use sui::object::{Self, UID};

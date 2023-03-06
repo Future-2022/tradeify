@@ -35,6 +35,7 @@ export const getMainCoins = (tokenPrice, lpPool) => {
     let isEarn = 0;
     let tokenName = getTokenName(item);
     let tokenIcon = importImage(item);
+    let tokenId = undefined;
 
     lpPool.map(itemValue => {
       if(itemValue.metadata[0].symbol == item) {
@@ -45,16 +46,19 @@ export const getMainCoins = (tokenPrice, lpPool) => {
             isEarn = item.isEarn;
           }
         })
+        tokenId = itemValue.metadata[0].typeArg;
         // price = Number(itemValue.data.balanceB.value) / Number(itemValue.data.balanceA.value);
       }
     })
     let value = {
       symbol: item,
+      tokenId: tokenId,
       price: Number(price).toFixed(3),
       tokenName: tokenName,
       tokenIcon: tokenIcon,      
       changeValue: changeValue,
       isEarn: isEarn,
+      label: item,
     }
     mainCoin.push(value);
   })
@@ -118,7 +122,6 @@ export const getTraderMetaData = (lpCoin, value, tokenPrice) => {
     })
     let netValue = changeDecimal5Fix(valueItem.calcAmount) * Number(markPrice) / Number(entryPrice);
     let calcAmount = changeDecimal5Fix(valueItem.calcAmount);
-    console.log(valueItem);
     let resultEarnAmount = changeDecimal5Fix(Number(valueItem.updateCalcAmount));
     let netResultValue = changeDecimal5Fix(Number(valueItem.calcAmount) + Number(valueItem.updateCalcAmount))
     if(valueItem.tradingType == 0) {
@@ -175,7 +178,7 @@ export const getTokenName = (LPSymbol) => {
   if(LPSymbol == 'TRY') {
     tokenName = 'Tradeify';
   } else if (LPSymbol == "BTC"){
-    tokenName = 'bitcoin';
+    tokenName = 'Bitcoin';
   } else if (LPSymbol == "ETH"){
     tokenName = 'Ethereum';
   } else if (LPSymbol == "SUI"){
@@ -214,6 +217,7 @@ export const LPMetaData = (tokenPrice, totalLPValue, metaValue) => {
         LPFirstTokenValue: balanceA / (10 ** Number(item.metadata[0].decimals)).toFixed(4),
         LPSymbol: LPSymbol,
         LPPrice: LPPrice,
+        LPValue: lpValue,
         LPTokenValue: LPTokenValue,
         LPPercentage: LPPercentage,
         LPFirstIcon: LPFirstIcon,

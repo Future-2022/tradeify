@@ -2,7 +2,7 @@ import React, { useEffect, useContext } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { WalletStandardAdapterProvider } from '@mysten/wallet-adapter-wallet-standard'
 import { WalletProvider } from '@mysten/wallet-adapter-react'
-import { JsonRpcProvider, Network } from '@mysten/sui.js'
+import { JsonRpcProvider, devnetConnection } from '@mysten/sui.js'
 import "@fontsource/ibm-plex-sans";
 import './App.css';
 import './css/tailwind.output.css';
@@ -21,9 +21,8 @@ import Header from './components/Header';
 
 import { StoreContext } from './store';
 
-import { CONFIG } from './lib/config';
 const supportedWallets = [new WalletStandardAdapterProvider()]
-const provider = new JsonRpcProvider(CONFIG.rpcUrl);
+const provider = new JsonRpcProvider(devnetConnection);
 
 function App() {
   const [modalIsOpen, setModalIsOpen] = React.useState(false);
@@ -65,17 +64,17 @@ function App() {
               <Route path="/trade" element={<Trade />} />
               <Route path="/market" element={<Market />} />
               <Route path="/liquidity" element={<Liquidity />} />
-              <Route path="/earn/lockStake" element={<LockStake />} />
-              
-              </Routes>
-              <ToastContainer
-                  className='custom-toast'
-                  autoClose={3000}
-                  closeButton={false}
-                  closeOnClick
-                  theme='light'
-                  position='bottom-right'
-              />             
+              <Route path="/earn/lockStake" element={<LockStake />} />              
+            </Routes>
+            
+            <ToastContainer
+              className='custom-toast'
+              autoClose={3000}
+              closeButton={false}
+              closeOnClick
+              theme='light'
+              position='bottom-right'
+            />             
           </React.Fragment>  
         {/* </UseSuiWalletProvider> */}
       </StoreContext.Provider>

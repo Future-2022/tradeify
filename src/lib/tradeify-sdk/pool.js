@@ -28,6 +28,7 @@ export class Pool {
 
   static async fromSuiObject(obj) {
     const state = PoolObj.fromSuiObject(obj)
+    console.log(state);
     const metadata = await Promise.all([
       CoinMetadataLoader.loadMetadata(state.typeArgs[0]),
     ])

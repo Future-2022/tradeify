@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './index.css';
+import { Ed25519Keypair, JsonRpcProvider, RawSigner, fromB64 } from '@mysten/sui.js';
+// import { fromB64 } from 'sscrypto'
 import TLP from '../../img/png/token-logo.png';
 import { useMediaQuery } from 'react-responsive';
 import { useWallet } from '@mysten/wallet-adapter-react';
@@ -8,7 +10,7 @@ import { fetchUserLpCoins, findStakingMeta, isLoggedIn, getStakingPoolStatus, fe
 import { CONFIG } from '../../lib/config';
 import { StoreContext } from '../../store';
 import { stakeTLP, depositTLPStake, getStakingReward, UnStakeTLP } from '../../lib/tradeify-sdk/staking';
-
+// import { Buffer } from 'buffer';
 import { toast } from 'react-toastify';
 
 const Earn = (props) => {
@@ -109,9 +111,11 @@ const Earn = (props) => {
                     currentTimestamp: currentTimestamp,
                     tlpType: CONFIG.tlp,
                     tryType: CONFIG.try
-                }).then(res => {
+                }).then(res => {                    
+                    setUserStakingStatus(undefined);  
                     toast.info(`TLP has been rewarded!`)
                     setUserReward(0);
+                    globalContext.setEvent(Math.random())
                 })
             }
         }
@@ -156,7 +160,7 @@ const Earn = (props) => {
             totalSupplyTLPValue = res.details.data.fields.balance_tlp;
             setTotalSupplyTLP(totalSupplyTLPValue);
         })                
-    }, [totalLPValue, tlpValue, globalContext.account, userStakingStatus])
+    }, [totalLPValue, tlpValue, globalContext.account, userStakingStatus, globalContext.event])
 
     useEffect(() => {
         findStakingMeta(globalContext.provider, localStorage.getItem('walletAddress')).then((res) => {
@@ -165,7 +169,7 @@ const Earn = (props) => {
                 setUserStakingStatus(item);
             })
         });
-    }, [totalLPValue, tlpValue, globalContext.account])
+    }, [totalLPValue, tlpValue, globalContext.account, globalContext.event])
     
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (lpCoins) => {
@@ -177,7 +181,7 @@ const Earn = (props) => {
             setStakingAPR(APR);
             setTotalLPValue(totalLPValue);
         })
-    }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP])
+    }, [totalLPValue, tlpValue, globalContext.account, totalSupplyTLP, globalContext.event])
     
     
 
@@ -197,6 +201,41 @@ const Earn = (props) => {
         } 
     }
 
+    // const test  = async () => {
+    //     const raw = '0x0993c6ebb0b79a4b9f55ac15d7b3f80a4493778f9c29b6b4356a197e8a33f394'
+    //     const kp_bytes = await Buffer.from(raw.slice(2),"hex")
+    //     const keyPair = Ed25519Keypair.fromSecretKey(kp_bytes)
+    //     const currentTime = Date.now();
+    //     // const keypair = Ed25519Keypair.deriveKeypair("toast hat cement doctor erosion nut gain wagon multiply gate buffalo sport");
+    //     const signer = new RawSigner(keyPair, globalContext.provider);
+    //     const moveCallTxn = await signer.executeMoveCall({
+    //         packageObjectId: '0xad6dc9132391c3d3207381f8a764f2afd2481d7d',
+    //         module: 'time',
+    //         function: 'stamp',
+    //         typeArguments: [],
+    //         arguments: [
+    //           '0x839166f4445f015edb517256c6d097164bbf71e8',
+    //           '0x3dbcad91bef55555aa432022f399a09e6f690fe7',
+    //           currentTime.toString(),
+    //         ],
+    //         gasBudget: 10000,
+    //     });        
+    // }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // test();
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // const test2 = async () => {        
+    //     const referralStatusAddress = [];
+    //     referralStatusAddress.push("0x3dbcad91bef55555aa432022f399a09e6f690fe7");
+    //     const refer = await globalContext.provider.getObjectBatch(referralStatusAddress);
+    //     console.log(refer[0].details.data.fields)
+    // }
+
     return (
         <div>
             <div className={`d-flex ${isMobile == true ? `px-3`:`px-5`}`}>
@@ -206,9 +245,11 @@ const Earn = (props) => {
                     <div className='mt-5'><h3 className='text-white font-bold'>TLP Staking</h3></div>
                     <div className='d-flex mt-3 flex-wrap'>
                         <div className={`market-form window your-stats ${isMobile == true ? `p-3`:`w-50 p-5`}`}>
-                            <div className='right-top-bg'></div>
+                            {/* <div className='right-top-bg'></div> */}
                             <div className='left-bottom-bg'></div>
                             <h4 className='mt-4'>Stake TLP</h4>  
+                            {/* <div className='btn btn-primary' onClick={() => test()}>Test</div> */}
+                            {/* <div className='btn btn-primary' onClick={() => test2()}>Test2</div> */}
                     
                             <div className='trade-token-select only-border-warning mb-2 p-4 mt-5'>
                                 <div className='d-flex justify-content-between'>

@@ -14,11 +14,9 @@ import {
 } from '@mysten/sui.js'
 // import { Slider } from 'rsuite';
 import Modal from 'react-modal';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 
-import { useSuiWallet } from '../../context/ConnectWallet/useSuiWallet';
 import { StoreContext } from '../../store';
-import { calcSwapOut } from '../../lib/tradeify-sdk/pool';
 import { CONFIG } from '../../lib/config';
 
 import './index.css';
@@ -26,9 +24,6 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import TokenLogo from '../../img/png/token-logo.png';
 import ExchangeLogo from '../../img/png/exchange.png';
-import TokenIcon1 from '../../img/png/SUI.png';
-import TokenIcon2 from '../../img/svg/BTC.svg';
-import TokenIcon3 from '../../img/png/eth-bg.png';
 
 import { getTradeDatas, getCoins, getReferralIDByCode, isLoggedIn,
     getTraderStatus, getUniqueCoinTypes, getCoinBalances, getMainCoins, getTokenPrice,
@@ -71,7 +66,6 @@ const leverageMarks = {
     100: "100x",
 };
 
-const provider = new JsonRpcProvider(CONFIG.rpcUrl);
 const LongPosition = () => {   
     const globalContext = useContext(StoreContext);     
 
@@ -81,7 +75,7 @@ const LongPosition = () => {
     const [limitPrice, setLimitPrice] = useState(undefined);
     const [isOrderMenu, setIsOrderMenu] = useState(false);
     const [orderType, setOrderType] = useState(1);
-    const [leverageValue, setLeverageValue] = useState(5);
+    const [leverageValue, setLeverageValue] = useState(15);
     
     const [trade, setTrade] = useState(0); 
 
@@ -184,17 +178,26 @@ const LongPosition = () => {
             toast.info("please wait for a few sec. now loading data");
             setIsOpenModal(false);
         } else {
-            const token = coins.filter(item => item.label == type);
-            if(token.length == 0) {
-                toast.info(`You haven't ${type} token. Please buy or faucet token.`);
-                setIsOpenModal(false);
-            } else {
+                let token = [];
                 let value = undefined;
-                coinBalance.forEach((item, index) => {
-                    if(index == token[0].value) {
-                        value = item;
+
+                mainCoins.forEach((item, index) => {
+                    if(item.symbol == type) {
+                        token.push(item);
                     }
                 });
+
+                let priceFlag = false;
+                coinBalance.forEach((item, index) => {
+                    if(index == token[0].tokenId) {
+                        value = item;
+                        priceFlag = true;
+                    }
+                });
+                if(priceFlag == false) {
+                    value = 0;
+                }
+                
                 if(isSelectActive == 1) {
                     setFirstToken(token);
                     setFirstTokenMaxValue(value);
@@ -213,7 +216,7 @@ const LongPosition = () => {
                 } else {
                     setSecondToken(token);   
                     setMarketPrice(token);      
-                    globalContext.setMarketToken(token[0].label);
+                    globalContext.setMarketToken(type);
                     lpCoin.map(item => {
                         if(type == item.metadata[0].symbol) {
                             setOutPoolId(item);    
@@ -232,7 +235,7 @@ const LongPosition = () => {
                     });
                 }
                 setIsOpenModal(false);
-            }  
+            // }            
         }
     }
 
@@ -294,8 +297,8 @@ const LongPosition = () => {
                 createPosition(globalContext.provider, globalContext.wallet, {
                     inPoolID: inPoolId.id,
                     outPoolID: outPoolId.id,
-                    tokenTypeA: firstToken[0].value,
-                    tokenTypeB: secondToken[0].value,
+                    tokenTypeA: firstToken[0].tokenId,
+                    tokenTypeB: secondToken[0].tokenId,
                     tokenTypeC: CONFIG.usdt,
                     marketPrice: marketPrice,
                     tradingAmount: changeBigNumber(firstTokenValue),
@@ -343,6 +346,75 @@ const LongPosition = () => {
         setLimitPrice(price.toFixed(4));        
     }
 
+    const changeTokenOption = async () => {
+        let fristTokenTemp = firstToken;
+        let secondTokenTemp = secondToken;
+
+        let firstTokenVal = [];
+        let value = undefined;
+
+        mainCoins.forEach((item, index) => {
+            if(item.symbol == secondTokenTemp[0].symbol) {
+                firstTokenVal.push(item);
+            }
+        });
+
+        let priceFlag = false;
+        coinBalance.forEach((item, index) => {
+            if(index == firstTokenVal[0].tokenId) {
+                value = item;
+                priceFlag = true;
+            }
+        });
+        if(priceFlag == false) {
+            value = 0;
+        }
+        lpCoin.map(item => {
+            if(item.metadata[0].typeArg == firstTokenVal[0].tokenId) {              
+                tokenPrice.map(itemValue => {
+                    if(itemValue.symbol == item.metadata[0].symbol) {
+                        setFirstTokenPrice(itemValue.value);
+                    }
+                })
+            }
+            
+        })
+        await setFirstToken(firstTokenVal);
+
+        let secondTokenVal = [];
+        let secondValue = undefined;
+
+        mainCoins.forEach((item, index) => {
+            if(item.symbol == fristTokenTemp[0].symbol) {
+                secondTokenVal.push(item);
+            }
+        });
+
+        let priceFlagSecond = false;
+        coinBalance.forEach((item, index) => {
+            if(index == secondTokenVal[0].tokenId) {
+                secondValue = item;
+                priceFlagSecond = true;
+            }
+        });
+        if(priceFlagSecond == false) {
+            secondValue = 0;
+        }
+        lpCoin.map(item => {
+            if(item.metadata[0].typeArg == secondTokenVal[0].tokenId) {                
+                tokenPrice.map(itemValue => {
+                    if(itemValue.symbol == item.metadata[0].symbol) {
+                        setSecondTokenPrice(itemValue.value);
+                    }
+                })
+            }
+            
+        })
+        await setSecondToken(secondTokenVal);
+
+        handleFirstTokenChange(0);
+    }
+
     return (
         <div>
             <div>
@@ -378,7 +450,7 @@ const LongPosition = () => {
                         <div className='d-flex cursor-pointer token-select' onClick={() => openModal(1)}><h5>{firstToken[0].label}</h5><FaAngleDown className='fs-26 mt-1' /></div>
                     </div>
                 </div>
-                <div className='ex-logo-part'><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
+                <div className='ex-logo-part' onClick={() => changeTokenOption()}><img src={ExchangeLogo} width={45} className='exchange-logo' /></div>
                 <div className='trade-token-select mt-2'>
                     <div className='d-flex justify-content-between'><h5 className='fs-12 text-gray text-left'>Short</h5><h5 className='text-gray-light fs-12 text-left'>Leverage: {leverageValue}x</h5></div>
                     <div className='d-flex justify-content-between'>

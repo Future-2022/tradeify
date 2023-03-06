@@ -24,7 +24,7 @@ const Home = (props) => {
     const [totalLPValue, setTotalLPValue] = useState(0);
     const [stakingPoolStatus, setStakingPoolStatus] = useState(undefined);
     
-    const [tryPrice, setTryPrice] = useState(1);   
+    const [tryPrice, setTryPrice] = useState(CONFIG.TRYPrice);   
 
     const [lpCoin, SetLPCoin] = useState(undefined);
     const [lpCoins, SetLPCoins] = useState([]);
@@ -45,7 +45,6 @@ const Home = (props) => {
 
     useEffect(() => {
         fetchLPCoins(globalContext.provider, globalContext.wallet).then(async (item) => {
-            console.log(item)
             SetLPCoins(item)
         })             
         getStakingPoolStatus(globalContext.provider).then(res => {
@@ -63,8 +62,6 @@ const Home = (props) => {
                 totalLPValue += Number(item.data.lpSupply);
             })
         }
-
-        // const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
         const newMetaData = LPMetaData(tokenPrice, totalLPValue, lpCoins);
         SetLPCoin(newMetaData);
         setTotalLPValue(changeDecimal0Fix(totalLPValue));
@@ -211,7 +208,7 @@ const Home = (props) => {
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Total Staked</h6>
-                                            <h6 className='text-white'>{stakingPoolStatus != undefined ? changeDecimal0Fix(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</h6>
+                                            <h6 className='text-white'>{stakingPoolStatus != undefined ? changeDecimal(stakingPoolStatus.details.data.fields.balance_tlp) : 0} TLP</h6>
                                         </div>
                                         <div className='d-flex justify-content-between py-2'>
                                             <h6 className='text-gray'>Market Cap</h6>
@@ -253,7 +250,8 @@ const Home = (props) => {
                                                         </div>
                                                     </div>
                                                     <div className='w-20'><h6 className='text-gray'>$ {item.LPPrice}</h6></div>
-                                                    <div className='w-20'><h6 className='text-gray'>$ {item.totalPooledValue}</h6></div>
+                                                    <div className='w-20'><h6 className='text-gray'>$ {changeDecimal(item.LPValue)}</h6></div>
+                                                    {/* <div className='w-20'><h6 className='text-gray'>$ {item.totalPooledValue}</h6></div> */}
                                                     <div className='w-20'><h6 className='text-gray'>{item.LPWeight} % / {item.LPTargetWeight} %</h6></div>
                                                     <div className='w-20'><h6 className='text-gray'>{item.LPFee} %</h6></div>
                                                 </div>
@@ -277,7 +275,7 @@ const Home = (props) => {
                                                 </div>
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Pool</p></div>
-                                                    <div className='w-50'><h6 className='text-gray'>${item.totalPooledValue}</h6></div>
+                                                    <div className='w-50'><h6 className='text-gray'>${changeDecimal(item.LPValue)}</h6></div>
                                                 </div>
                                                 <div className='d-flex justify-content-between'>
                                                     <div className='w-50'><p className='text-gray pl-3'>Weight</p></div>
