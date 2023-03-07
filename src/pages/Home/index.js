@@ -11,7 +11,7 @@ import { CONFIG } from '../../lib/config';
 import { getTotalTRYValue, getStakingPoolStatus, 
     fetchLPCoins, LPMetaData, getTokenPrice, changeDecimal, changeDecimal0Fix } from '../../control/main';
 
-const Home = (props) => {
+const Home = () => {
 
     const isMobile = useMediaQuery({ query: '(max-width: 480px)' });  
     const globalContext = useContext(StoreContext); 

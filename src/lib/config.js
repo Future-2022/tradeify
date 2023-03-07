@@ -6,34 +6,34 @@ export const CONFIG = {
     link: 'https://tradeify.app/',
 
     // tokenomics
-    eth_id: '0x6ec5f7bf6e787f3234677f5cdbf5451e97fa0516',
-    eth: '0x478c94fe09609eb56b842e3e4cdb7caa2b1b9125::eth::ETH',
+    eth_id: '0xa5c4ae3ae54d2a3cbf04559dcbd7378a47ecda5f',
+    eth: '0x95a1743959f4741e25f18b5733ac8a4e01668fce::eth::ETH',
 
-    btc_id: '0x1ea2f6ea5252d932346e4a2e3ca0ecc02853cd6e',
-    btc: '0x90c19ea0d39f2c2b907c8d381abbdf7c2eaf9f27::btc::BTC',
+    btc_id: '0xccf97f0533f800b527a2c180f2a68948f42eef42',
+    btc: '0x2701b3eb89ffa3fec56fb2c25423ab9ee80027a9::btc::BTC',
 
-    try_id: '0x94515184d72fbeeeab1af589c1bf1cf9b31cea05',
-    try: '0xa52c5c75c955cf07ee407cb0f4806e25ef675646::try::TRY',  
+    try_id: '0xe8ed7e4bcbf1fe80805012c05d8411e1c09bbbdb',
+    try: '0x6c4b0af2d133f6fcf669665a81f7dc12e754bee6::try::TRY',  
 
-    tlp: '0xc011f01591113a8d42ed9496c1a4d29001cc2079::tlp::TLP',
+    tlp: '0x373993f80bf4090eb69358c817acf7b0d66b8cb2::tlp::TLP',
 
     // mint, buy/sell, swap package
-    tradeifyPackageId: '0xc011f01591113a8d42ed9496c1a4d29001cc2079',
-    poolRegistryId: '0x20bb67f7b91068c0b0995a8b0fed2433e58ef05d',
-    TLPStorageId: '0xbbff4d3579464ce9394131ff8b98e67023e2aad0',
+    tradeifyPackageId: '0x373993f80bf4090eb69358c817acf7b0d66b8cb2',
+    poolRegistryId: '0x5522177f3390c8725fcd4fa76a6ef30e52c45f1c',
+    TLPStorageId: '0xf55053bd32baea13b9e934ec0d428e2a8655e377',
 
     // staking package
-    stakingPackageId: '0xc011f01591113a8d42ed9496c1a4d29001cc2079',
-    stakingPoolId: '0x435caf30d9fa62cd1610854035a27bf7d334df97',
+    stakingPackageId: '0x373993f80bf4090eb69358c817acf7b0d66b8cb2',
+    stakingPoolId: '0x3a16602a82af57985f03ef1a48be39dd9714957d',
 
     // referral package
-    referralPackageId: '0xc011f01591113a8d42ed9496c1a4d29001cc2079',
-    referRegistryId: '0xb8084bdc18b3f5f09bc0921643b9446cc144a13e',
-    refTraderRegistryId: '0x87c796f69772cac1b95825a0424f79100f1359b1',
-    referralStaus: '0x368d305922804381d8792b5504992748778598fd',
+    referralPackageId: '0x373993f80bf4090eb69358c817acf7b0d66b8cb2',
+    referRegistryId: '0x8dc58c4241c0aac07ddc11dc8a1c108de449fdde',
+    refTraderRegistryId: '0x2bb76dfdac92d4b1ca81038523a24463c0d69e27',
+    referralStaus: '0xdbf1f531d7ed73bacc7403a3f8641c78969583b0',
 
     // trading package
-    tradingPoolID: '0xf79a7e385989b96c92534079db51327d5af28a93',
+    tradingPoolID: '0x4d2885d2fac9807ac66517ea30d3a1bf362a1027',
 
     nullAddress: '0x0000000000000000000000000000000000000000',
 
